@@ -1,0 +1,153 @@
+import React from "react";
+import Campo, { inputStyle } from "./Campo";
+import { colores, fuentes } from "../styles/colores";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+
+const FASES = [
+  { valor: "mono", label: "Mono" },
+  { valor: "bi", label: "Bi" },
+  { valor: "tri", label: "Tri" },
+];
+
+function BotonPill({ activo, onClick, children, flex = 1 }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex,
+        padding: "8px 0",
+        borderRadius: 3,
+        border: `1px solid ${activo ? colores.copper : colores.border}`,
+        background: activo ? colores.copper : "transparent",
+        color: activo ? "#171512" : colores.textDim,
+        fontWeight: 600,
+        fontSize: 13,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Un Circuito es lo que tiene un breaker físico: voltaje, fases,
+// material, distancia, y su TIPO (dedicado/mixto). Los equipos se
+// agregan después, dentro del circuito ya creado.
+export default function FormularioCircuito({ form, setForm, onGuardar, onCancelar, error, editando, normativaActiva, onCambiarFases }) {
+  const normativa = App.normativa.obtener(normativaActiva);
+  const voltajesEstandar = normativa.voltajesPorFase[form.fases] ?? [];
+
+  function elegirVoltajeEstandar(v) {
+    setForm({ ...form, voltaje: String(v), voltajeManual: false });
+  }
+
+  return (
+    <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 18 }}>
+      <h2
+        style={{
+          fontFamily: fuentes.condensada,
+          fontWeight: 600,
+          fontSize: 13,
+          letterSpacing: "0.08em",
+          color: colores.textDim,
+          margin: "0 0 14px 0",
+          textTransform: "uppercase",
+        }}
+      >
+        {editando ? "Editar circuito" : "Nuevo circuito"}
+      </h2>
+
+      <Campo label="Nombre del circuito">
+        <input style={inputStyle()} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Iluminación cocina" />
+      </Campo>
+
+      <Campo label="Tipo de circuito">
+        <div style={{ display: "flex", gap: 8 }}>
+          <BotonPill activo={form.tipo === "dedicado"} onClick={() => setForm({ ...form, tipo: "dedicado" })}>
+            Dedicado
+          </BotonPill>
+          <BotonPill activo={form.tipo === "mixto"} onClick={() => setForm({ ...form, tipo: "mixto" })}>
+            Mixto
+          </BotonPill>
+        </div>
+        <div style={{ fontSize: 11, color: colores.textDim, marginTop: 6, lineHeight: 1.4 }}>
+          {form.tipo === "dedicado"
+            ? "Un solo equipo (motores, A/C, bomba — norma CIEN/NEC lo exige para cargas grandes)."
+            : "Varios equipos comparten el mismo breaker (alumbrado, tomacorrientes de uso general)."}
+        </div>
+      </Campo>
+
+      <Campo label="Fases">
+        <div style={{ display: "flex", gap: 8 }}>
+          {FASES.map((f) => (
+            <BotonPill key={f.valor} activo={form.fases === f.valor} onClick={() => onCambiarFases(f.valor)}>
+              {f.label}
+            </BotonPill>
+          ))}
+        </div>
+      </Campo>
+
+      <Campo label={`Voltaje (${normativa.id})`}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {voltajesEstandar.map((v) => (
+            <BotonPill key={v} flex="0 0 auto" activo={!form.voltajeManual && Number(form.voltaje) === v} onClick={() => elegirVoltajeEstandar(v)}>
+              <span style={{ padding: "0 10px" }}>{v}V</span>
+            </BotonPill>
+          ))}
+          <BotonPill flex="0 0 auto" activo={form.voltajeManual} onClick={() => setForm({ ...form, voltajeManual: true })}>
+            <span style={{ padding: "0 10px" }}>Manual</span>
+          </BotonPill>
+        </div>
+        {form.voltajeManual && (
+          <input
+            style={{ ...inputStyle(), marginTop: 8 }}
+            type="number"
+            placeholder="Voltaje del circuito (V)"
+            value={form.voltaje}
+            onChange={(e) => setForm({ ...form, voltaje: e.target.value })}
+          />
+        )}
+      </Campo>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <Campo label="Distancia (m)">
+          <input style={inputStyle()} type="number" value={form.distancia} onChange={(e) => setForm({ ...form, distancia: e.target.value })} />
+        </Campo>
+        <Campo label="Temp. ambiente (°C)">
+          <input style={inputStyle()} type="number" value={form.temp} onChange={(e) => setForm({ ...form, temp: e.target.value })} />
+        </Campo>
+      </div>
+
+      <Campo label="Material del conductor">
+        <div style={{ display: "flex", gap: 8 }}>
+          {["cobre", "aluminio"].map((m) => (
+            <BotonPill key={m} activo={form.material === m} onClick={() => setForm({ ...form, material: m })}>
+              <span style={{ textTransform: "capitalize" }}>{m}</span>
+            </BotonPill>
+          ))}
+        </div>
+      </Campo>
+
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: colores.textDim, margin: "4px 0 16px" }}>
+        <input type="checkbox" checked={form.continua} onChange={(e) => setForm({ ...form, continua: e.target.checked })} />
+        Carga continua (&gt;3 horas)
+      </label>
+
+      {error && <div style={{ color: colores.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={onGuardar}
+          style={{ flex: 1, padding: "10px 0", background: colores.copper, color: "#171512", border: "none", borderRadius: 3, fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+        >
+          {editando ? "Guardar cambios" : "+ Crear circuito"}
+        </button>
+        {editando && (
+          <button onClick={onCancelar} style={{ padding: "10px 16px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+            Cancelar
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

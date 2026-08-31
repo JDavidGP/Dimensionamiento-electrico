@@ -1,0 +1,133 @@
+Arquitectura modular basada en mediadores (contrato revisado)
+=============================================================
+
+Principios
+----------
+- Los módulos NO se conocen entre sí.
+- La comunicación entre módulos distintos pasa por un Mediator.
+- Las funciones internas de un mismo módulo pueden llamarse directamente.
+- Los datos compartidos se obtienen mediante DataProvider / Repository.
+- Una sola fuente de verdad del proyecto (modelo canónico).
+- Mutaciones del proyecto solo desde la capa de aplicación
+  (hook + ApplicationMediator). Motor y Normativa son solo lectura del modelo.
+- Eventos: solo notificaciones de UI, nunca cálculos críticos.
+
+Regla de oro
+------------
+Llamadas directas: dentro del mismo módulo.
+Mediator: entre módulos distintos.
+Repository/DataProvider: compartir datos (lectura).
+Eventos: notificaciones, no request/response de cálculo.
+
+ApplicationMediator
+-------------------
+Coordina flujos de aplicación. NO acumula reglas de negocio.
+Orquesta: calcular proyecto, validar, guardar/abrir, (futuro) informe/diagrama.
+La UI no importa mediadores de dominio en paralelo; pasa por aquí.
+
+Dependen de él:
+  MotorCalculoMediator, NormativaMediator, ValidacionMediator,
+  PersistenciaMediator, DocumentoMediator, DiagramaMediator
+
+MotorCalculoMediator
+--------------------
+Responsabilidad: coordinar cálculos eléctricos.
+
+Módulos internos:
+  Demanda, simultaneidad (informativa), continuidad 1.25,
+  corriente, caída de tensión, dimensionamiento (calibre+breaker),
+  corrección temperatura, corrección agrupamiento, cortocircuito,
+  impedancia de lazo (PENDIENTE: topología/tablero),
+  balance de fases (PENDIENTE: entidad Tablero)
+
+Dependencias permitidas:
+  - DataProvider (lectura)
+  - NormativaMediator (solo consultar parámetros)
+  - Funciones internas del motor
+
+NO depende de: UI, Validacion, Documento, Diagrama, Persistencia
+
+Inyección: el motor recibe el objeto normativa ya resuelto;
+no importa el catálogo NEC/CIEN/IEC por ID.
+
+NormativaMediator
+-----------------
+Módulos: NEC, IEC, CIEN, biblioteca normativa
+
+Dependencias: Repository, Cache
+
+Responsabilidad: entregar parámetros y tablas; listar normativas;
+gancho opcional verificarCircuito.
+
+NO realiza dimensionamiento.
+Conversiones de unidades (AWG↔mm², etc.) viven en shared/utils,
+NO en Normativa.
+
+ValidacionMediator
+------------------
+Tres tipos (misma fachada, semántica distinta):
+  1) Formulario — al editar (bloquea entrada inválida)
+  2) Consistencia del proyecto — modelo (huérfanos, IDs, dedicado>1)
+  3) Eléctrica/normativa — sobre RESULTADOS ya calculados
+
+Dependencias:
+  - DataProvider (modelo + resultados del snapshot)
+  - NormativaMediator
+  - MotorCalculoMediator SOLO bajo demanda explícita
+    (no en cadena tras cada cálculo global)
+
+Regla anti-ciclo: calcular → snapshot de resultados → validar LEE;
+validar no reabre el motor en bucle.
+
+PersistenciaMediator
+--------------------
+Diseño por adapters:
+  JsonAdapter (actual), SqliteAdapter (futuro), PdfImportAdapter (futuro)
+
+Dependencias: APIs del adapter (filesystem / DB).
+No depende de Motor ni Normativa.
+
+DocumentoMediator
+-----------------
+Reportes PDF, memoria técnica, resumen de cálculos.
+Dependencias: DataProvider (resultados ya calculados).
+No recalcula en silencio.
+
+DiagramaMediator
+----------------
+Editor unifilar, topología, etiquetas, coordenadas.
+Dependencias: DataProvider.
+
+Modelo canónico anti-bucle:
+  Tabla y diagrama son VISTAS.
+  Ambas escriben al modelo de proyecto; nunca una vista a la otra.
+
+Servicios compartidos
+---------------------
+DataProvider — entrega datos; no calcula; en React es snapshot
+              sincronizado desde el hook (no segunda fuente de verdad).
+Repository  — tablas de referencia.
+Cache       — tablas y resultados frecuentes.
+Logger      — errores / diagnóstico.
+Config      — global y feature flags.
+
+Flujo de ejemplo (corregido)
+----------------------------
+UI
+ → ApplicationMediator.calcularProyecto()
+      → MotorCalculoMediator (+ NormativaMediator parámetros)
+      → resultados al snapshot
+ → ValidacionMediator LEE snapshot (no recalcula en cadena)
+ → DocumentoMediator (opcional)
+ → PersistenciaMediator guarda
+
+Orden: calcular → snapshot → validar → documentar → guardar.
+
+Prohibiciones
+-------------
+Motor    ↛ Validacion, Documento, Diagrama, UI
+Normativa ↛ Motor, UI
+Documento/Diagrama ↛ Motor (directo)
+Módulo A ↛ Módulo B sin mediador
+
+Detalle completo: src/ARCHITECTURE.md
