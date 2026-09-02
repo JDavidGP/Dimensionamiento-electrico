@@ -162,7 +162,7 @@ function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tabl
   return [entradaCircuito, ...entradasEquipos];
 }
 
-function validarTablero(tablero, circuitos, idsVistos, proyectoId) {
+function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []) {
   const problemas = [];
   let estado = ESTADOS.OK;
 
@@ -176,6 +176,20 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId) {
   if (circuitosAsociados.length === 0) {
     problemas.push("Sin circuitos asociados");
     estado = peorEstado(estado, ESTADOS.ADVERTENCIA);
+  }
+
+  // tableroPadreId es opcional: null significa alimentado directo de la
+  // acometida/poste/transformador, no de otro tablero — no es un error.
+  // NO se valida la cadena hacia arriba (ciclos) todavía — es el
+  // siguiente paso, no esta sesión.
+  if (tablero.tableroPadreId) {
+    if (tablero.tableroPadreId === tablero.id) {
+      problemas.push("Tablero padre apunta a sí mismo");
+      estado = ESTADOS.ERROR;
+    } else if (!tableros.some((t) => t.id === tablero.tableroPadreId)) {
+      problemas.push(`Referencia a tablero padre inexistente (${tablero.tableroPadreId})`);
+      estado = ESTADOS.ERROR;
+    }
   }
 
   return crearEntrada({
@@ -206,7 +220,7 @@ export function validarIntegridadReferencial(proyecto, circuitos = [], equipos =
   const listaTableros = tableros.length > 0 ? tableros : proj.tableros || [];
 
   listaTableros.forEach((t) => {
-    entradas.push(validarTablero(t, circuitos, idsVistos, proj.id));
+    entradas.push(validarTablero(t, circuitos, idsVistos, proj.id, listaTableros));
   });
 
   circuitos.forEach((c) => {

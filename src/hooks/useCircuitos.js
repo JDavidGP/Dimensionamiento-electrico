@@ -61,6 +61,21 @@ export function useCircuitos() {
     return { potenciaTotal, potenciaConectada, corrienteTotal };
   }, [resultados]);
 
+  // Alimentador de cada tablero, vía TableroMediator (no dispara el
+  // motor en cadena: usa los `resultados` de circuitos ya calculados).
+  const alimentadores = useMemo(() => {
+    const mapa = {};
+    tableros.forEach((t) => {
+      mapa[t.id] = App.tablero.calcularAlimentador(t.id, {
+        circuitos,
+        resultados,
+        normativaId: normativaActiva,
+        tablero: t,
+      });
+    });
+    return mapa;
+  }, [tableros, circuitos, resultados, normativaActiva]);
+
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
     () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros),
@@ -192,11 +207,18 @@ export function useCircuitos() {
     return equipos.filter((e) => e.circuitoId === circuitoId);
   }
 
-  // --- TABLERO (Fase 3 — dato relacional puro, cero gráfico) ---
+  // --- TABLERO (Fase 3 dato relacional + Fase 4 alimentador) ---
   function crearTablero(datos) {
     const tablero = App.tablero.crear(datos);
     setTableros([...tableros, tablero]);
     return tablero;
+  }
+
+  function editarTablero(id, cambios) {
+    const tablero = tableros.find((t) => t.id === id);
+    if (!tablero) return;
+    const actualizado = App.tablero.editar(tablero, cambios);
+    setTableros(tableros.map((t) => (t.id === id ? actualizado : t)));
   }
 
   function eliminarTablero(id) {
@@ -304,10 +326,12 @@ export function useCircuitos() {
     equiposDe,
     tableros,
     crearTablero,
+    editarTablero,
     eliminarTablero,
     asignarCircuitoATablero,
     circuitosDeTablero,
     circuitosSinTablero,
+    alimentadores,
     listaIntegridad,
     resumenIntegridad: resumenInt,
     detalleElectrico,

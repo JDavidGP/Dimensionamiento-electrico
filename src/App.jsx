@@ -46,10 +46,12 @@ export default function App() {
     equiposDe,
     tableros,
     crearTablero,
+    editarTablero,
     eliminarTablero,
     asignarCircuitoATablero,
     circuitosDeTablero,
     circuitosSinTablero,
+    alimentadores,
     listaIntegridad,
   } = useCircuitos();
 
@@ -76,7 +78,9 @@ export default function App() {
             tableros={tableros}
             circuitosDeTablero={circuitosDeTablero}
             circuitosSinTablero={circuitosSinTablero}
+            alimentadores={alimentadores}
             crearTablero={crearTablero}
+            editarTablero={editarTablero}
             eliminarTablero={eliminarTablero}
           />
 

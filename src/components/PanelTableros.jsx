@@ -1,70 +1,273 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
-import { inputStyle } from "./Campo";
+import Campo, { inputStyle } from "./Campo";
+
+const FASES = [
+  { valor: "mono", label: "Mono" },
+  { valor: "bi", label: "Bi" },
+  { valor: "tri", label: "Tri" },
+];
+
+const FORM_VACIO = {
+  nombre: "",
+  tensionAlimentacion: "120",
+  fases: "mono",
+  tableroPadreId: "", // "" = acometida/poste/transformador (sin padre)
+  longitudAlimentador: "",
+  materialAlimentador: "cobre",
+};
+
+function BotonPill({ activo, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        flex: 1,
+        padding: "7px 0",
+        borderRadius: 3,
+        border: `1px solid ${activo ? colores.copper : colores.border}`,
+        background: activo ? colores.copper : "transparent",
+        color: activo ? "#171512" : colores.textDim,
+        fontWeight: 600,
+        fontSize: 12,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Bloque de resultado del alimentador (tramo troncal) de un tablero,
+// tal como lo devuelve TableroMediator.calcularAlimentador. Cubre los
+// tres estados posibles: pendiente (falta dato), error (no hay calibre
+// que cumpla) y ok (dimensionado).
+function BloqueAlimentador({ resultado }) {
+  if (!resultado) return null;
+
+  if (resultado.pendiente) {
+    return (
+      <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.4 }}>
+        Alimentador pendiente: {resultado.motivo}
+      </div>
+    );
+  }
+
+  if (!resultado.ok) {
+    return (
+      <div style={{ fontSize: 11.5, color: colores.error, lineHeight: 1.4 }}>
+        ⚠ {resultado.error}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontFamily: fuentes.mono, fontSize: 11.5, color: colores.textMain, lineHeight: 1.6 }}>
+      <div>
+        Calibre: <strong>{resultado.seccion} {resultado.unidadSeccion}</strong> ({resultado.areaMm2.toFixed(2)} mm²) · Breaker: <strong>{resultado.breaker}A</strong>
+      </div>
+      <div style={{ color: colores.textDim }}>
+        {resultado.corrienteDiseno.toFixed(2)}A diseño · caída {resultado.caidaPct.toFixed(2)}% · {resultado.cantidadCircuitos} circuito(s) agregados
+      </div>
+      {resultado.advertencias?.map((a, i) => (
+        <div key={i} style={{ color: colores.warn }}>⚠ {a}</div>
+      ))}
+    </div>
+  );
+}
 
 // Mismo patrón de acordeón que TablaResultados: lista colapsada, clic
-// despliega el detalle del tablero seleccionado (sus circuitos). Fase 3
-// (dato relacional) — cero gráfico, eso es Fase 6 (esquema unifilar).
+// despliega el detalle del tablero seleccionado (sus circuitos y su
+// alimentador ya calculado). Fase 3 (dato relacional) + Fase 4
+// (alimentador: longitud, material, fases, tableroPadreId) — cero
+// gráfico, eso es Fase 6 (esquema unifilar).
+//
+// tableroPadreId ya se captura y se puede elegir de entre los tableros
+// existentes, pero encadenarlo hacia arriba (subpaneles, jerarquía
+// visual) es el siguiente paso, no esta sesión — acá solo se muestra
+// de qué tablero depende, sin construir el árbol completo.
 export default function PanelTableros({
   tableros,
   circuitosDeTablero,
   circuitosSinTablero,
+  alimentadores,
   crearTablero,
+  editarTablero,
   eliminarTablero,
 }) {
   const [tableroActivoId, setTableroActivoId] = useState(null);
-  const [nombreNuevo, setNombreNuevo] = useState("");
-  const [tensionNueva, setTensionNueva] = useState("120");
+  const [formAbierto, setFormAbierto] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
+  const [form, setForm] = useState(FORM_VACIO);
 
   const sinAsignar = circuitosSinTablero();
 
-  function alCrear(e) {
-    e.preventDefault();
-    if (!nombreNuevo.trim()) return;
-    const t = crearTablero({ nombre: nombreNuevo, tensionAlimentacion: tensionNueva });
-    setNombreNuevo("");
-    setTensionNueva("120");
-    setTableroActivoId(t.id); // lo abre de una, para ver que se creó bien
+  function abrirCreacion() {
+    setForm(FORM_VACIO);
+    setEditandoId(null);
+    setFormAbierto(true);
   }
+
+  function abrirEdicion(t) {
+    setForm({
+      nombre: t.nombre,
+      tensionAlimentacion: String(t.tensionAlimentacion),
+      fases: t.fases,
+      tableroPadreId: t.tableroPadreId ?? "",
+      longitudAlimentador: t.longitudAlimentador ? String(t.longitudAlimentador) : "",
+      materialAlimentador: t.materialAlimentador,
+    });
+    setEditandoId(t.id);
+    setFormAbierto(true);
+  }
+
+  function cerrarForm() {
+    setForm(FORM_VACIO);
+    setEditandoId(null);
+    setFormAbierto(false);
+  }
+
+  function alGuardar(e) {
+    e.preventDefault();
+    if (!form.nombre.trim()) return;
+    if (editandoId) {
+      editarTablero(editandoId, form);
+    } else {
+      const t = crearTablero(form);
+      setTableroActivoId(t.id); // lo abre de una, para ver que se creó bien
+    }
+    cerrarForm();
+  }
+
+  function alEliminar(t) {
+    eliminarTablero(t.id);
+    if (tableroActivoId === t.id) setTableroActivoId(null);
+    if (editandoId === t.id) cerrarForm();
+  }
+
+  // Un tablero no puede ser su propio padre — filtro trivial de UI.
+  // Nada más (ni ancestros, ni ciclos): esa lógica es el siguiente paso.
+  const opcionesPadre = tableros.filter((t) => t.id !== editandoId);
 
   return (
     <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
-      <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
-        Tableros
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          Tableros
+        </div>
+        {!formAbierto && (
+          <button
+            onClick={abrirCreacion}
+            style={{ padding: "4px 10px", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+          >
+            + Nuevo tablero
+          </button>
+        )}
       </div>
 
-      {/* Alta rápida */}
-      <form onSubmit={alCrear} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <input
-          value={nombreNuevo}
-          onChange={(e) => setNombreNuevo(e.target.value)}
-          placeholder="Nombre del tablero"
-          style={{ ...inputStyle(), flex: 1 }}
-        />
-        <input
-          value={tensionNueva}
-          onChange={(e) => setTensionNueva(e.target.value)}
-          placeholder="V"
-          type="number"
-          style={{ ...inputStyle(), width: 70 }}
-        />
-        <button
-          type="submit"
-          disabled={!nombreNuevo.trim()}
-          style={{
-            padding: "0 14px",
-            borderRadius: 3,
-            border: "none",
-            background: nombreNuevo.trim() ? colores.copper : colores.border,
-            color: nombreNuevo.trim() ? "#171512" : colores.textDim,
-            fontWeight: 700,
-            fontSize: 12,
-            cursor: nombreNuevo.trim() ? "pointer" : "not-allowed",
-          }}
-        >
-          + Crear
-        </button>
-      </form>
+      {formAbierto && (
+        <form onSubmit={alGuardar} style={{ border: `1px solid ${colores.border}`, borderRadius: 4, padding: 12, marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: colores.copper, fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            {editandoId ? "Editar tablero" : "Nuevo tablero"}
+          </div>
+
+          <Campo label="Nombre del tablero">
+            <input
+              style={inputStyle()}
+              value={form.nombre}
+              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              placeholder="Ej: Tablero principal, Subpanel cocina"
+            />
+          </Campo>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Campo label="Tensión alimentación (V)">
+              <input
+                style={inputStyle()}
+                type="number"
+                value={form.tensionAlimentacion}
+                onChange={(e) => setForm({ ...form, tensionAlimentacion: e.target.value })}
+              />
+            </Campo>
+            <Campo label="Fases del alimentador">
+              <div style={{ display: "flex", gap: 6 }}>
+                {FASES.map((f) => (
+                  <BotonPill key={f.valor} activo={form.fases === f.valor} onClick={() => setForm({ ...form, fases: f.valor })}>
+                    {f.label}
+                  </BotonPill>
+                ))}
+              </div>
+            </Campo>
+          </div>
+
+          <Campo label="Tablero padre (opcional)">
+            <select
+              style={inputStyle()}
+              value={form.tableroPadreId}
+              onChange={(e) => setForm({ ...form, tableroPadreId: e.target.value })}
+            >
+              <option value="">— Acometida / poste / transformador —</option>
+              {opcionesPadre.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
+                </option>
+              ))}
+            </select>
+          </Campo>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Campo label="Longitud del alimentador (m)">
+              <input
+                style={inputStyle()}
+                type="number"
+                value={form.longitudAlimentador}
+                onChange={(e) => setForm({ ...form, longitudAlimentador: e.target.value })}
+                placeholder="Desde el origen"
+              />
+            </Campo>
+            <Campo label="Material del alimentador">
+              <div style={{ display: "flex", gap: 6 }}>
+                {["cobre", "aluminio"].map((m) => (
+                  <BotonPill key={m} activo={form.materialAlimentador === m} onClick={() => setForm({ ...form, materialAlimentador: m })}>
+                    <span style={{ textTransform: "capitalize" }}>{m}</span>
+                  </BotonPill>
+                ))}
+              </div>
+            </Campo>
+          </div>
+          <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, margin: "-4px 0 12px" }}>
+            Distancia medida desde el poste, el tablero padre o el transformador de energía hasta este tablero.
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="submit"
+              disabled={!form.nombre.trim()}
+              style={{
+                flex: 1,
+                padding: "9px 0",
+                borderRadius: 3,
+                border: "none",
+                background: form.nombre.trim() ? colores.copper : colores.border,
+                color: form.nombre.trim() ? "#171512" : colores.textDim,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: form.nombre.trim() ? "pointer" : "not-allowed",
+              }}
+            >
+              {editandoId ? "Guardar cambios" : "+ Crear tablero"}
+            </button>
+            <button
+              type="button"
+              onClick={cerrarForm}
+              style={{ padding: "9px 14px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
 
       {tableros.length === 0 ? (
         <div style={{ color: colores.textDim, fontSize: 12.5, textAlign: "center", padding: "10px 0" }}>
@@ -74,6 +277,7 @@ export default function PanelTableros({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {tableros.map((t) => {
             const circuitosDelTablero = circuitosDeTablero(t.id);
+            const padre = t.tableroPadreId ? tableros.find((p) => p.id === t.tableroPadreId) : null;
             const activo = tableroActivoId === t.id;
             return (
               <div
@@ -99,14 +303,24 @@ export default function PanelTableros({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13.5, color: colores.textMain }}>{t.nombre}</div>
                     <div style={{ fontFamily: fuentes.mono, fontSize: 11, color: colores.textDim }}>
-                      {t.tensionAlimentacion}V · {circuitosDelTablero.length} circuito{circuitosDelTablero.length !== 1 ? "s" : ""}
+                      {t.tensionAlimentacion}V · {t.fases} · {circuitosDelTablero.length} circuito{circuitosDelTablero.length !== 1 ? "s" : ""}
                     </div>
                   </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      eliminarTablero(t.id);
-                      if (activo) setTableroActivoId(null);
+                      abrirEdicion(t);
+                    }}
+                    style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 13 }}
+                    aria-label={`Editar tablero ${t.nombre}`}
+                    title="Editar tablero"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      alEliminar(t);
                     }}
                     style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 15 }}
                     aria-label={`Eliminar tablero ${t.nombre}`}
@@ -117,21 +331,30 @@ export default function PanelTableros({
                 </div>
 
                 {activo && (
-                  <div style={{ borderTop: `1px solid ${colores.border}` }}>
-                    {circuitosDelTablero.length === 0 ? (
-                      <div style={{ padding: "8px 12px 8px 30px", fontSize: 12, color: colores.textDim }}>
-                        Sin circuitos asignados — usá el selector de tablero en cada circuito de la lista.
+                  <div style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px", display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontSize: 11.5, color: colores.textDim }}>
+                      Alimenta desde: <strong style={{ color: colores.textMain }}>{padre ? padre.nombre : "Acometida / poste / transformador principal"}</strong>
+                      {t.longitudAlimentador > 0 && ` · ${t.longitudAlimentador}m de ${t.materialAlimentador}`}
+                    </div>
+
+                    <BloqueAlimentador resultado={alimentadores?.[t.id]} />
+
+                    <div>
+                      <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+                        Circuitos
                       </div>
-                    ) : (
-                      circuitosDelTablero.map((c) => (
-                        <div
-                          key={c.id}
-                          style={{ padding: "7px 12px 7px 30px", fontSize: 12.5, color: colores.textMain, borderBottom: `1px solid ${colores.border}` }}
-                        >
-                          {c.nombre || "(sin nombre)"}
+                      {circuitosDelTablero.length === 0 ? (
+                        <div style={{ fontSize: 12, color: colores.textDim }}>
+                          Sin circuitos asignados — usá el selector de tablero en cada circuito de la lista.
                         </div>
-                      ))
-                    )}
+                      ) : (
+                        circuitosDelTablero.map((c) => (
+                          <div key={c.id} style={{ fontSize: 12.5, color: colores.textMain, padding: "3px 0" }}>
+                            {c.nombre || "(sin nombre)"}
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -1,8 +1,13 @@
 /**
  * TableroMediator
- * Responsabilidad: dominio Tablero — dato relacional puro (Fase 3).
+ * Responsabilidad: dominio Tablero — dato relacional puro (Fase 3) +
+ * alimentador (Fase 4: longitud, material, fases, tableroPadreId).
  * CERO gráfico: eso es DiagramaMediator (Fase 6), que consumirá este
  * dato más adelante pero es un dominio distinto.
+ *
+ * NO implementa (todavía) la lógica de encadenar tableroPadreId hacia
+ * arriba (subpaneles, jerarquía, detección de ciclos) — es el
+ * siguiente paso, no esta sesión.
  *
  * Dependencias permitidas: DataProvider (lectura), funciones internas
  * del módulo tablero, y — desde Fase 4 (alimentador) — la función pura
@@ -18,6 +23,7 @@
  */
 import {
   crearTablero,
+  editarTablero,
   circuitosDeTablero,
   circuitosSinTablero,
   asignarCircuitoATablero,
@@ -32,6 +38,23 @@ export const TableroMediator = {
   /** Fábrica de un tablero nuevo (no lo guarda — eso lo hace el hook). */
   crear(datos) {
     return crearTablero(datos);
+  },
+
+  /**
+   * Devuelve el tablero editado; el hook decide cómo guardarlo. Un
+   * tableroPadreId que apunta al propio tablero se ignora (no tiene
+   * sentido físico) — la validación de padre inexistente la hace
+   * ValidacionMediator sobre el modelo guardado.
+   */
+  editar(tablero, cambios) {
+    let cambiosFinal = cambios;
+    if (cambios.tableroPadreId && cambios.tableroPadreId === tablero.id) {
+      Logger.warn("TableroMediator.editar: tableroPadreId no puede ser el propio tablero, se ignora", {
+        id: tablero.id,
+      });
+      cambiosFinal = { ...cambios, tableroPadreId: tablero.tableroPadreId };
+    }
+    return editarTablero(tablero, cambiosFinal);
   },
 
   listar() {
@@ -74,24 +97,34 @@ export const TableroMediator = {
    * DataProvider.getResultados(), no dispara el motor en cadena — mismo
    * anti-ciclo que ya respeta ValidacionMediator).
    * PROVISIONAL: ver nota en modules/motor/calcularAlimentador.js.
+   *
+   * Acepta overrides explícitos (circuitos/resultados/normativaId/
+   * tablero), todos opcionales — llamarlo solo con tableroId funciona
+   * exactamente igual que antes (cae al DataProvider). Los overrides
+   * existen porque el snapshot del DataProvider se sincroniza en un
+   * useEffect que corre DESPUÉS del render: si la UI llama a este
+   * método durante el render con datos recién cambiados (tableros/
+   * circuitos/resultados), el DataProvider todavía tiene el snapshot
+   * del render anterior. Pasando los valores frescos se evita ese
+   * desfase de un render.
    */
-  calcularAlimentador(tableroId) {
-    const tablero = DataProvider.getTablero(tableroId);
-    if (!tablero) {
+  calcularAlimentador(tableroId, { circuitos, resultados, normativaId, tablero } = {}) {
+    const t = tablero ?? DataProvider.getTablero(tableroId);
+    if (!t) {
       return { ok: false, error: `Tablero ${tableroId} no existe.` };
     }
 
-    const circuitos = circuitosDeTablero(tableroId, DataProvider.getCircuitos());
-    const resultados = DataProvider.getResultados();
-    const resultadosDelTablero = circuitos
-      .map((c) => resultados.find((r) => r.id === c.id))
+    const circuitosDelTablero = circuitosDeTablero(tableroId, circuitos ?? DataProvider.getCircuitos());
+    const listaResultados = resultados ?? DataProvider.getResultados();
+    const resultadosDelTablero = circuitosDelTablero
+      .map((c) => listaResultados.find((r) => r.id === c.id))
       .filter(Boolean);
 
-    const normativa = NormativaMediator.obtener(DataProvider.getNormativaActivaId());
+    const normativa = NormativaMediator.obtener(normativaId ?? DataProvider.getNormativaActivaId());
     if (!normativa) {
       return { ok: false, error: "Normativa activa no resuelta." };
     }
 
-    return calcularAlimentador(tablero, resultadosDelTablero, tablero.fases, normativa);
+    return calcularAlimentador(t, resultadosDelTablero, t.fases, normativa);
   },
 };
