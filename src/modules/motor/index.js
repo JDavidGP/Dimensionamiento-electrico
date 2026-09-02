@@ -6,6 +6,7 @@
 export { calcularCircuito } from "./calcularCircuito.js";
 export { calcularCorriente, potenciaDesdeCorriente } from "./corriente.js";
 export { calcularCaidaTension } from "./caidaTension.js";
+export { evaluarCaidaAcumulada } from "./caidaTensionAcumulada.js";
 export { seleccionarBreaker } from "./breaker.js";
 export { resistenciaOhmKm } from "./resistencia.js";
 export { combinarCargas, potenciaDeEquipo } from "./cargaCombinada.js";

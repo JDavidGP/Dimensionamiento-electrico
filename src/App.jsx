@@ -21,6 +21,7 @@ export default function App() {
     nuevoProyecto,
     circuitos,
     resultados,
+    resultadosParaTabla,
     totales,
     normativaActiva,
     setNormativaActiva,
@@ -122,7 +123,7 @@ export default function App() {
 
           <TablaResultados
             circuitos={circuitos}
-            resultados={resultados}
+            resultados={resultadosParaTabla}
             equiposDe={equiposDe}
             circuitoActivoId={circuitoActivoId}
             onSeleccionarCircuito={setCircuitoActivoId}

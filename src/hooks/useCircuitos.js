@@ -76,6 +76,33 @@ export function useCircuitos() {
     return mapa;
   }, [tableros, circuitos, resultados, normativaActiva]);
 
+  // Chequeo ADICIONAL de caída de tensión acumulada (alimentador + circuito),
+  // PROVISIONAL — ver evaluarCaidaAcumulada en modules/motor. Deriva una
+  // copia de `resultados` con una advertencia extra cuando corresponde;
+  // NO toca `resultados` (sigue siendo la fuente para totales, para el
+  // cálculo de `alimentadores` de arriba, y para detalleElectrico). Si el
+  // circuito no tiene tablero, o el tablero no tiene alimentador calculado
+  // todavía (pendiente o error), no se agrega nada — no se asume un valor.
+  const resultadosParaTabla = useMemo(() => {
+    return resultados.map((r) => {
+      if (!r.ok) return r;
+      const circuito = circuitos.find((c) => c.id === r.id);
+      const alimentador = circuito?.tableroId ? alimentadores[circuito.tableroId] : null;
+      if (!alimentador?.ok) return r;
+
+      const evaluacion = App.motor.caidaAcumulada(r.caidaPct, alimentador.caidaPct);
+      if (!evaluacion.aplica || !evaluacion.excede) return r;
+
+      return {
+        ...r,
+        advertencias: [
+          ...r.advertencias,
+          `Caída de tensión ACUMULADA (alimentador + circuito) ${evaluacion.totalPct.toFixed(2)}% supera el ${evaluacion.limitePct}% provisional (circuito ${r.caidaPct.toFixed(2)}% + alimentador ${alimentador.caidaPct.toFixed(2)}%).`,
+        ],
+      };
+    });
+  }, [resultados, circuitos, alimentadores]);
+
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
     () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros),
@@ -300,6 +327,7 @@ export function useCircuitos() {
     circuitos,
     equipos,
     resultados,
+    resultadosParaTabla,
     totales,
     normativaActiva,
     setNormativaActiva,
