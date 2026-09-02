@@ -7,6 +7,11 @@ import { NEC } from "./nec.js";
 import { CIEN } from "./cien.js";
 import { IEC_ES } from "./iec/es.js";
 
+// NO se agrega un campo de "tabla de simultaneidad" acá a propósito:
+// investigado y descartado por falta de fuente a nivel de UN circuito
+// (NEC 220 ya son reglasDemanda; la simultaneidad real de REBT opera a
+// nivel Tablero/alimentador, no circuito). Ver el comentario completo
+// en modules/motor/factorDemanda.js antes de reabrir este tema.
 const CAMPOS_OBLIGATORIOS = [
   "id",
   "nombre",

@@ -15,6 +15,9 @@ export const CIRCUITO_VACIO = {
   temp: "30",
   // Solo informativo; NUNCA alimenta el dimensionamiento.
   // Visible en UI solo si tipo=mixto y hay >1 equipo.
+  // A propósito SIN tabla por normativa (no es un campo pendiente,
+  // es una decisión investigada) — ver el comentario completo en
+  // modules/motor/factorDemanda.js.
   factorSimultaneidadManual: "", // "" | "0.0"–"1.0"
   // Dato relacional puro (Fase 3) — a qué tablero pertenece. null =
   // sin asignar todavía. NO tiene UI propia todavía; se gestiona vía

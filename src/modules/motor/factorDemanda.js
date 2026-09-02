@@ -18,6 +18,28 @@
  *   (a) demanda normativa  → dimensiona
  *   (b) continuidad        → por equipo, dentro del grupo
  *   (c) simultaneidad campo → solo referencia
+ *
+ * DECISIÓN (investigada, no arbitraria): circuito.factorSimultaneidadManual
+ * queda MANUAL, sin tabla por normativa — a diferencia de reglasDemanda,
+ * que sí tiene tabla porque hay artículo específico por tipo de equipo.
+ * Se evaluó agregar una tabla de simultaneidad al contrato de normativa
+ * (mismo patrón que demandaPorDefecto) y no hay fuente que la respalde
+ * a nivel de UN circuito:
+ *   - NEC Art. 220 ya tiene sus propias tablas de diversidad/demanda por
+ *     tipo de equipo — son justamente reglasDemanda de arriba. Duplicar
+ *     eso acá como "tabla de simultaneidad" sería inventar una segunda
+ *     fuente para el mismo número, o reimplementar 220.42/53/54/55 con
+ *     otro nombre.
+ *   - La simultaneidad real de REBT (España, ITC-BT-10) sí existe como
+ *     tabla oficial, pero opera sobre el ALIMENTADOR/TABLERO (varias
+ *     viviendas compartiendo acometida), no sobre un circuito individual
+ *     — por eso normativa/iec/es.js ya la dejó como
+ *     `factorDiversidad: null`, placeholder explícito a nivel Tablero,
+ *     no a nivel Circuito. No es lo mismo que este campo.
+ * Mientras no exista una tabla oficial a nivel de circuito, el número lo
+ * sigue poniendo el usuario (buen juicio de campo: cuántos equipos de un
+ * circuito mixto realmente coinciden en uso), nunca dimensiona, y por
+ * eso normativa/index.js NO lo agrega a CAMPOS_OBLIGATORIOS.
  */
 
 import { FACTOR_CARGA_CONTINUA } from "../../shared/constants/constantes.js";
