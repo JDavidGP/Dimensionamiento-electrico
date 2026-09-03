@@ -192,9 +192,22 @@ export const TableroMediator = {
     const deltaVPorTramo = [Number(circuito.voltaje) * (resultadoCircuito.caidaPct / 100)];
 
     for (const tablero of cadena) {
-      const alim = this.calcularAlimentador(tablero.id, { circuitos, resultados, normativaId, tablero });
+      // AGREGADO, no solo circuitos directos: la corriente que pasa por
+      // el alimentador de este tablero es la de TODO su subárbol (sus
+      // propios circuitos + cualquier subpanel que cuelgue de él), no
+      // solo la porción que le corresponde a este circuito en particular
+      // — la caída de tensión del conductor depende de la corriente
+      // real que lo atraviesa, no de a quién "le toca" cada amperio.
+      const alim = this.calcularAlimentadorAgregado(tablero.id, { tableros: listaTableros, circuitos, resultados, normativaId });
 
       if (!alim.ok) {
+        if (alim.ciclo) {
+          // Ciclo en el SUBÁRBOL de este tablero (padre→hijos) — distinto
+          // del ciclo hijo→padre que ya se descartó arriba con
+          // obtenerCadenaAscendente. Puede pasar en una rama hermana sin
+          // afectar el camino ascendente en sí.
+          return { aplica: true, ok: false, ciclo: true, error: alim.error };
+        }
         if (alim.pendiente) {
           return {
             aplica: true,

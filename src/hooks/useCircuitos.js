@@ -61,16 +61,21 @@ export function useCircuitos() {
     return { potenciaTotal, potenciaConectada, corrienteTotal };
   }, [resultados]);
 
-  // Alimentador de cada tablero, vía TableroMediator (no dispara el
-  // motor en cadena: usa los `resultados` de circuitos ya calculados).
+  // Alimentador de cada tablero, vía TableroMediator — AGREGADO: incluye
+  // la demanda de todo su subárbol (sus circuitos propios + la de cada
+  // tablero hijo, recursivo), no solo sus circuitos directos. Antes de
+  // esto, un tablero padre sin circuitos propios (el caso normal de un
+  // panel principal que solo alimenta subpaneles) quedaba "pendiente"
+  // para siempre y su calibre/breaker nunca se veía — no dispara el
+  // motor en cadena: usa los `resultados` de circuitos ya calculados.
   const alimentadores = useMemo(() => {
     const mapa = {};
     tableros.forEach((t) => {
-      mapa[t.id] = App.tablero.calcularAlimentador(t.id, {
+      mapa[t.id] = App.tablero.calcularAlimentadorAgregado(t.id, {
+        tableros,
         circuitos,
         resultados,
         normativaId: normativaActiva,
-        tablero: t,
       });
     });
     return mapa;
