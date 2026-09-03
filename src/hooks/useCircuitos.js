@@ -82,7 +82,9 @@ export function useCircuitos() {
   }, [tableros, circuitos, resultados, normativaActiva]);
 
   // Chequeo ADICIONAL de caída de tensión acumulada, recorriendo la
-  // cadena de tableros hacia arriba (tableroPadreId), PROVISIONAL — ver
+  // cadena de tableros hacia arriba (tableroPadreId). Límite 5%
+  // CONFIRMADO con fuente (NEC 210.19(A) Nota informativa N.° 4 +
+  // 215.2(A)(1) Nota informativa N.° 2) — ver
   // TableroMediator.caidaAcumuladaDesdeCircuito y
   // modules/motor/caidaTensionAcumulada.js. Deriva una copia de
   // `resultados` con una advertencia extra cuando corresponde; NO toca

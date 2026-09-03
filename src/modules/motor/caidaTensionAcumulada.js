@@ -13,8 +13,13 @@
 // nunca sumando porcentajes que ya vienen calculados contra bases
 // distintas, que es matemáticamente inválido.
 //
-// PROVISIONAL (ver LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT en
-// shared/constants/constantes.js): 5% total, sin cambios de esta sesión.
+// Límite: 5% total — CONFIRMADO con fuente (NEC 210.19(A) Nota
+// informativa N.° 4 + 215.2(A)(1) Nota informativa N.° 2, nota
+// INFORMATIVA no exigible por artículo, NEC §90.5). Ver el comentario
+// completo de LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT en
+// shared/constants/constantes.js — sigue nombrada PROVISIONAL como
+// política del proyecto (afinable para media tensión/transformadores),
+// no porque la cifra esté sin verificar.
 //
 // FUERA DE ALCANCE (a propósito, no esta sesión): transformadores,
 // cambio de nivel de tensión entre tramos, frecuencias distintas. Esta

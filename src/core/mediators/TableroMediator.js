@@ -144,8 +144,11 @@ export const TableroMediator = {
    * padre del padre → ... hasta la acometida). Suma VOLTIOS (no
    * porcentajes — cada tramo puede tener su propia tensión nominal) y
    * calcula el % final UNA sola vez, contra circuito.voltaje (la
-   * tensión del punto de utilización). PROVISIONAL, ver
-   * modules/motor/caidaTensionAcumulada.js.
+   * tensión del punto de utilización). Límite 5% CONFIRMADO con fuente
+   * (NEC 210.19(A) Nota informativa N.° 4 + 215.2(A)(1) Nota informativa
+   * N.° 2) — ver el comentario completo en
+   * modules/motor/caidaTensionAcumulada.js y en
+   * LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT.
    *
    * Contrato de retorno (el hook decide qué mostrar con cada caso):
    *   { aplica: false }                                    — nada que evaluar
