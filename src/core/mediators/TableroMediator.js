@@ -5,9 +5,10 @@
  * CERO gráfico: eso es DiagramaMediator (Fase 6), que consumirá este
  * dato más adelante pero es un dominio distinto.
  *
- * NO implementa (todavía) la lógica de encadenar tableroPadreId hacia
- * arriba (subpaneles, jerarquía, detección de ciclos) — es el
- * siguiente paso, no esta sesión.
+ * caidaAcumuladaDesdeCircuito() SÍ encadena tableroPadreId hacia arriba
+ * (caída de tensión acumulada, con detección de ciclos). Lo que sigue
+ * sin existir es la jerarquía VISUAL/lista de subpaneles hacia abajo
+ * — eso es un paso aparte, no esta sesión.
  *
  * Dependencias permitidas: DataProvider (lectura), funciones internas
  * del módulo tablero, y — desde Fase 4 (alimentador) — la función pura
@@ -28,8 +29,9 @@ import {
   circuitosSinTablero,
   asignarCircuitoATablero,
   liberarCircuitosDeTablero,
+  obtenerCadenaAscendente,
 } from "../../modules/tablero/index.js";
-import { calcularAlimentador } from "../../modules/motor/index.js";
+import { calcularAlimentador, evaluarCaidaAcumulada } from "../../modules/motor/index.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { Logger } from "../services/Logger.js";
@@ -126,5 +128,91 @@ export const TableroMediator = {
     }
 
     return calcularAlimentador(t, resultadosDelTablero, t.fases, normativa);
+  },
+
+  /**
+   * Caída de tensión ACUMULADA de un circuito, recorriendo la cadena de
+   * tableros hacia arriba (su propio tablero → tableroPadreId → el
+   * padre del padre → ... hasta la acometida). Suma VOLTIOS (no
+   * porcentajes — cada tramo puede tener su propia tensión nominal) y
+   * calcula el % final UNA sola vez, contra circuito.voltaje (la
+   * tensión del punto de utilización). PROVISIONAL, ver
+   * modules/motor/caidaTensionAcumulada.js.
+   *
+   * Contrato de retorno (el hook decide qué mostrar con cada caso):
+   *   { aplica: false }                                    — nada que evaluar
+   *   { aplica: true, ok: false, ciclo: true, error }       — jerarquía con ciclo
+   *   { aplica: true, ok: false, noDeterminado: true, motivo } — falta un tramo
+   *   { aplica: true, ok: false, tramoFallido: true, motivo }  — un tramo ya no cumple por sí solo
+   *   { aplica: true, ok: true, deltaVTotal, totalPct, limitePct,
+   *     excede, cantidadTramos, cantidadTableros }           — resultado completo
+   *
+   * FUERA DE ALCANCE (a propósito): transformadores / cambio de nivel
+   * de tensión entre tramos, frecuencias distintas, subpanel con
+   * alimentación mixta 120V/240V simultánea (depende de balance de
+   * fases). Esta función asume una sola tensión de referencia válida
+   * para toda la cadena.
+   */
+  caidaAcumuladaDesdeCircuito(circuito, { tableros, circuitos, resultados, normativaId, resultadoCircuito } = {}) {
+    if (!circuito?.tableroId) {
+      return { aplica: false };
+    }
+    if (!resultadoCircuito?.ok) {
+      return { aplica: false };
+    }
+
+    const listaTableros = tableros ?? DataProvider.getTableros();
+    const { cadena, ciclo } = obtenerCadenaAscendente(circuito.tableroId, listaTableros);
+
+    if (ciclo) {
+      const nombreInicio = listaTableros.find((t) => t.id === circuito.tableroId)?.nombre ?? circuito.tableroId;
+      return {
+        aplica: true,
+        ok: false,
+        ciclo: true,
+        error: `Ciclo detectado en la jerarquía de tableros a partir de "${nombreInicio}" — revisá el tablero padre de esos tableros, nunca debería volver sobre sí mismo.`,
+      };
+    }
+
+    if (cadena.length === 0) {
+      // circuito.tableroId apunta a un tablero que no existe — dato
+      // roto que ya reporta ValidacionMediator aparte; acá no hay
+      // cadena real que recorrer, no se inventa un resultado.
+      return { aplica: false };
+    }
+
+    const deltaVPorTramo = [Number(circuito.voltaje) * (resultadoCircuito.caidaPct / 100)];
+
+    for (const tablero of cadena) {
+      const alim = this.calcularAlimentador(tablero.id, { circuitos, resultados, normativaId, tablero });
+
+      if (!alim.ok) {
+        if (alim.pendiente) {
+          return {
+            aplica: true,
+            ok: false,
+            noDeterminado: true,
+            motivo: `Tablero "${tablero.nombre}": ${alim.motivo}`,
+          };
+        }
+        return {
+          aplica: true,
+          ok: false,
+          tramoFallido: true,
+          motivo: `Tablero "${tablero.nombre}" ya no cumple su propio límite de tramo (3%) por separado: ${alim.error}`,
+        };
+      }
+
+      deltaVPorTramo.push(Number(tablero.tensionAlimentacion) * (alim.caidaPct / 100));
+    }
+
+    const evaluacion = evaluarCaidaAcumulada(deltaVPorTramo, Number(circuito.voltaje));
+
+    return {
+      aplica: true,
+      ok: true,
+      ...evaluacion,
+      cantidadTableros: cadena.length,
+    };
   },
 };

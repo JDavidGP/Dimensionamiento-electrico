@@ -11,9 +11,11 @@
 // ARCHITECTURE.md ya prohíbe para tabla↔diagrama. `circuitosDeTablero()`
 // siempre se calcula filtrando, nunca se mantiene una segunda copia.
 //
-// tableroPadreId ya vive en el modelo (de dónde viene el alimentador),
-// pero la lógica de encadenarlo hacia arriba (subpaneles, jerarquía,
-// ciclos) es el siguiente paso — no esta sesión.
+// tableroPadreId ya vive en el modelo (de dónde viene el alimentador).
+// obtenerCadenaAscendente() es la primera pieza que lo encadena de
+// verdad (caída de tensión acumulada, recorriendo tablero → padre →
+// padre del padre...). Todavía NO hay jerarquía visual ni lista de
+// subpaneles hacia abajo — eso sigue siendo el siguiente paso.
 
 import { generarId } from "../../shared/utils/id.js";
 
@@ -68,4 +70,39 @@ export function liberarCircuitosDeTablero(tableroId, circuitos = []) {
   return circuitos.map((c) =>
     c.tableroId === tableroId ? { ...c, tableroId: null } : c
   );
+}
+
+/**
+ * Sube por tableroPadreId desde `tableroId` hasta la raíz (tablero sin
+ * padre) o hasta detectar un ciclo. Devuelve la cadena en orden
+ * ascendente — el propio tablero primero, después su padre, el padre
+ * del padre, etc. NO incluye el circuito que originó la consulta, eso
+ * lo agrega el llamador.
+ *
+ * Un tableroPadreId que vuelve a apuntar a un tablero YA visitado en
+ * ESTA cadena es un ciclo: se corta ahí y se devuelve `ciclo: true` en
+ * vez de colgar la función — nunca loop infinito. Un tableroPadreId
+ * que apunta a un tablero inexistente simplemente termina la cadena
+ * ahí (no es un ciclo, es una referencia rota — la reporta
+ * ValidacionMediator aparte).
+ *
+ * @returns {{ cadena: object[], ciclo: boolean }}
+ */
+export function obtenerCadenaAscendente(tableroId, tableros = []) {
+  const cadena = [];
+  const visitados = new Set();
+  let actualId = tableroId;
+
+  while (actualId) {
+    if (visitados.has(actualId)) {
+      return { cadena, ciclo: true };
+    }
+    const actual = tableros.find((t) => t.id === actualId);
+    if (!actual) break;
+    visitados.add(actualId);
+    cadena.push(actual);
+    actualId = actual.tableroPadreId;
+  }
+
+  return { cadena, ciclo: false };
 }

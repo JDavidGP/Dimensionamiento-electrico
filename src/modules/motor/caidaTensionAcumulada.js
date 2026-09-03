@@ -1,38 +1,56 @@
-// Chequeo ADICIONAL de caída de tensión ACUMULADA (alimentador + circuito
-// derivado). NO reemplaza el chequeo individual de cada tramo — eso sigue
-// viviendo en seleccionarSeccion.js, contra normativa.limiteCaidaTensionPct
-// (3% por tramo, sin cambios). Esta función solo suma dos porcentajes YA
-// calculados por otros módulos y compara contra el límite combinado.
+// Chequeo ADICIONAL de caída de tensión ACUMULADA sobre una CADENA de
+// tramos (circuito + N alimentadores de tablero, subiendo tableroPadreId
+// hasta la acometida). NO reemplaza el chequeo individual de cada tramo
+// — eso sigue viviendo en seleccionarSeccion.js, contra
+// normativa.limiteCaidaTensionPct (3% por tramo, sin cambios).
+//
+// MÉTODO (decidido, ver conversación de diseño): se suman VOLTIOS
+// (deltaV), no porcentajes — cada tramo de la cadena puede tener una
+// tensión nominal de referencia distinta (ej. si algún día hay cambio
+// de nivel de tensión en el medio, ver nota de alcance abajo). El %
+// final se calcula UNA sola vez, al terminar de sumar, contra la
+// tensión nominal del punto de utilización (la carga que se evalúa) —
+// nunca sumando porcentajes que ya vienen calculados contra bases
+// distintas, que es matemáticamente inválido.
 //
 // PROVISIONAL (ver LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT en
-// shared/constants/constantes.js): 5% total, nota informativa de NEC
-// 210.19(A) (3% circuito + 3% alimentador). Hoy solo suma UN tramo de
-// alimentador (tablero → acometida); cuando se encadene tableroPadreId
-// (varios tableros en serie) este chequeo va a necesitar sumar cada tramo
-// intermedio, no solo dos — eso es trabajo de la sesión de subtableros,
-// no de este módulo.
+// shared/constants/constantes.js): 5% total, sin cambios de esta sesión.
+//
+// FUERA DE ALCANCE (a propósito, no esta sesión): transformadores,
+// cambio de nivel de tensión entre tramos, frecuencias distintas. Esta
+// función asume que `tensionReferenciaV` es válida para TODOS los
+// tramos que ya se sumaron en voltios — mezclar niveles de tensión sin
+// modelar el transformador es responsabilidad de quien arme
+// deltaVPorTramo, no de esta función.
+//
+// Esta función NO sabe de dónde salen los deltaV, ni si algún tramo de
+// la cadena falló o está pendiente — eso lo resuelve el llamador
+// (TableroMediator.caidaAcumuladaDesdeCircuito) ANTES de invocarla: si
+// esta función se llama, es porque todos los tramos son válidos.
 import { LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT } from "../../shared/constants/constantes.js";
 
 /**
- * @param {number} caidaCircuitoPct - % de caída del circuito derivado (ya calculado).
- * @param {number|null|undefined} caidaAlimentadorPct - % de caída del
- *   alimentador del tablero al que pertenece el circuito. Pasar
- *   null/undefined cuando no hay dato (circuito sin tablero, o tablero sin
- *   alimentador calculado todavía) — NUNCA se asume 0 acá: el llamador
- *   recibe `aplica: false` y no debe mostrar ni inventar un resultado.
- * @returns {{aplica: false} | {aplica: true, totalPct: number, limitePct: number, excede: boolean}}
+ * @param {number[]} deltaVPorTramo - caída en VOLTIOS de cada tramo de
+ *   la cadena (circuito + cada alimentador), ya validados por el
+ *   llamador. El orden no importa, solo se suman.
+ * @param {number} tensionReferenciaV - tensión nominal del punto de
+ *   utilización (normalmente circuito.voltaje) — denominador del %
+ *   final, se aplica UNA sola vez.
+ * @returns {{
+ *   aplica: true, deltaVTotal: number, totalPct: number,
+ *   limitePct: number, excede: boolean, cantidadTramos: number
+ * }}
  */
-export function evaluarCaidaAcumulada(caidaCircuitoPct, caidaAlimentadorPct) {
-  if (caidaAlimentadorPct == null || !Number.isFinite(Number(caidaAlimentadorPct))) {
-    return { aplica: false };
-  }
-
-  const totalPct = Number(caidaCircuitoPct) + Number(caidaAlimentadorPct);
+export function evaluarCaidaAcumulada(deltaVPorTramo, tensionReferenciaV) {
+  const deltaVTotal = deltaVPorTramo.reduce((s, v) => s + Number(v), 0);
+  const totalPct = (deltaVTotal / Number(tensionReferenciaV)) * 100;
 
   return {
     aplica: true,
+    deltaVTotal,
     totalPct,
     limitePct: LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT,
     excede: totalPct > LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT,
+    cantidadTramos: deltaVPorTramo.length,
   };
 }

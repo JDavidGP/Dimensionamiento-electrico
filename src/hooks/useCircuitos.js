@@ -76,32 +76,58 @@ export function useCircuitos() {
     return mapa;
   }, [tableros, circuitos, resultados, normativaActiva]);
 
-  // Chequeo ADICIONAL de caída de tensión acumulada (alimentador + circuito),
-  // PROVISIONAL — ver evaluarCaidaAcumulada en modules/motor. Deriva una
-  // copia de `resultados` con una advertencia extra cuando corresponde;
-  // NO toca `resultados` (sigue siendo la fuente para totales, para el
-  // cálculo de `alimentadores` de arriba, y para detalleElectrico). Si el
-  // circuito no tiene tablero, o el tablero no tiene alimentador calculado
-  // todavía (pendiente o error), no se agrega nada — no se asume un valor.
+  // Chequeo ADICIONAL de caída de tensión acumulada, recorriendo la
+  // cadena de tableros hacia arriba (tableroPadreId), PROVISIONAL — ver
+  // TableroMediator.caidaAcumuladaDesdeCircuito y
+  // modules/motor/caidaTensionAcumulada.js. Deriva una copia de
+  // `resultados` con una advertencia extra cuando corresponde; NO toca
+  // `resultados` (sigue siendo la fuente para totales, para
+  // `alimentadores` de arriba, y para detalleElectrico).
+  //
+  // - ciclo / tramoFallido -> advertencia (no se pudo determinar, y por
+  //   qué) — son datos rotos o un tramo que ya falló por su cuenta,
+  //   vale la pena que se vean aunque no se sepa el % final.
+  // - noDeterminado (falta un tramo por calcular) -> no se muestra
+  //   nada, igual que cuando falta cualquier otro dato del proyecto.
+  // - excede -> advertencia con el % total Y la cantidad de tramos
+  //   sobre los que se calculó (nunca el número solo).
   const resultadosParaTabla = useMemo(() => {
     return resultados.map((r) => {
       if (!r.ok) return r;
       const circuito = circuitos.find((c) => c.id === r.id);
-      const alimentador = circuito?.tableroId ? alimentadores[circuito.tableroId] : null;
-      if (!alimentador?.ok) return r;
+      if (!circuito) return r;
 
-      const evaluacion = App.motor.caidaAcumulada(r.caidaPct, alimentador.caidaPct);
-      if (!evaluacion.aplica || !evaluacion.excede) return r;
+      const acumulada = App.tablero.caidaAcumuladaDesdeCircuito(circuito, {
+        tableros,
+        circuitos,
+        resultados,
+        normativaId: normativaActiva,
+        resultadoCircuito: r,
+      });
+
+      if (!acumulada.aplica || acumulada.noDeterminado) return r;
+
+      if (acumulada.ciclo || acumulada.tramoFallido) {
+        return {
+          ...r,
+          advertencias: [
+            ...r.advertencias,
+            `Caída de tensión acumulada NO se pudo determinar: ${acumulada.error ?? acumulada.motivo}`,
+          ],
+        };
+      }
+
+      if (!acumulada.excede) return r;
 
       return {
         ...r,
         advertencias: [
           ...r.advertencias,
-          `Caída de tensión ACUMULADA (alimentador + circuito) ${evaluacion.totalPct.toFixed(2)}% supera el ${evaluacion.limitePct}% provisional (circuito ${r.caidaPct.toFixed(2)}% + alimentador ${alimentador.caidaPct.toFixed(2)}%).`,
+          `Caída de tensión ACUMULADA ${acumulada.totalPct.toFixed(2)}% supera el ${acumulada.limitePct}% provisional, calculada sobre ${acumulada.cantidadTramos} tramos (circuito + ${acumulada.cantidadTableros} tablero${acumulada.cantidadTableros !== 1 ? "s" : ""}).`,
         ],
       };
     });
-  }, [resultados, circuitos, alimentadores]);
+  }, [resultados, circuitos, tableros, normativaActiva]);
 
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
