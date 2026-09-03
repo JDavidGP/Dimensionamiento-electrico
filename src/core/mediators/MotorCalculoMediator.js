@@ -17,6 +17,7 @@ import {
   calcularCortocircuitoTrifasico,
   calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
+  balanceFases,
 } from "../../modules/motor/index.js";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { DataProvider } from "../services/DataProvider.js";
@@ -66,4 +67,5 @@ export const MotorCalculoMediator = {
   cortocircuitoTrifasico: calcularCortocircuitoTrifasico,
   cortocircuitoMonofasico: calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
+  balanceFases,
 };

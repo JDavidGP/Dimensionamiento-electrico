@@ -46,6 +46,9 @@ export function formularioACircuito(form, idExistente = null) {
     // TableroMediator), pero no se debe perder al re-guardar un circuito
     // existente que ya tenía tablero asignado.
     tableroId: form.tableroId ?? null,
+    // Pass-through, mismo criterio: todavía no hay UI para elegir línea
+    // (balance de fases), no se debe perder al re-guardar.
+    lineas: form.lineas ?? [],
   };
 }
 
@@ -62,6 +65,7 @@ export function circuitoAFormulario(circuito) {
     factorSimultaneidadManual:
       circuito.factorSimultaneidadManual == null ? "" : String(circuito.factorSimultaneidadManual),
     tableroId: circuito.tableroId ?? null,
+    lineas: circuito.lineas ?? [],
   };
 }
 

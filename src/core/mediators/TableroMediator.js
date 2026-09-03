@@ -39,7 +39,7 @@ import {
   hijosDeTablero,
   obtenerArbolDescendentePostOrden,
 } from "../../modules/tablero/index.js";
-import { calcularAlimentador, evaluarCaidaAcumulada } from "../../modules/motor/index.js";
+import { calcularAlimentador, evaluarCaidaAcumulada, balanceFases } from "../../modules/motor/index.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { Logger } from "../services/Logger.js";
@@ -341,5 +341,117 @@ export const TableroMediator = {
     }
 
     return agregados[tableroId];
+  },
+
+  /**
+   * Balance de fases de UN tablero: % de desbalance de corriente entre
+   * sus líneas (L1/L2/L3), agregando sus circuitos propios (según
+   * circuito.lineas) + sus subtableros hijos DIRECTOS (según
+   * hijo.lineasAlimentador, con la corriente YA agregada de todo el
+   * subárbol de ese hijo vía calcularAlimentadorAgregado — NO hace
+   * falta un recorrido recursivo propio para esto, ya lo resuelve esa
+   * función; acá solo se reparte ese total entre las líneas del padre
+   * que ese hijo declara usar).
+   *
+   * Por qué CORRIENTE, no potencia: un circuito/alimentador bifásico no
+   * "reparte" su corriente entre sus dos líneas, la misma corriente
+   * atraviesa ambas — ver la nota completa en modules/motor/balanceFases.js.
+   *
+   * Mismo criterio "nunca sumar 0 y seguir" que caidaAcumuladaDesdeCircuito:
+   * si CUALQUIER circuito propio o hijo directo no tiene línea(s)
+   * asignada(s) todavía, o no calcula OK, el resultado es
+   * `noDeterminado`, no un % parcial que omite esa carga en silencio.
+   *
+   * Contrato de retorno:
+   *   { aplica: false }                             — tablero mono (nada
+   *                                                     que balancear),
+   *                                                     o sin circuitos/hijos
+   *   { aplica: true, ok: false, noDeterminado: true, motivo }
+   *   { aplica: true, ok: true, porLinea, porcentajeDesbalance,
+   *     limitePct, excede }
+   *
+   * UMBRAL sin decidir todavía — ver UMBRAL_DESBALANCE_FASES_PCT en
+   * shared/constants/constantes.js. FUERA DE ALCANCE esta sesión: UI
+   * para asignar líneas (circuito.lineas / tablero.lineasAlimentador),
+   * subtablero con alimentación mixta 120V/240V simultánea.
+   */
+  balanceFasesDeTablero(tableroId, { tableros, circuitos, resultados, normativaId } = {}) {
+    const listaTableros = tableros ?? DataProvider.getTableros();
+    const tablero = listaTableros.find((t) => t.id === tableroId);
+    if (!tablero) {
+      return { aplica: false };
+    }
+    if (tablero.fases === "mono") {
+      return { aplica: false }; // una sola línea -- no hay nada que balancear
+    }
+
+    const listaCircuitos = circuitos ?? DataProvider.getCircuitos();
+    const listaResultados = resultados ?? DataProvider.getResultados();
+    const circuitosPropios = circuitosDeTablero(tableroId, listaCircuitos);
+    const hijos = hijosDeTablero(tableroId, listaTableros);
+
+    if (circuitosPropios.length === 0 && hijos.length === 0) {
+      return { aplica: false }; // nada que balancear todavía
+    }
+
+    const aportes = {};
+
+    for (const c of circuitosPropios) {
+      if (!c.lineas || c.lineas.length === 0) {
+        return {
+          aplica: true,
+          ok: false,
+          noDeterminado: true,
+          motivo: `Circuito "${c.nombre}" todavía no tiene línea(s) asignada(s).`,
+        };
+      }
+      const r = listaResultados.find((res) => res.id === c.id);
+      if (!r?.ok) {
+        return {
+          aplica: true,
+          ok: false,
+          noDeterminado: true,
+          motivo: `Circuito "${c.nombre}" todavía no calcula OK.`,
+        };
+      }
+      for (const linea of c.lineas) {
+        aportes[linea] = (aportes[linea] ?? 0) + r.corrienteDiseno;
+      }
+    }
+
+    for (const hijo of hijos) {
+      if (!hijo.lineasAlimentador || hijo.lineasAlimentador.length === 0) {
+        return {
+          aplica: true,
+          ok: false,
+          noDeterminado: true,
+          motivo: `Subtablero "${hijo.nombre}" todavía no tiene línea(s) de alimentador asignada(s).`,
+        };
+      }
+      const alimHijo = this.calcularAlimentadorAgregado(hijo.id, {
+        tableros: listaTableros,
+        circuitos: listaCircuitos,
+        resultados: listaResultados,
+        normativaId,
+      });
+      if (!alimHijo.ok) {
+        return {
+          aplica: true,
+          ok: false,
+          noDeterminado: true,
+          motivo: `Subtablero "${hijo.nombre}": ${alimHijo.motivo || alimHijo.error}`,
+        };
+      }
+      for (const linea of hijo.lineasAlimentador) {
+        aportes[linea] = (aportes[linea] ?? 0) + alimHijo.corrienteDiseno;
+      }
+    }
+
+    const resultado = balanceFases(aportes);
+    if (!resultado.aplica) {
+      return { aplica: false };
+    }
+
+    return { aplica: true, ok: true, ...resultado };
   },
 };

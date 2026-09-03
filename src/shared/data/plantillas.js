@@ -23,6 +23,14 @@ export const CIRCUITO_VACIO = {
   // sin asignar todavía. NO tiene UI propia todavía; se gestiona vía
   // TableroMediator. Ver ARCHITECTURE.md.
   tableroId: null,
+  // A qué línea(s) del tablero está conectado ("L1"/"L2"/"L3", según
+  // cuántas tenga disponibles su tablero) — para balance de fases.
+  // [] = sin asignar todavía, el circuito NO participa en el balance
+  // (no se inventa una línea por defecto). Cantidad de líneas =
+  // cantidad de líneas físicas de este circuito (1 para mono, 2 para
+  // bi, 3 —todas— para tri) — no es libre, la valida balanceFases.
+  // NO tiene UI propia todavía. Ver modules/motor/balanceFases.js.
+  lineas: [],
 };
 
 // Un EQUIPO es un aparato conectado a un circuito.
@@ -54,4 +62,12 @@ export const TABLERO_VACIO = {
   tableroPadreId: null,
   longitudAlimentador: "",
   materialAlimentador: "cobre",
+  // A qué línea(s) del tablero PADRE está conectado el alimentador de
+  // ESTE tablero (mismo concepto que circuito.lineas, un nivel más
+  // arriba) — para que balance de fases pueda agregar la demanda de
+  // subtableros hacia el padre por la línea correcta. [] = sin asignar
+  // (no participa en el balance del padre todavía). No aplica cuando
+  // tableroPadreId es null (alimentado de la acometida, no hay "líneas
+  // del padre" que elegir todavía — ver módulo origen).
+  lineasAlimentador: [],
 };

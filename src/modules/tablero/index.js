@@ -27,6 +27,11 @@ function normalizar(datos = {}) {
     tableroPadreId: datos.tableroPadreId || null,
     longitudAlimentador: Number(datos.longitudAlimentador) || 0,
     materialAlimentador: datos.materialAlimentador?.toLowerCase() || "cobre",
+    // A qué línea(s) del tablero PADRE está conectado este alimentador
+    // — para balance de fases (agregación hacia el padre). [] = sin
+    // asignar, no participa en el balance del padre todavía. Sin UI
+    // propia esta sesión — ver modules/motor/balanceFases.js.
+    lineasAlimentador: Array.isArray(datos.lineasAlimentador) ? datos.lineasAlimentador : [],
   };
 }
 

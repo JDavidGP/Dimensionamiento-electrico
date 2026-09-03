@@ -20,4 +20,4 @@ export {
 export { seleccionarSeccion } from "./seleccionSeccion.js";
 export { combinarResultadosCircuitos } from "./combinarResultadosCircuitos.js";
 export { calcularAlimentador } from "./calcularAlimentador.js";
-// balanceFases: pendiente de entidad Tablero
+export { balanceFases } from "./balanceFases.js";
