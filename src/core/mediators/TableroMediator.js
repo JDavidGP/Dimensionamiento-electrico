@@ -5,10 +5,16 @@
  * CERO gráfico: eso es DiagramaMediator (Fase 6), que consumirá este
  * dato más adelante pero es un dominio distinto.
  *
- * caidaAcumuladaDesdeCircuito() SÍ encadena tableroPadreId hacia arriba
- * (caída de tensión acumulada, con detección de ciclos). Lo que sigue
- * sin existir es la jerarquía VISUAL/lista de subpaneles hacia abajo
- * — eso es un paso aparte, no esta sesión.
+ * caidaAcumuladaDesdeCircuito() encadena tableroPadreId hacia arriba
+ * (hijo → padre, un solo camino: caída de tensión acumulada).
+ * calcularAlimentadorAgregado() recorre hacia ABAJO (padre → hijos,
+ * puede ramificarse): agrega la demanda de TODO el subárbol antes de
+ * dimensionar el alimentador de un tablero. Son dos recorridos
+ * distintos, cada uno con su propia detección de ciclos — no
+ * confundir ni reusar la guarda del otro.
+ *
+ * Lo que sigue sin existir es la jerarquía VISUAL (lista de subpaneles
+ * en la UI) — eso es un paso aparte, no esta sesión.
  *
  * Dependencias permitidas: DataProvider (lectura), funciones internas
  * del módulo tablero, y — desde Fase 4 (alimentador) — la función pura
@@ -30,6 +36,8 @@ import {
   asignarCircuitoATablero,
   liberarCircuitosDeTablero,
   obtenerCadenaAscendente,
+  hijosDeTablero,
+  obtenerArbolDescendentePostOrden,
 } from "../../modules/tablero/index.js";
 import { calcularAlimentador, evaluarCaidaAcumulada } from "../../modules/motor/index.js";
 import { DataProvider } from "../services/DataProvider.js";
@@ -214,5 +222,108 @@ export const TableroMediator = {
       ...evaluacion,
       cantidadTableros: cadena.length,
     };
+  },
+
+  /**
+   * Dimensiona el alimentador de `tableroId` agregando la demanda de
+   * TODO su subárbol: sus circuitos propios + la demanda YA CALCULADA
+   * de cada uno de sus tableros hijos (que a su vez agregan la de los
+   * suyos, recursivamente — puede haber varias ramas, no un solo
+   * camino, ver obtenerArbolDescendentePostOrden).
+   *
+   * Un tablero solo se puede calcular cuando TODOS sus hijos ya se
+   * calcularon — por eso se resuelve el subárbol completo en orden
+   * post-orden (hijos antes que el padre) y se memoiza en `agregados`,
+   * nunca se recalcula un tablero dos veces.
+   *
+   * Reusa la función pura calcularAlimentador SIN tocarla: la demanda
+   * de cada hijo ya calculado se adapta a la forma que espera
+   * combinarResultadosCircuitos (cargaDemandaNormativaW, cosPhiEfectivo)
+   * y se mezcla con los resultados reales de los circuitos propios —
+   * el motor no distingue si una demanda vino de un circuito o de un
+   * tablero hijo, es la misma física agregada.
+   *
+   * Contrato de retorno (mismo criterio que calcularAlimentador):
+   *   { ok: false, ciclo: true, error }            — ciclo padre→hijos
+   *   { ok: false, pendiente: true, motivo }        — falta un tramo del
+   *                                                    subárbol por calcular
+   *   { ok: false, error }                          — un tramo del
+   *                                                    subárbol ya no cumple, o tableroId no existe
+   *   { ok: true, potenciaTotalW, cosPhiCombinado,
+   *     seccion, breaker, caidaPct, ... }           — igual forma que
+   *                                                    calcularAlimentador
+   *
+   * FUERA DE ALCANCE a propósito (ver módulo origen y
+   * caidaTensionAcumulada.js): transformadores, cambio de nivel de
+   * tensión, balance de fases, subtablero con alimentación mixta
+   * 120V/240V simultánea.
+   */
+  calcularAlimentadorAgregado(tableroId, { tableros, circuitos, resultados, normativaId } = {}) {
+    const listaTableros = tableros ?? DataProvider.getTableros();
+    const { orden, ciclo, tableroCiclo } = obtenerArbolDescendentePostOrden(tableroId, listaTableros);
+
+    if (ciclo) {
+      return {
+        ok: false,
+        ciclo: true,
+        error: `Ciclo detectado en la jerarquía de tableros al bajar por los hijos de "${tableroCiclo?.nombre ?? tableroId}" — revisá el tablero padre de esos tableros, nunca debería volver sobre sí mismo.`,
+      };
+    }
+
+    if (orden.length === 0) {
+      return { ok: false, error: `Tablero ${tableroId} no existe.` };
+    }
+
+    const normativa = NormativaMediator.obtener(normativaId ?? DataProvider.getNormativaActivaId());
+    if (!normativa) {
+      return { ok: false, error: "Normativa activa no resuelta." };
+    }
+
+    const listaCircuitos = circuitos ?? DataProvider.getCircuitos();
+    const listaResultados = resultados ?? DataProvider.getResultados();
+    const agregados = {}; // tableroId -> resultado ya calculado (memo, se llena en post-orden)
+
+    for (const t of orden) {
+      const hijos = hijosDeTablero(t.id, listaTableros);
+      const hijoIncompleto = hijos.find((h) => !agregados[h.id]?.ok);
+
+      if (hijoIncompleto) {
+        // Nunca se suma 0 y se sigue como si el hijo no existiera: este
+        // tablero hereda la misma falta de dato que su hijo, con el
+        // motivo puntual de cuál hijo es.
+        const rHijo = agregados[hijoIncompleto.id];
+        agregados[t.id] = {
+          ok: false,
+          pendiente: !!rHijo.pendiente,
+          motivo: `Tablero hijo "${hijoIncompleto.nombre}" ${
+            rHijo.pendiente ? "todavía no tiene su alimentador calculado" : "no cumple su propio límite de tramo"
+          }: ${rHijo.motivo || rHijo.error}`,
+        };
+        continue;
+      }
+
+      const circuitosPropios = circuitosDeTablero(t.id, listaCircuitos);
+      const resultadosPropios = circuitosPropios
+        .map((c) => listaResultados.find((r) => r.id === c.id))
+        .filter(Boolean);
+
+      // Demanda de cada hijo, YA agregada de su propio subárbol,
+      // disfrazada de "resultado de circuito" para reusar
+      // combinarResultadosCircuitos sin tocarlo.
+      const pseudoResultadosHijos = hijos.map((h) => ({
+        ok: true,
+        cargaDemandaNormativaW: agregados[h.id].potenciaTotalW,
+        cosPhiEfectivo: agregados[h.id].cosPhiCombinado,
+      }));
+
+      agregados[t.id] = calcularAlimentador(
+        t,
+        [...resultadosPropios, ...pseudoResultadosHijos],
+        t.fases,
+        normativa
+      );
+    }
+
+    return agregados[tableroId];
   },
 };

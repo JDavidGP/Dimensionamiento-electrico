@@ -106,3 +106,56 @@ export function obtenerCadenaAscendente(tableroId, tableros = []) {
 
   return { cadena, ciclo: false };
 }
+
+/** Subpaneles directos (hijos) de un tablero (lectura, calculada). */
+export function hijosDeTablero(tableroId, tableros = []) {
+  return tableros.filter((t) => t.tableroPadreId === tableroId);
+}
+
+/**
+ * Recorre el árbol de tableros hacia ABAJO (padre → hijos) desde
+ * `tableroId`, en orden POST-ORDEN: cada tablero aparece DESPUÉS de
+ * todos sus descendientes. Es el orden correcto para agregar demanda
+ * de abajo hacia arriba — un tablero necesita el resultado YA
+ * calculado de todos sus hijos antes de poder calcular el suyo, y acá
+ * puede haber varias ramas (abanico), no un solo camino.
+ *
+ * Dirección de recorrido DISTINTA a obtenerCadenaAscendente (que sube
+ * por tableroPadreId, hijo → padre, un solo camino). Esta baja
+ * filtrando quién tiene a cada tablero como padre, y puede ramificarse
+ * — por eso necesita su PROPIA guarda de ciclos, no reusa la de
+ * arriba. Un tablero que se volvería a visitar bajando por sus propios
+ * descendientes es un ciclo en esta dirección: se corta ahí, nunca
+ * recursión infinita.
+ *
+ * @returns {{ orden: object[], ciclo: boolean, tableroCiclo?: object }}
+ *   `orden`: tableros del subárbol (incluido el propio `tableroId`),
+ *   en orden post-orden. Si `ciclo` es true, `orden` puede venir
+ *   incompleto — el llamador no debe usarlo como si fuera válido.
+ */
+export function obtenerArbolDescendentePostOrden(tableroId, tableros = []) {
+  const orden = [];
+  const visitados = new Set();
+
+  function visitar(id) {
+    if (visitados.has(id)) {
+      return { ciclo: true, tableroCiclo: tableros.find((t) => t.id === id) };
+    }
+    const actual = tableros.find((t) => t.id === id);
+    if (!actual) return { ciclo: false };
+    visitados.add(id);
+
+    for (const hijo of hijosDeTablero(id, tableros)) {
+      const resultado = visitar(hijo.id);
+      if (resultado.ciclo) return resultado;
+    }
+
+    orden.push(actual);
+    return { ciclo: false };
+  }
+
+  const resultado = visitar(tableroId);
+  return resultado.ciclo
+    ? { orden, ciclo: true, tableroCiclo: resultado.tableroCiclo }
+    : { orden, ciclo: false };
+}
