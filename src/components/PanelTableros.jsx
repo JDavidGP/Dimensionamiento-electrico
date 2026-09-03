@@ -100,12 +100,29 @@ export default function PanelTableros({
   const [formAbierto, setFormAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState(FORM_VACIO);
+  // Cuando se crea desde el botón "+ Agregar subtablero" de un tablero
+  // puntual, el padre queda resuelto de una (no hay que buscarlo en el
+  // dropdown) — guardamos el objeto completo para mostrar su nombre sin
+  // tener que volver a buscarlo por id.
+  const [padreForzado, setPadreForzado] = useState(null);
 
   const sinAsignar = circuitosSinTablero();
 
   function abrirCreacion() {
     setForm(FORM_VACIO);
     setEditandoId(null);
+    setPadreForzado(null);
+    setFormAbierto(true);
+  }
+
+  // Disparado desde el acordeón de un tablero ya existente: crea un
+  // tablero nuevo con tableroPadreId ya resuelto a ESTE tablero — el
+  // mismo formulario de siempre, solo que el campo "Tablero padre" no
+  // hace falta buscarlo, ya se sabe de dónde cuelga.
+  function abrirCreacionSubtablero(tableroPadre) {
+    setForm({ ...FORM_VACIO, tableroPadreId: tableroPadre.id });
+    setEditandoId(null);
+    setPadreForzado(tableroPadre);
     setFormAbierto(true);
   }
 
@@ -119,12 +136,14 @@ export default function PanelTableros({
       materialAlimentador: t.materialAlimentador,
     });
     setEditandoId(t.id);
+    setPadreForzado(null); // al editar, el padre sigue siendo elegible desde el dropdown
     setFormAbierto(true);
   }
 
   function cerrarForm() {
     setForm(FORM_VACIO);
     setEditandoId(null);
+    setPadreForzado(null);
     setFormAbierto(false);
   }
 
@@ -201,20 +220,28 @@ export default function PanelTableros({
             </Campo>
           </div>
 
-          <Campo label="Tablero padre (opcional)">
-            <select
-              style={inputStyle()}
-              value={form.tableroPadreId}
-              onChange={(e) => setForm({ ...form, tableroPadreId: e.target.value })}
-            >
-              <option value="">— Acometida / poste / transformador —</option>
-              {opcionesPadre.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre}
-                </option>
-              ))}
-            </select>
-          </Campo>
+          {padreForzado ? (
+            <Campo label="Tablero padre">
+              <div style={{ ...inputStyle(), display: "flex", alignItems: "center", color: colores.textMain, background: "transparent" }}>
+                Cuelga de: <strong style={{ marginLeft: 4 }}>{padreForzado.nombre}</strong>
+              </div>
+            </Campo>
+          ) : (
+            <Campo label="Tablero padre (opcional)">
+              <select
+                style={inputStyle()}
+                value={form.tableroPadreId}
+                onChange={(e) => setForm({ ...form, tableroPadreId: e.target.value })}
+              >
+                <option value="">— Acometida / poste / transformador —</option>
+                {opcionesPadre.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombre}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <Campo label="Longitud del alimentador (m)">
@@ -332,9 +359,20 @@ export default function PanelTableros({
 
                 {activo && (
                   <div style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px", display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div style={{ fontSize: 11.5, color: colores.textDim }}>
-                      Alimenta desde: <strong style={{ color: colores.textMain }}>{padre ? padre.nombre : "Acometida / poste / transformador principal"}</strong>
-                      {t.longitudAlimentador > 0 && ` · ${t.longitudAlimentador}m de ${t.materialAlimentador}`}
+                    <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                      <span>
+                        Alimenta desde: <strong style={{ color: colores.textMain }}>{padre ? padre.nombre : "Acometida / poste / transformador principal"}</strong>
+                        {t.longitudAlimentador > 0 && ` · ${t.longitudAlimentador}m de ${t.materialAlimentador}`}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrirCreacionSubtablero(t);
+                        }}
+                        style={{ flexShrink: 0, padding: "3px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.copper, fontWeight: 700, fontSize: 11, cursor: "pointer" }}
+                      >
+                        + Subtablero
+                      </button>
                     </div>
 
                     <BloqueAlimentador resultado={alimentadores?.[t.id]} />
