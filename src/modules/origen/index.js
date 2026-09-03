@@ -43,6 +43,17 @@ export const TIPOS_ORIGEN = {
  *     tableroPadreId inexistente; este módulo no lo duplica, solo no
  *     miente sobre qué encontró).
  *
+ * DECISIÓN DE PLANIFICACIÓN (no técnica, para ubicar el trabajo en el
+ * tiempo): Transformador se integra junto con el sistema de media
+ * tensión, cuando ese sistema se desarrolle — no antes, y no como
+ * pieza aislada. Única excepción: si aparece la necesidad real de darle
+ * identidad propia a un transformador en BAJA tensión (ej. un
+ * transformador de aislamiento o reductor 240V→120V dentro de una
+ * instalación de baja tensión, sin que medie todavía el sistema de
+ * media tensión completo) — en ese caso puntual sí se adelanta esta
+ * pieza, acotada a ese uso, sin esperar al desarrollo completo de media
+ * tensión.
+ *
  * PENDIENTE — Transformador (documentado a propósito, NO implementar
  * todavía; no hay un proyecto real que lo necesite para validar el
  * diseño contra datos reales):
