@@ -95,6 +95,7 @@ export default function PanelTableros({
   crearTablero,
   editarTablero,
   eliminarTablero,
+  listaIntegridad = [],
 }) {
   const [tableroActivoId, setTableroActivoId] = useState(null);
   const [formAbierto, setFormAbierto] = useState(false);
@@ -306,6 +307,18 @@ export default function PanelTableros({
             const circuitosDelTablero = circuitosDeTablero(t.id);
             const padre = t.tableroPadreId ? tableros.find((p) => p.id === t.tableroPadreId) : null;
             const activo = tableroActivoId === t.id;
+            // Integridad de ESTE tablero (tableroPadreId inexistente,
+            // auto-referencia, sin circuitos asociados) — mismo patrón
+            // que TablaResultados.jsx ya usa para circuitos, hasta hoy
+            // nunca conectado acá.
+            const entradaIntegridad = listaIntegridad.find((e) => e.tipo === "tablero" && e.id === t.id);
+            const colorEstado = entradaIntegridad
+              ? entradaIntegridad.estado === "error"
+                ? colores.error
+                : entradaIntegridad.estado === "advertencia"
+                  ? colores.warn
+                  : colores.ok
+              : colores.ok;
             return (
               <div
                 key={t.id}
@@ -327,6 +340,7 @@ export default function PanelTableros({
                   }}
                 >
                   <span style={{ color: colores.textDim, fontSize: 11, width: 12, textAlign: "center" }}>{activo ? "▾" : "▸"}</span>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: colorEstado, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13.5, color: colores.textMain }}>{t.nombre}</div>
                     <div style={{ fontFamily: fuentes.mono, fontSize: 11, color: colores.textDim }}>
@@ -359,6 +373,20 @@ export default function PanelTableros({
 
                 {activo && (
                   <div style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px", display: "flex", flexDirection: "column", gap: 10 }}>
+                    {entradaIntegridad?.problemas?.length > 0 && (
+                      <div>
+                        {entradaIntegridad.problemas.map((p, i) => (
+                          <div
+                            key={i}
+                            style={{ color: entradaIntegridad.estado === "error" ? colores.error : colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}
+                            title="Integridad de datos, no cálculo eléctrico"
+                          >
+                            <span>🗂</span> <span>{p}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                       <span>
                         Alimenta desde: <strong style={{ color: colores.textMain }}>{padre ? padre.nombre : "Acometida / poste / transformador principal"}</strong>

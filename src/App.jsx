@@ -80,6 +80,7 @@ export default function App() {
             circuitosDeTablero={circuitosDeTablero}
             circuitosSinTablero={circuitosSinTablero}
             alimentadores={alimentadores}
+            listaIntegridad={listaIntegridad}
             crearTablero={crearTablero}
             editarTablero={editarTablero}
             eliminarTablero={eliminarTablero}
