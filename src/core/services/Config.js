@@ -9,6 +9,12 @@ export const Config = {
   limites: {
     caidaTensionPct: 3.0,
     factorCargaContinua: 1.25,
+    // Umbral recomendado de desbalance de fases (10%, ver constantes.js
+    // para la fuente/justificación). Modificable por proyecto vía
+    // Config.set({ limites: { desbalanceFasesPct: N } }) — subirlo
+    // dispara una advertencia seria en balanceFases(), no lo hace en
+    // silencio.
+    desbalanceFasesPct: 10.0,
   },
   features: {
     diagrama: false,

@@ -34,21 +34,27 @@ export const FACTOR_CARGA_CONTINUA = 1.25; // Regla del 125% para cargas continu
 // ambos tramos. Ver modules/motor/caidaTensionAcumulada.js.
 export const LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT = 5.0;
 
-// Umbral de desbalance de corriente entre líneas (L1/L2/L3) de un
-// tablero. SIN DECIDIR TODAVÍA — a diferencia de LIMITE_CAIDA_TENSION_
-// ACUMULADA_PROVISIONAL_PCT (que sí tiene cita NEC exacta), este número
-// NO tiene artículo del NEC que lo fije: el NEC 210.11(B) exige repartir
-// las cargas entre líneas pero no fija un % — el 10-20% que circula en
-// la práctica de la industria viene de IEEE Std 141 (Red Book) y de
-// normas NEMA para motores (NEMA MG-1: 1% de desbalance de TENSIÓN ya
-// empieza a deratear un motor; a partir de 5% no se recomienda operar),
-// no del Code eléctrico en sí. Es una convención de buena práctica, no
-// un límite exigible.
-// Valor puesto acá (10%) es el extremo más conservador de esa práctica
-// citada — un default de referencia para poder programar y probar el
-// motor de cálculo, NO una decisión final. Pendiente confirmar con el
-// usuario antes de tratarlo como definitivo (ver conversación de diseño
-// de la sesión de balance de fases).
+// Umbral RECOMENDADO de desbalance de corriente entre líneas (L1/L2/L3)
+// de un tablero. CONFIRMADO por el usuario como valor por defecto del
+// proyecto (10%) — a diferencia de LIMITE_CAIDA_TENSION_ACUMULADA_
+// PROVISIONAL_PCT (que tiene cita NEC exacta), este número NO tiene
+// artículo del NEC que lo fije: el NEC 210.11(B) exige repartir las
+// cargas entre líneas pero no fija un %. El 10-20% que circula en la
+// práctica de la industria viene de IEEE Std 141 (Red Book) y de
+// normas NEMA para motores (NEMA MG-1: un desbalance de TENSIÓN de 1%
+// ya empieza a deratear un motor trifásico — a 5% la capacidad cae a
+// ~75%, y no se recomienda operar por encima de ese punto). 10% es el
+// extremo más conservador de esa práctica citada.
+//
+// MODIFICABLE en runtime — Config.limites.desbalanceFasesPct (ver
+// core/services/Config.js) empieza igual a este valor pero se puede
+// sobrescribir por proyecto. balanceFases() (modules/motor) genera una
+// ADVERTENCIA SERIA cuando el umbral efectivamente usado supera este
+// valor recomendado — subir el margen no es gratis: más desbalance de
+// corriente sostenido calienta el neutro en circuitos multialambre por
+// encima de lo esperado, envejece el aislamiento más rápido, y un
+// desbalance de tensión asociado empuja a deratear motores (NEMA MG-1)
+// o directamente a no operarlos con seguridad por encima de 5%.
 export const UMBRAL_DESBALANCE_FASES_PCT = 10.0;
 
 export const MIN_COSPHI = 0.5;

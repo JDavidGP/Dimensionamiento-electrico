@@ -43,6 +43,7 @@ import { calcularAlimentador, evaluarCaidaAcumulada, balanceFases } from "../../
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { Logger } from "../services/Logger.js";
+import { Config } from "../services/Config.js";
 
 export const TableroMediator = {
   /** Fábrica de un tablero nuevo (no lo guarda — eso lo hace el hook). */
@@ -370,12 +371,17 @@ export const TableroMediator = {
    *   { aplica: true, ok: true, porLinea, porcentajeDesbalance,
    *     limitePct, excede }
    *
-   * UMBRAL sin decidir todavía — ver UMBRAL_DESBALANCE_FASES_PCT en
-   * shared/constants/constantes.js. FUERA DE ALCANCE esta sesión: UI
-   * para asignar líneas (circuito.lineas / tablero.lineasAlimentador),
-   * subtablero con alimentación mixta 120V/240V simultánea.
+   * UMBRAL: 10% recomendado (CONFIRMADO, ver UMBRAL_DESBALANCE_FASES_PCT
+   * en shared/constants/constantes.js), MODIFICABLE vía
+   * Config.limites.desbalanceFasesPct o pasando `umbralPct` explícito
+   * acá — si el umbral efectivo supera el recomendado, el resultado
+   * trae una advertencia seria (ver modules/motor/balanceFases.js), no
+   * lo permite en silencio. FUERA DE ALCANCE esta sesión: UI para
+   * asignar líneas (circuito.lineas / tablero.lineasAlimentador) ni
+   * para cambiar el umbral, subtablero con alimentación mixta
+   * 120V/240V simultánea.
    */
-  balanceFasesDeTablero(tableroId, { tableros, circuitos, resultados, normativaId } = {}) {
+  balanceFasesDeTablero(tableroId, { tableros, circuitos, resultados, normativaId, umbralPct } = {}) {
     const listaTableros = tableros ?? DataProvider.getTableros();
     const tablero = listaTableros.find((t) => t.id === tableroId);
     if (!tablero) {
@@ -447,7 +453,7 @@ export const TableroMediator = {
       }
     }
 
-    const resultado = balanceFases(aportes);
+    const resultado = balanceFases(aportes, umbralPct ?? Config.limites.desbalanceFasesPct);
     if (!resultado.aplica) {
       return { aplica: false };
     }
