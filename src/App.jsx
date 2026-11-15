@@ -8,6 +8,7 @@ import TablaResultados from "./components/TablaResultados";
 import PanelBreakers from "./components/PanelBreakers";
 import PanelTableros from "./components/PanelTableros";
 import SelectorNormativa from "./components/SelectorNormativa";
+import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
 
@@ -61,7 +62,6 @@ export default function App() {
   return (
     <div style={{ background: colores.bg, minHeight: "100vh", color: colores.textMain, fontFamily: fuentes.display }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap');
         input, select { font-family: inherit; }
         input:focus, select:focus, button:focus { outline: 2px solid ${colores.copper}; outline-offset: 1px; }
       `}</style>
@@ -140,6 +140,8 @@ export default function App() {
           <PanelBreakers resultados={resultados} />
         </div>
       </div>
+
+      <PiePagina />
     </div>
   );
 }
