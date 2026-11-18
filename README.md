@@ -91,7 +91,16 @@ npm run dev
 
 ## Aviso
 
-Esta herramienta está en desarrollo y sirve de apoyo al cálculo. No sustituye el criterio de un profesional habilitado ni la verificación según la normativa vigente en cada país.
+Esta herramienta está en desarrollo y sirve de apoyo al cálculo. No sustituye el criterio de un profesional habilitado ni la verificación según la normativa vigente en cada país. El mismo aviso se muestra dentro de la aplicación.
+
+## Privacidad
+
+La aplicación no pide registro, no usa cookies, analítica ni rastreo, y no carga recursos de terceros (las fuentes son del sistema). Los cálculos se hacen en el navegador y los proyectos se guardan solo como archivos JSON en el equipo del usuario.
+
+## Licencias de terceros
+
+- [React](https://github.com/facebook/react) y [Vite](https://github.com/vitejs/vite): licencia MIT.
+- Las tablas normativas contienen valores numéricos de referencia; no se reproduce el texto de las normas. NEC® es marca registrada de la NFPA, sin relación con este proyecto.
 
 ## Licencia
 
