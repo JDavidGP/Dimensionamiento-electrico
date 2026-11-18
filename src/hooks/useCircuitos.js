@@ -313,6 +313,33 @@ export function useCircuitos() {
     return App.tablero.circuitosDe(tableroId, circuitos);
   }
 
+  function asignarLineasCircuito(circuitoId, lineas) {
+    const circuito = circuitos.find((c) => c.id === circuitoId);
+    if (!circuito) return;
+    const actualizado = App.tablero.asignarLineas(circuito, lineas);
+    setCircuitos(circuitos.map((c) => (c.id === circuitoId ? actualizado : c)));
+  }
+
+  // Balance de fases de cada tablero, vía TableroMediator — mismo
+  // patrón que `alimentadores` arriba (mapa por tableroId, recalculado
+  // cuando cambia cualquier dato que lo afecte). `umbralDesbalanceFasesPct`
+  // va explícito como dependencia porque cambiarlo desde Ajustes no
+  // cambia tableros/circuitos/resultados — sin esto, useMemo no se
+  // volvería a ejecutar y el umbral nuevo no se vería reflejado acá.
+  const balancesFases = useMemo(() => {
+    const mapa = {};
+    tableros.forEach((t) => {
+      mapa[t.id] = App.tablero.balanceFasesDeTablero(t.id, {
+        tableros,
+        circuitos,
+        resultados,
+        normativaId: normativaActiva,
+        umbralPct: umbralDesbalanceFasesPct,
+      });
+    });
+    return mapa;
+  }, [tableros, circuitos, resultados, normativaActiva, umbralDesbalanceFasesPct]);
+
   function circuitosSinTablero() {
     return App.tablero.sinAsignar(circuitos);
   }
@@ -406,9 +433,11 @@ export function useCircuitos() {
     editarTablero,
     eliminarTablero,
     asignarCircuitoATablero,
+    asignarLineasCircuito,
     circuitosDeTablero,
     circuitosSinTablero,
     alimentadores,
+    balancesFases,
     listaIntegridad,
     resumenIntegridad: resumenInt,
     detalleElectrico,

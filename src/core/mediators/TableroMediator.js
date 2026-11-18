@@ -34,6 +34,7 @@ import {
   circuitosDeTablero,
   circuitosSinTablero,
   asignarCircuitoATablero,
+  asignarLineasACircuito,
   liberarCircuitosDeTablero,
   obtenerCadenaAscendente,
   hijosDeTablero,
@@ -95,6 +96,11 @@ export const TableroMediator = {
 
   desasignar(circuito) {
     return asignarCircuitoATablero(circuito, null);
+  },
+
+  /** Devuelve el circuito con sus líneas (L1/L2/L3) actualizadas; el hook decide cómo guardarlo. */
+  asignarLineas(circuito, lineas) {
+    return asignarLineasACircuito(circuito, lineas);
   },
 
   /** Al borrar un tablero, libera (no borra) los circuitos que le pertenecían. */
@@ -369,17 +375,23 @@ export const TableroMediator = {
    *                                                     o sin circuitos/hijos
    *   { aplica: true, ok: false, noDeterminado: true, motivo }
    *   { aplica: true, ok: true, porLinea, porcentajeDesbalance,
-   *     limitePct, excede }
+   *     limitePct, excede, contribuyentesPorLinea }
+   *
+   * `contribuyentesPorLinea`: { L1: [{tipo:"circuito"|"subtablero", id,
+   * nombre, corrienteA}], ... } — mismos totales que `porLinea`,
+   * desglosados por quién aporta cuánto. Lo usa PanelTableros.jsx para
+   * sugerir qué mover cuando `excede` es true, sin tener que repetir
+   * este recorrido en la UI.
    *
    * UMBRAL: 10% recomendado (CONFIRMADO, ver UMBRAL_DESBALANCE_FASES_PCT
    * en shared/constants/constantes.js), MODIFICABLE vía
    * Config.limites.desbalanceFasesPct o pasando `umbralPct` explícito
-   * acá — si el umbral efectivo supera el recomendado, el resultado
-   * trae una advertencia seria (ver modules/motor/balanceFases.js), no
-   * lo permite en silencio. FUERA DE ALCANCE esta sesión: UI para
-   * asignar líneas (circuito.lineas / tablero.lineasAlimentador) ni
-   * para cambiar el umbral, subtablero con alimentación mixta
-   * 120V/240V simultánea.
+   * acá (Ajustes, en la UI) — si el umbral efectivo supera el
+   * recomendado, el resultado trae una advertencia seria (ver
+   * modules/motor/balanceFases.js), no lo permite en silencio.
+   * CONECTADO a la UI (PanelTableros.jsx + TablaResultados.jsx, líneas
+   * y balance visibles). FUERA DE ALCANCE todavía: subtablero con
+   * alimentación mixta 120V/240V simultánea.
    */
   balanceFasesDeTablero(tableroId, { tableros, circuitos, resultados, normativaId, umbralPct } = {}) {
     const listaTableros = tableros ?? DataProvider.getTableros();
@@ -401,6 +413,14 @@ export const TableroMediator = {
     }
 
     const aportes = {};
+    // Quién aporta cuánto a cada línea — mismos totales que `aportes`,
+    // desglosados por origen. No alimenta el cálculo (eso es `aportes`
+    // solo); existe para que la UI pueda sugerir qué mover sin tener
+    // que recorrer todo esto de nuevo por su cuenta.
+    const contribuyentesPorLinea = {};
+    function registrarContribuyente(linea, item) {
+      (contribuyentesPorLinea[linea] ??= []).push(item);
+    }
 
     for (const c of circuitosPropios) {
       if (!c.lineas || c.lineas.length === 0) {
@@ -422,6 +442,7 @@ export const TableroMediator = {
       }
       for (const linea of c.lineas) {
         aportes[linea] = (aportes[linea] ?? 0) + r.corrienteDiseno;
+        registrarContribuyente(linea, { tipo: "circuito", id: c.id, nombre: c.nombre, corrienteA: r.corrienteDiseno });
       }
     }
 
@@ -450,6 +471,7 @@ export const TableroMediator = {
       }
       for (const linea of hijo.lineasAlimentador) {
         aportes[linea] = (aportes[linea] ?? 0) + alimHijo.corrienteDiseno;
+        registrarContribuyente(linea, { tipo: "subtablero", id: hijo.id, nombre: hijo.nombre, corrienteA: alimHijo.corrienteDiseno });
       }
     }
 
@@ -458,6 +480,6 @@ export const TableroMediator = {
       return { aplica: false };
     }
 
-    return { aplica: true, ok: true, ...resultado };
+    return { aplica: true, ok: true, ...resultado, contribuyentesPorLinea };
   },
 };

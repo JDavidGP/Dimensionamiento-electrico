@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
+import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
@@ -77,6 +78,188 @@ function BloqueAlimentador({ resultado }) {
   );
 }
 
+// Asignación de línea(s) del alimentador de un SUBtablero respecto a
+// las líneas de su tablero PADRE (mismo concepto que circuito.lineas,
+// un nivel más arriba) — para que balance de fases pueda agregar la
+// demanda de este subtablero hacia el padre por la línea correcta.
+// Solo se renderiza si hay padre y el padre tiene más de una línea.
+function SelectorLineasAlimentador({ tablero, padre, onEditarTablero }) {
+  const disponibles = lineasDisponiblesDeTablero(padre.fases);
+  const requeridas = lineasRequeridas(tablero.fases, disponibles);
+  const actuales = tablero.lineasAlimentador ?? [];
+  const completo = actuales.length === requeridas;
+
+  function asignar(nuevas) {
+    onEditarTablero(tablero.id, { lineasAlimentador: nuevas });
+  }
+
+  if (tablero.fases === "tri" && requeridas === disponibles.length) {
+    const yaAsignado = actuales.length === disponibles.length && disponibles.every((l) => actuales.includes(l));
+    return (
+      <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", gap: 8 }}>
+        <span>Alimentador trifásico — usa las {disponibles.length} líneas de "{padre.nombre}" ({disponibles.join(", ")}):</span>
+        {yaAsignado ? (
+          <span style={{ color: colores.ok, fontWeight: 600 }}>✓ asignado</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => asignar(disponibles)}
+            style={{ padding: "2px 8px", borderRadius: 3, border: `1px solid ${colores.copper}`, background: "transparent", color: colores.copper, fontSize: 11, cursor: "pointer" }}
+          >
+            Asignar
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <span>Línea(s) del alimentador en "{padre.nombre}" (requiere {requeridas}):</span>
+      {disponibles.map((linea) => {
+        const seleccionada = actuales.includes(linea);
+        const alcanzoMaximoSinEstaSeleccionada = !seleccionada && actuales.length >= requeridas && requeridas > 1;
+        return (
+          <button
+            key={linea}
+            type="button"
+            disabled={alcanzoMaximoSinEstaSeleccionada}
+            onClick={() => asignar(siguienteSeleccionLineas(actuales, linea, requeridas))}
+            title={alcanzoMaximoSinEstaSeleccionada ? `Ya hay ${requeridas} línea(s) seleccionada(s) — quitá una antes de agregar ${linea}` : undefined}
+            style={{
+              padding: "2px 9px",
+              borderRadius: 3,
+              border: `1px solid ${seleccionada ? colores.copper : colores.border}`,
+              background: seleccionada ? colores.copper : "transparent",
+              color: seleccionada ? "#171512" : alcanzoMaximoSinEstaSeleccionada ? colores.border : colores.textDim,
+              fontWeight: 600,
+              fontSize: 11,
+              cursor: alcanzoMaximoSinEstaSeleccionada ? "not-allowed" : "pointer",
+            }}
+          >
+            {linea}
+          </button>
+        );
+      })}
+      <span style={{ color: completo ? colores.ok : colores.warn }}>
+        {actuales.length}/{requeridas}
+      </span>
+    </div>
+  );
+}
+
+// Severidad visual del % de desbalance: verde hasta el 70% del umbral,
+// ámbar entre ese 70% y el umbral (se acerca al límite sin haberlo
+// cruzado todavía), rojo al superarlo. Es una gradación de UI, no una
+// cifra normativa — el único corte que sí tiene fuente es `excede`
+// (porcentajeDesbalance > limitePct, ver balanceFases.js).
+function colorSeveridadBalance(pct, limite) {
+  if (pct > limite) return colores.error;
+  if (pct > limite * 0.7) return colores.warn;
+  return colores.ok;
+}
+
+// Balance de fases de un tablero (TableroMediator.balanceFasesDeTablero),
+// con detalle visual por color: barra por línea (ancho = corriente,
+// color = severidad) y, si excede el umbral, una sugerencia de qué
+// mover para mejorar el balance — nunca se aplica solo, es información
+// para que el instalador decida.
+function BloqueBalanceFases({ balance }) {
+  if (!balance || !balance.aplica) return null;
+
+  if (!balance.ok) {
+    return (
+      <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.4 }}>
+        Balance de fases pendiente: {balance.motivo}
+      </div>
+    );
+  }
+
+  const { porLinea, porcentajeDesbalance, limitePct, excede, advertencias, contribuyentesPorLinea } = balance;
+  const color = colorSeveridadBalance(porcentajeDesbalance, limitePct);
+  const entradas = Object.entries(porLinea);
+  const maxValor = Math.max(...entradas.map(([, v]) => v));
+  const [lineaMax] = entradas.reduce((a, b) => (b[1] > a[1] ? b : a));
+  const [lineaMin] = entradas.reduce((a, b) => (b[1] < a[1] ? b : a));
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+        <span style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          Balance de fases
+        </span>
+        <span style={{ fontFamily: fuentes.mono, fontSize: 12, color, fontWeight: 700 }}>
+          {porcentajeDesbalance.toFixed(1)}%
+        </span>
+        <span style={{ fontSize: 10.5, color: colores.textDim }}>(umbral {limitePct}%)</span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 6 }}>
+        {entradas.map(([linea, valor]) => {
+          const barColor = linea === lineaMax ? color : linea === lineaMin ? colores.textDim : colores.copper;
+          const ancho = maxValor > 0 ? (valor / maxValor) * 100 : 0;
+          return (
+            <div key={linea} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 20, fontFamily: fuentes.mono, fontSize: 10.5, color: colores.textDim }}>{linea}</span>
+              <div style={{ flex: 1, height: 7, background: colores.bg, borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ width: `${ancho}%`, height: "100%", background: barColor }} />
+              </div>
+              <span style={{ width: 54, textAlign: "right", fontFamily: fuentes.mono, fontSize: 10.5, color: colores.textMain }}>
+                {valor.toFixed(1)}A
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {advertencias?.map((a, i) => (
+        <div key={i} style={{ color: colores.warn, fontSize: 11, marginBottom: 4 }}>
+          ⚠ {a}
+        </div>
+      ))}
+
+      {excede && (
+        <div
+          style={{
+            fontSize: 11,
+            color: colores.textDim,
+            background: `${colores.error}14`,
+            border: `1px solid ${colores.error}44`,
+            borderRadius: 4,
+            padding: 8,
+            marginTop: 4,
+            lineHeight: 1.5,
+          }}
+        >
+          <div style={{ color: colores.error, fontWeight: 600, marginBottom: 4 }}>
+            Sugerencia para mejorar el balance (a criterio del instalador):
+          </div>
+          <div>
+            La línea <strong style={{ color: colores.textMain }}>{lineaMax}</strong> lleva {porLinea[lineaMax].toFixed(1)}A, la más
+            cargada; <strong style={{ color: colores.textMain }}>{lineaMin}</strong> lleva solo {porLinea[lineaMin].toFixed(1)}A.
+            Considerá reasignar alguno de estos de {lineaMax} hacia {lineaMin} u otra línea más descargada:
+          </div>
+          <ul style={{ margin: "4px 0 4px 18px", padding: 0 }}>
+            {(contribuyentesPorLinea?.[lineaMax] ?? [])
+              .slice()
+              .sort((a, b) => b.corrienteA - a.corrienteA)
+              .map((item) => (
+                <li key={item.id}>
+                  {item.nombre} ({item.tipo === "subtablero" ? "subtablero" : "circuito"}) — {item.corrienteA.toFixed(1)}A
+                </li>
+              ))}
+          </ul>
+          <div style={{ fontStyle: "italic" }}>
+            La decisión final de qué mover —o si conviene hacerlo— queda a criterio del instalador/electricista responsable del
+            proyecto.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Mismo patrón de acordeón que TablaResultados: lista colapsada, clic
 // despliega el detalle del tablero seleccionado (sus circuitos y su
 // alimentador ya calculado). Fase 3 (dato relacional) + Fase 4
@@ -92,6 +275,7 @@ export default function PanelTableros({
   circuitosDeTablero,
   circuitosSinTablero,
   alimentadores,
+  balancesFases = {},
   crearTablero,
   editarTablero,
   eliminarTablero,
@@ -404,6 +588,12 @@ export default function PanelTableros({
                     </div>
 
                     <BloqueAlimentador resultado={alimentadores?.[t.id]} />
+
+                    {padre && padre.fases !== "mono" && (
+                      <SelectorLineasAlimentador tablero={t} padre={padre} onEditarTablero={editarTablero} />
+                    )}
+
+                    <BloqueBalanceFases balance={balancesFases?.[t.id]} />
 
                     <div>
                       <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>

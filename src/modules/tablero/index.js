@@ -68,6 +68,19 @@ export function asignarCircuitoATablero(circuito, tableroId) {
 }
 
 /**
+ * Devuelve el circuito con `lineas` actualizado — mismo criterio que
+ * asignarCircuitoATablero (no muta; la escritura real la hace la capa
+ * de aplicación / hook). Para balance de fases, ver
+ * TableroMediator.balanceFasesDeTablero. NO valida acá que la cantidad
+ * coincida con circuito.fases — esa restricción vive en la UI
+ * (shared/utils/lineasFases.js), que ya constriñe la interacción para
+ * que no pueda quedar mal armada desde ahí.
+ */
+export function asignarLineasACircuito(circuito, lineas) {
+  return { ...circuito, lineas: Array.isArray(lineas) ? lineas : [] };
+}
+
+/**
  * Al eliminar un tablero, los circuitos que le pertenecían quedan sin
  * asignar (no se borran, no quedan huérfanos apuntando a un ID muerto).
  */
