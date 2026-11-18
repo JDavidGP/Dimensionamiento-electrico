@@ -18,6 +18,8 @@ import {
   calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
   balanceFases,
+  normalizarTransformador,
+  calcularCorrientesNominales,
 } from "../../modules/motor/index.js";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { DataProvider } from "../services/DataProvider.js";
@@ -68,4 +70,9 @@ export const MotorCalculoMediator = {
   cortocircuitoMonofasico: calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
   balanceFases,
+  // Transformador: expuesto en el mismo nivel que llenadoConducto y
+  // cortocircuito (creado, no conectado — ningún hook ni componente
+  // llama esto todavía; ver modules/motor/transformador.js).
+  normalizarTransformador,
+  corrientesNominalesTransformador: calcularCorrientesNominales,
 };

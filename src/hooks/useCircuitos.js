@@ -18,6 +18,20 @@ export function useCircuitos() {
     App.config.normativaPorDefecto
   );
 
+  // Umbral de desbalance de fases — vive como estado de React (no solo
+  // en Config) para que cambiarlo desde Ajustes dispare un re-render.
+  // Arranca igual al default de Config; al cambiarlo, también se
+  // actualiza Config.limites para quien lo lea fuera de este hook.
+  const [umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPctBase] = useState(
+    App.config.limites.desbalanceFasesPct
+  );
+  function setUmbralDesbalanceFasesPct(valor) {
+    const num = Number(valor);
+    if (!(num > 0)) return; // ignora valores inválidos, no rompe el estado
+    setUmbralDesbalanceFasesPctBase(num);
+    App.config.set({ limites: { desbalanceFasesPct: num } });
+  }
+
   const [formCircuito, setFormCircuito] = useState(CIRCUITO_VACIO);
   const [errorCircuito, setErrorCircuito] = useState("");
   const [editandoCircuitoId, setEditandoCircuitoId] = useState(null);
@@ -364,6 +378,8 @@ export function useCircuitos() {
     totales,
     normativaActiva,
     setNormativaActiva,
+    umbralDesbalanceFasesPct,
+    setUmbralDesbalanceFasesPct,
     formCircuito,
     setFormCircuito,
     errorCircuito,

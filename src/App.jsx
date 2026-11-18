@@ -26,6 +26,8 @@ export default function App() {
     totales,
     normativaActiva,
     setNormativaActiva,
+    umbralDesbalanceFasesPct,
+    setUmbralDesbalanceFasesPct,
     formCircuito,
     setFormCircuito,
     errorCircuito,
@@ -66,7 +68,10 @@ export default function App() {
         input:focus, select:focus, button:focus { outline: 2px solid ${colores.copper}; outline-offset: 1px; }
       `}</style>
 
-      <Header />
+      <Header
+        umbralDesbalanceFasesPct={umbralDesbalanceFasesPct}
+        setUmbralDesbalanceFasesPct={setUmbralDesbalanceFasesPct}
+      />
       <div style={{ padding: "0 24px 20px 24px", borderBottom: `1px solid ${colores.border}` }}>
         <BarraProyecto proyecto={proyecto} setProyecto={setProyecto} avisoArchivo={avisoArchivo} onGuardar={guardarProyecto} onAbrir={abrirProyecto} onNuevo={nuevoProyecto} />
       </div>

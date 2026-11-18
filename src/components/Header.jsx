@@ -1,10 +1,17 @@
 import React from "react";
 import { colores, fuentes } from "../styles/colores";
+import MenuOpciones from "./MenuOpciones";
 
-export default function Header() {
+export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }) {
   return (
-    <div style={{ borderBottom: `1px solid ${colores.border}`, padding: "20px 24px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+    <div style={{ position: "relative", borderBottom: `1px solid ${colores.border}`, padding: "20px 24px" }}>
+      <div style={{ position: "absolute", top: 16, right: 24 }}>
+        <MenuOpciones
+          umbralDesbalanceFasesPct={umbralDesbalanceFasesPct}
+          setUmbralDesbalanceFasesPct={setUmbralDesbalanceFasesPct}
+        />
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", paddingRight: 44 }}>
         <h1
           style={{
             fontFamily: fuentes.condensada,

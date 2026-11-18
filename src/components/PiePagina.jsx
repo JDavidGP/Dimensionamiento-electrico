@@ -17,6 +17,7 @@ export default function PiePagina() {
 
   return (
     <footer
+      id="pie-pagina"
       style={{ borderTop: `1px solid ${colores.border}`, padding: "20px 24px 28px 24px", background: colores.panel }}
     >
       <section aria-labelledby="aviso-responsabilidad">

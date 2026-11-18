@@ -54,7 +54,7 @@ export const TIPOS_ORIGEN = {
  * pieza, acotada a ese uso, sin esperar al desarrollo completo de media
  * tensión.
  *
- * PENDIENTE — Transformador (documentado a propósito, NO implementar
+ * PENDIENTE — Transformador (documentado a propósito, NO conectar
  * todavía; no hay un proyecto real que lo necesite para validar el
  * diseño contra datos reales):
  *
@@ -63,10 +63,17 @@ export const TIPOS_ORIGEN = {
  *   tiene "alimentador" en el mismo sentido que un tablero (tiene
  *   devanados, %Z, relación de transformación, conexión Y/Δ), y por
  *   eso NO debería modelarse reutilizando la entidad Tablero con
- *   campos opcionales — necesita su propia entidad nueva
- *   (`modules/transformador/`, catálogo aparte).
+ *   campos opcionales.
  *
- *   Cuando exista esa entidad, esta función necesita:
+ *   La entidad ya existe — `modules/motor/transformador.js`
+ *   (TRANSFORMADOR_VACIO, normalizarTransformador,
+ *   calcularCorrientesNominales), creada sin conectar a pedido
+ *   explícito del usuario. Vive en modules/motor/ (junto a
+ *   canalizacion.js y cortocircuito.js), no en un modules/transformador/
+ *   propio como se planteaba antes acá — ajustar esta referencia si
+ *   cambia de ubicación más adelante.
+ *
+ *   Para conectarla, esta función necesita:
  *     1. Un segundo catálogo como parámetro (`transformadores`, junto
  *        a `tableros`) y buscar `origenId` en AMBOS — hoy alcanza con
  *        uno solo porque solo existe Tablero.
