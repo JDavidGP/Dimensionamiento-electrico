@@ -13,16 +13,28 @@ import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
 
-// NOTA PARA MÁS ADELANTE (usuario, 2026-11-20 — "puede esperar" según
-// sus propias palabras, no implementar sin que lo pida de nuevo):
-// la columna izquierda (Normativa → Tableros → Circuito → Equipo) ya
-// acumuló bastante — tipo de instalación, fuentes de energía,
-// conmutación — y se está volviendo larga de recorrer con scroll. El
-// usuario pensó en pasar la UI a un layout por pestañas (tab layout /
-// ViewPager2) en vez de todo apilado en una sola columna. No hay un
-// diseño concreto decidido todavía (qué va en cada pestaña) — solo
-// queda registrada la intención, para retomarla cuando el usuario
-// confirme que quiere avanzar con esto.
+// NOTA PARA MÁS ADELANTE (usuario, 2026-11-20, refinada el mismo día —
+// explícitamente DESPUÉS de terminar el diagrama unifilar, no antes;
+// no implementar sin que lo pida de nuevo): la columna izquierda
+// (Normativa → Tableros → Circuito → Equipo) ya acumuló bastante —
+// tipo de instalación, fuentes de energía, conmutación — y se está
+// volviendo larga de recorrer con scroll.
+//
+// Diseño ya precisado por el usuario (antes solo era "tab layout /
+// ViewPager2" sin más detalle):
+//   - Un menú arriba, horizontal, que se desliza de izquierda a
+//     derecha (tabs tipo ViewPager2 — swipe, no solo click).
+//   - Escalonado por el ORDEN en que se van ingresando los datos: los
+//     primeros datos que se cargan (normativa, tipo de instalación,
+//     tablero...) van a la IZQUIERDA del todo; a la DERECHA del todo
+//     va el resumen y la generación de fichas / informe técnico (ver
+//     el pendiente ya existente "Memoria técnica / informe en PDF" en
+//     la hoja de ruta — esa pestaña final sería su lugar natural en
+//     este layout).
+//   - Todavía sin decidir: cuántas pestañas exactas y qué entra en
+//     cada una (ej. ¿tableros y fuentes de energía van juntos o
+//     separados? ¿el diagrama unifilar es su propia pestaña?) — eso
+//     se define cuando se retome esto.
 export default function App() {
   const {
     proyecto,
