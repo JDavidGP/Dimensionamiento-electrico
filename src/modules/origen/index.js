@@ -91,6 +91,38 @@ export const TIPOS_ORIGEN = {
  *        cadena — ver la nota de alcance en ese archivo, es el mismo
  *        pendiente visto desde el otro lado.
  *
+ * DECISIÓN DE UI (usuario, 2026-11-19): cuando esto se conecte, el
+ * selector de "Tablero padre" que ya existe en el formulario de tablero
+ * (PanelTableros.jsx) es el lugar elegido para elegir el origen — se
+ * amplía esa misma lista desplegable para que, además de otros
+ * tableros, aparezcan las fuentes de energía disponibles (Transformador,
+ * y las de la nota siguiente). No se crea un selector nuevo aparte.
+ *
+ * NOTAS PARA MÁS ADELANTE (usuario, 2026-11-19 — todavía sin
+ * desarrollar, quedan registradas para no perderlas; no implementar
+ * sin que haya un proyecto real que lo necesite, mismo criterio que el
+ * resto de este archivo):
+ *
+ *   - Más tipos de fuente además de Transformador: Generador y Banco de
+ *     baterías — mismo grupo de "equipos especiales" opcional que ya
+ *     se armó en shared/data/equiposEspeciales.js.
+ *   - Fuentes configurables EN PARALELO o POR TURNOS: varios países
+ *     alternan red pública de día y autoconsumo (solar/batería) de
+ *     noche, o al revés — esto es un concepto de CONMUTACIÓN/HORARIO
+ *     entre fuentes, distinto de "de dónde cuelga un tablero" (que es
+ *     una relación fija). Probablemente necesite su propia entidad
+ *     (algo como un "esquema de conmutación" con una lista de fuentes
+ *     + la condición de cambio entre ellas), no un campo más en
+ *     Tablero ni en Transformador.
+ *   - Tipo de instalación — domiciliaria o industrial: afecta qué
+ *     configuraciones de motores de alto consumo y transformadores
+ *     tiene sentido ofrecer (ver shared/data/equiposEspeciales.js,
+ *     donde se anotó la misma idea del lado de "equipos especiales").
+ *   - Objetivo explícito del usuario al pedir esto: mantener la
+ *     aplicación "más limpia" — o sea, estos son candidatos a opciones
+ *     AVANZADAS/opcionales, no a ensanchar el flujo principal
+ *     (normativa → tablero → circuito → equipo) para todo el mundo.
+ *
  * @param {string|null|undefined} origenId
  * @param {object[]} tableros
  * @returns {
