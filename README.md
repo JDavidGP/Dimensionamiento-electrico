@@ -88,9 +88,9 @@ npm run dev
 - [ ] Memoria técnica / informe en PDF
 - [ ] Sistema de etiquetado y planos
 - [ ] Migración progresiva a TypeScript
-- [ ] Fuentes de energía (Transformador, Generador, Banco de baterías) como origen seleccionable de un tablero, reutilizando el selector de "Tablero padre"
-- [ ] Fuentes de energía configurables en paralelo o por turnos (ej. red pública de día / autoconsumo de noche, o al revés)
-- [ ] Tipo de instalación (domiciliaria / industrial), para ajustar qué configuraciones de motores de alto consumo y transformadores se ofrecen
+- [ ] Fuentes de energía (Acometida, Batería, Generador diesel, Transformador) como origen seleccionable de un tablero, reutilizando el selector de "Tablero padre"
+- [ ] Fuentes de energía configurables en paralelo o por turnos (ej. red pública de día / autoconsumo de noche, o al revés) y conmutación automática del generador ante una falla de red
+- [ ] Tipo de instalación (domiciliaria / industrial), elegido junto con la normativa, para quitar/agregar equipos y tablas según el tipo de instalación
 
 ## Aviso
 

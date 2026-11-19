@@ -103,21 +103,41 @@ export const TIPOS_ORIGEN = {
  * sin que haya un proyecto real que lo necesite, mismo criterio que el
  * resto de este archivo):
  *
- *   - Más tipos de fuente además de Transformador: Generador y Banco de
- *     baterías — mismo grupo de "equipos especiales" opcional que ya
- *     se armó en shared/data/equiposEspeciales.js.
+ *   - Fuentes de energía, forma concreta (refinada por el usuario):
+ *       · Acometida — la red pública local. Ya existe en este módulo
+ *         como TIPOS_ORIGEN.ACOMETIDA, pero como CONDICIÓN ("sin
+ *         padre"/corte de la cadena), no como entidad con datos
+ *         propios — a diferencia de las dos siguientes.
+ *       · Batería (banco de baterías) — fuente de autoconsumo.
+ *       · Generador (ej. diesel) — fuente AUXILIAR ante fallas de la
+ *         red, no la fuente primaria.
+ *     Las tres listadas juntas en el selector de origen (ver DECISIÓN
+ *     DE UI arriba), aunque Acometida se represente distinto por
+ *     dentro. Batería y Generador son entidades nuevas, mismo grupo de
+ *     "equipos especiales" opcional que ya se armó en
+ *     shared/data/equiposEspeciales.js (junto a Transformador).
  *   - Fuentes configurables EN PARALELO o POR TURNOS: varios países
  *     alternan red pública de día y autoconsumo (solar/batería) de
  *     noche, o al revés — esto es un concepto de CONMUTACIÓN/HORARIO
  *     entre fuentes, distinto de "de dónde cuelga un tablero" (que es
- *     una relación fija). Probablemente necesite su propia entidad
- *     (algo como un "esquema de conmutación" con una lista de fuentes
- *     + la condición de cambio entre ellas), no un campo más en
+ *     una relación fija). El caso del Generador diesel "auxiliar ante
+ *     fallas" es el mismo concepto con otro disparador: conmutación
+ *     AUTOMÁTICA/por transferencia ante un corte, no por horario.
+ *     Probablemente necesite su propia entidad (algo como un "esquema
+ *     de conmutación" con una lista de fuentes + la condición de
+ *     cambio entre ellas — horario o por falla), no un campo más en
  *     Tablero ni en Transformador.
  *   - Tipo de instalación — domiciliaria o industrial: afecta qué
  *     configuraciones de motores de alto consumo y transformadores
  *     tiene sentido ofrecer (ver shared/data/equiposEspeciales.js,
  *     donde se anotó la misma idea del lado de "equipos especiales").
+ *     UBICACIÓN DECIDIDA (usuario, mensaje posterior a este): se
+ *     elige junto con la normativa, en SelectorNormativa.jsx — no en
+ *     un lugar aparte — porque igual que la normativa, es una
+ *     condición de TODO el proyecto, elegida una vez, que después
+ *     filtra qué equipos y tablas se ofrecen en el resto de la UI
+ *     (quita o agrega, no solo ajusta valores). Ver la nota agregada
+ *     en ese componente.
  *   - Objetivo explícito del usuario al pedir esto: mantener la
  *     aplicación "más limpia" — o sea, estos son candidatos a opciones
  *     AVANZADAS/opcionales, no a ensanchar el flujo principal

@@ -5,6 +5,15 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 const LISTA_NORMATIVAS = App.normativa.listar().map((meta) => App.normativa.obtener(meta.id));
 import { colores, fuentes } from "../styles/colores";
 
+// NOTA PARA MÁS ADELANTE (usuario, 2026-11-19 — sin desarrollar
+// todavía, no implementar sin un proyecto real que lo necesite): acá
+// también va a vivir la elección de tipo de instalación (domiciliaria
+// vs. industrial), al lado de la normativa — mismo criterio: una
+// condición de TODO el proyecto, elegida una vez, que después filtra
+// qué equipos/tablas se ofrecen en el resto de la UI (ver
+// shared/data/equiposEspeciales.js y modules/origen/index.js, donde
+// está la nota completa del porqué).
+
 // Agrupa por familia manteniendo el orden de LISTA_NORMATIVAS (NEC, CIEN, IEC...)
 function agruparPorFamilia(lista) {
   const familias = [];

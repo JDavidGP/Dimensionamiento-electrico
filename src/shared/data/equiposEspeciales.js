@@ -53,8 +53,12 @@ export const EQUIPO_ESPECIAL_VACIO = {
 // filtre o ajuste qué aparece acá — una instalación industrial
 // necesita configuraciones de motores de alto consumo y
 // transformadores que no tiene sentido mostrarle por defecto a una
-// instalación domiciliaria (ruido en la UI, no un límite técnico). Ver
-// la nota gemela (misma fecha) en modules/origen/index.js, del lado de
-// "de dónde viene la energía" — ambas notas describen el mismo
-// objetivo del usuario: mantener la aplicación limpia para el caso
-// común, con lo avanzado disponible pero no impuesto.
+// instalación domiciliaria (ruido en la UI, no un límite técnico).
+// UBICACIÓN DECIDIDA (usuario, mensaje posterior): el tipo de
+// instalación se elige junto con la normativa, en
+// SelectorNormativa.jsx (ver la nota agregada ahí) — una vez elegido
+// ahí, filtra/ajusta qué aparece en este archivo, no al revés.
+// Ver también la nota gemela (misma fecha) en modules/origen/index.js,
+// del lado de "de dónde viene la energía" — ambas notas describen el
+// mismo objetivo del usuario: mantener la aplicación limpia para el
+// caso común, con lo avanzado disponible pero no impuesto.
