@@ -7,6 +7,7 @@ import Metrica from "./components/Metrica";
 import TablaResultados from "./components/TablaResultados";
 import PanelBreakers from "./components/PanelBreakers";
 import PanelTableros from "./components/PanelTableros";
+import PanelFuentesEnergia from "./components/PanelFuentesEnergia";
 import SelectorNormativa from "./components/SelectorNormativa";
 import DiagramaUnifilar from "./components/DiagramaUnifilar";
 import TabsViewPager from "./components/TabsViewPager";
@@ -78,6 +79,8 @@ export default function App() {
     balancesFases,
     fuentesEnergia,
     crearFuenteEnergia,
+    editarFuenteEnergia,
+    eliminarFuenteEnergia,
     nodosDiagrama,
     crearNodoDiagrama,
     editarNodoDiagrama,
@@ -141,6 +144,16 @@ export default function App() {
                   fuentesEnergia={fuentesEnergia}
                   crearFuenteEnergia={crearFuenteEnergia}
                 />
+
+                <div style={{ marginTop: 16 }}>
+                  <PanelFuentesEnergia
+                    fuentesEnergia={fuentesEnergia}
+                    crearFuenteEnergia={crearFuenteEnergia}
+                    editarFuenteEnergia={editarFuenteEnergia}
+                    eliminarFuenteEnergia={eliminarFuenteEnergia}
+                    listaIntegridad={listaIntegridad}
+                  />
+                </div>
               </div>
             ),
           },

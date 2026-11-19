@@ -252,6 +252,41 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []
 }
 
 /**
+ * Fuente de energía (Batería/Generador) como entrada propia de
+ * integridad — agregado cuando PanelFuentesEnergia.jsx le dio una lista
+ * propia en la UI (antes no tenía dónde mostrarse, ver el commit del
+ * caso inverso de la sincronización diagrama↔tabla). Chequeo mínimo,
+ * mismo criterio que tablero/circuito/equipo: ID duplicado (error) y
+ * representación en el diagrama (advertencia) — nada más se valida de
+ * una fuenteEnergia hoy (capacidadKW/notas son libres, no tienen regla).
+ */
+function validarFuenteEnergia(fuente, idsVistos, proyectoId, nodosDiagrama = []) {
+  const problemas = [];
+  let estado = ESTADOS.OK;
+
+  if (idsVistos.has(fuente.id)) {
+    problemas.push("ID duplicado en el proyecto");
+    estado = ESTADOS.ERROR;
+  }
+  idsVistos.add(fuente.id);
+
+  if (!nodosDiagrama.some((n) => n.entidadId === fuente.id)) {
+    problemas.push("Sin representar en el diagrama unifilar");
+    estado = peorEstado(estado, ESTADOS.ADVERTENCIA);
+  }
+
+  return crearEntrada({
+    id: fuente.id,
+    tipo: "fuenteEnergia",
+    nombre: fuente.nombre || fuente.id,
+    parentId: proyectoId,
+    estado,
+    resumen: `${fuente.tipo} · ${fuente.rol}`,
+    problemas,
+  });
+}
+
+/**
  * Punto de entrada de Fase 1 (+ Fase 3, Tablero).
  * @param {Object} proyecto - metadatos del proyecto ({ id, nombre, ... })
  * @param {Array}  circuitos - array plano de circuitos
@@ -271,6 +306,10 @@ export function validarIntegridadReferencial(proyecto, circuitos = [], equipos =
 
   listaTableros.forEach((t) => {
     entradas.push(validarTablero(t, circuitos, idsVistos, proj.id, listaTableros, fuentesEnergia, nodosDiagrama));
+  });
+
+  fuentesEnergia.forEach((f) => {
+    entradas.push(validarFuenteEnergia(f, idsVistos, proj.id, nodosDiagrama));
   });
 
   circuitos.forEach((c) => {

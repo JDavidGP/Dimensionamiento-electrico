@@ -29,18 +29,21 @@ const FORM_VACIO = {
 
 const FORM_FUENTE_VACIO = { nombre: "", tipo: "bateria", rol: "auxiliar" };
 
-const TIPOS_FUENTE_UI = [
+// Exportadas para que PanelFuentesEnergia.jsx (lista propia de fuentes
+// de energía, con su CRUD completo) use las mismas etiquetas — nunca
+// un segundo mapeo que se pueda desincronizar del de acá.
+export const TIPOS_FUENTE_UI = [
   { valor: "bateria", label: "Batería" },
   { valor: "generador", label: "Generador" },
 ];
 
-const ROLES_FUENTE_UI = [
+export const ROLES_FUENTE_UI = [
   { valor: "principal", label: "Principal" },
   { valor: "secundaria", label: "Secundaria" },
   { valor: "auxiliar", label: "Auxiliar" },
 ];
 
-function BotonPill({ activo, onClick, children, flex = 1 }) {
+export function BotonPill({ activo, onClick, children, flex = 1 }) {
   return (
     <button
       type="button"
