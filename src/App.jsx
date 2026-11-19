@@ -92,6 +92,7 @@ export default function App() {
             crearTablero={crearTablero}
             editarTablero={editarTablero}
             eliminarTablero={eliminarTablero}
+            normativaActiva={normativaActiva}
           />
 
           <FormularioCircuito

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
 import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
@@ -9,22 +10,30 @@ const FASES = [
   { valor: "tri", label: "Tri" },
 ];
 
+// tensionManual es puramente de este formulario (no se guarda en el
+// tablero) — decide si, al cambiar las fases del alimentador, la
+// tensión se auto-actualiza al estándar de la normativa activa o se
+// deja como la dejó el instalador. Mismo criterio que voltajeManual en
+// FormularioCircuito.jsx, pero sin persistirlo: al editar un tablero
+// existente alcanza con derivarlo comparando su tensión contra los
+// valores estándar (ver abrirEdicion).
 const FORM_VACIO = {
   nombre: "",
-  tensionAlimentacion: "120",
+  tensionAlimentacion: "",
+  tensionManual: false,
   fases: "mono",
   tableroPadreId: "", // "" = acometida/poste/transformador (sin padre)
   longitudAlimentador: "",
   materialAlimentador: "cobre",
 };
 
-function BotonPill({ activo, onClick, children }) {
+function BotonPill({ activo, onClick, children, flex = 1 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        flex: 1,
+        flex,
         padding: "7px 0",
         borderRadius: 3,
         border: `1px solid ${activo ? colores.copper : colores.border}`,
@@ -280,6 +289,7 @@ export default function PanelTableros({
   editarTablero,
   eliminarTablero,
   listaIntegridad = [],
+  normativaActiva,
 }) {
   const [tableroActivoId, setTableroActivoId] = useState(null);
   const [formAbierto, setFormAbierto] = useState(false);
@@ -291,10 +301,21 @@ export default function PanelTableros({
   // tener que volver a buscarlo por id.
   const [padreForzado, setPadreForzado] = useState(null);
 
+  const normativa = App.normativa.obtener(normativaActiva);
+  const voltajesEstandar = normativa.voltajesPorFase?.[form.fases] ?? [];
+
   const sinAsignar = circuitosSinTablero();
 
+  // Tensión por defecto para una fase dada, según la normativa activa
+  // — el primer valor estándar de esa fase, o "" si la normativa no
+  // tiene ninguno definido (no se inventa un número).
+  function tensionPorDefecto(fases) {
+    const estandar = normativa.voltajesPorFase?.[fases] ?? [];
+    return estandar[0] != null ? String(estandar[0]) : "";
+  }
+
   function abrirCreacion() {
-    setForm(FORM_VACIO);
+    setForm({ ...FORM_VACIO, tensionAlimentacion: tensionPorDefecto("mono") });
     setEditandoId(null);
     setPadreForzado(null);
     setFormAbierto(true);
@@ -305,16 +326,24 @@ export default function PanelTableros({
   // mismo formulario de siempre, solo que el campo "Tablero padre" no
   // hace falta buscarlo, ya se sabe de dónde cuelga.
   function abrirCreacionSubtablero(tableroPadre) {
-    setForm({ ...FORM_VACIO, tableroPadreId: tableroPadre.id });
+    setForm({ ...FORM_VACIO, tensionAlimentacion: tensionPorDefecto("mono"), tableroPadreId: tableroPadre.id });
     setEditandoId(null);
     setPadreForzado(tableroPadre);
     setFormAbierto(true);
   }
 
   function abrirEdicion(t) {
+    // tensionManual se deriva, no se guardó: si la tensión actual del
+    // tablero coincide con alguno de los valores estándar de SU fase
+    // bajo la normativa activa, se muestra como esa pill seleccionada;
+    // si no coincide con ninguno (ej. viene de otra normativa, o se
+    // cargó un proyecto hecho bajo otro estándar), se muestra como
+    // "Manual" — nunca se le cambia el valor en silencio.
+    const estandar = normativa.voltajesPorFase?.[t.fases] ?? [];
     setForm({
       nombre: t.nombre,
       tensionAlimentacion: String(t.tensionAlimentacion),
+      tensionManual: !estandar.includes(Number(t.tensionAlimentacion)),
       fases: t.fases,
       tableroPadreId: t.tableroPadreId ?? "",
       longitudAlimentador: t.longitudAlimentador ? String(t.longitudAlimentador) : "",
@@ -385,25 +414,55 @@ export default function PanelTableros({
             />
           </Campo>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Campo label="Tensión alimentación (V)">
+          <Campo label="Fases del alimentador">
+            <div style={{ display: "flex", gap: 6 }}>
+              {FASES.map((f) => (
+                <BotonPill
+                  key={f.valor}
+                  activo={form.fases === f.valor}
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      fases: f.valor,
+                      // Mismo criterio que cambiarFasesCircuito: si la
+                      // tensión no fue puesta a mano, se sigue el
+                      // estándar de la normativa para la fase nueva.
+                      tensionAlimentacion: form.tensionManual ? form.tensionAlimentacion : tensionPorDefecto(f.valor),
+                    })
+                  }
+                >
+                  {f.label}
+                </BotonPill>
+              ))}
+            </div>
+          </Campo>
+
+          <Campo label={`Tensión alimentación (${normativa.id})`}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {voltajesEstandar.map((v) => (
+                <BotonPill
+                  key={v}
+                  flex="0 0 auto"
+                  activo={!form.tensionManual && Number(form.tensionAlimentacion) === v}
+                  onClick={() => setForm({ ...form, tensionAlimentacion: String(v), tensionManual: false })}
+                >
+                  <span style={{ padding: "0 10px" }}>{v}V</span>
+                </BotonPill>
+              ))}
+              <BotonPill flex="0 0 auto" activo={form.tensionManual} onClick={() => setForm({ ...form, tensionManual: true })}>
+                <span style={{ padding: "0 10px" }}>Manual</span>
+              </BotonPill>
+            </div>
+            {form.tensionManual && (
               <input
-                style={inputStyle()}
+                style={{ ...inputStyle(), marginTop: 8 }}
                 type="number"
+                placeholder="Tensión del alimentador (V)"
                 value={form.tensionAlimentacion}
                 onChange={(e) => setForm({ ...form, tensionAlimentacion: e.target.value })}
               />
-            </Campo>
-            <Campo label="Fases del alimentador">
-              <div style={{ display: "flex", gap: 6 }}>
-                {FASES.map((f) => (
-                  <BotonPill key={f.valor} activo={form.fases === f.valor} onClick={() => setForm({ ...form, fases: f.valor })}>
-                    {f.label}
-                  </BotonPill>
-                ))}
-              </div>
-            </Campo>
-          </div>
+            )}
+          </Campo>
 
           {padreForzado ? (
             <Campo label="Tablero padre">
