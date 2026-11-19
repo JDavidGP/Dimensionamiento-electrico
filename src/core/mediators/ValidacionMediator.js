@@ -21,23 +21,25 @@ import { DataProvider } from "../services/DataProvider.js";
 export const ValidacionMediator = {
   ESTADOS,
 
-  listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia) {
+  listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama) {
     return obtenerListaIntegridad(
       proyecto ?? DataProvider.getProyecto(),
       circuitos ?? DataProvider.getCircuitos(),
       equipos ?? DataProvider.getEquipos(),
       tableros ?? DataProvider.getTableros(),
-      fuentesEnergia ?? DataProvider.getFuentesEnergia()
+      fuentesEnergia ?? DataProvider.getFuentesEnergia(),
+      nodosDiagrama ?? DataProvider.getNodosDiagrama()
     );
   },
 
-  resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia) {
+  resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama) {
     return resumenIntegridad(
       proyecto ?? DataProvider.getProyecto(),
       circuitos ?? DataProvider.getCircuitos(),
       equipos ?? DataProvider.getEquipos(),
       tableros ?? DataProvider.getTableros(),
-      fuentesEnergia ?? DataProvider.getFuentesEnergia()
+      fuentesEnergia ?? DataProvider.getFuentesEnergia(),
+      nodosDiagrama ?? DataProvider.getNodosDiagrama()
     );
   },
 

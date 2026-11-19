@@ -164,13 +164,13 @@ export function useCircuitos() {
 
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
-    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia),
-    [proyecto, circuitos, equipos, tableros, fuentesEnergia]
+    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama]
   );
 
   const resumenInt = useMemo(
-    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia),
-    [proyecto, circuitos, equipos, tableros, fuentesEnergia]
+    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama]
   );
 
   const detalleElectrico = useCallback(

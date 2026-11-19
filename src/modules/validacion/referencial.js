@@ -93,7 +93,7 @@ function validarEquipo(equipo, circuito, idsVistos) {
   });
 }
 
-function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tableros = []) {
+function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tableros = [], nodosDiagrama = []) {
   const problemas = [];
   let estado = ESTADOS.OK;
 
@@ -159,10 +159,29 @@ function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tabl
     entradaCircuito.estado = peorEstado(entradaCircuito.estado, e.estado);
   });
 
+  // Caso inverso de la sincronización diagrama↔tabla (ARCHITECTURE.md
+  // §9): qué equipos de este circuito TODAVÍA no tienen un nodo en el
+  // diagrama unifilar apuntándolos (nodo.entidadId === equipo.id). Se
+  // reporta acá, a nivel circuito (no por equipo individual) porque hoy
+  // no hay una fila de UI por equipo donde mostrarlo — TablaResultados
+  // ya muestra los `problemas` del circuito, así que esto se ve sin
+  // construir una pantalla nueva. Es ADVERTENCIA, no error: un equipo
+  // sin dibujar en el diagrama sigue siendo un dato de cálculo válido.
+  const equiposSinRepresentar = equiposDelCircuito.filter(
+    (eq) => !nodosDiagrama.some((n) => n.entidadId === eq.id)
+  );
+  if (equiposSinRepresentar.length > 0) {
+    const nombres = equiposSinRepresentar.map((e) => e.nombre || e.id).join(", ");
+    entradaCircuito.problemas.push(
+      `${equiposSinRepresentar.length} equipo(s) sin representar en el diagrama unifilar: ${nombres}`
+    );
+    entradaCircuito.estado = peorEstado(entradaCircuito.estado, ESTADOS.ADVERTENCIA);
+  }
+
   return [entradaCircuito, ...entradasEquipos];
 }
 
-function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = [], fuentesEnergia = []) {
+function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = [], fuentesEnergia = [], nodosDiagrama = []) {
   const problemas = [];
   let estado = ESTADOS.OK;
 
@@ -215,6 +234,12 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []
     }
   }
 
+  // Caso inverso de la sincronización diagrama↔tabla — ver nota igual en validarCircuito.
+  if (!nodosDiagrama.some((n) => n.entidadId === tablero.id)) {
+    problemas.push("Sin representar en el diagrama unifilar");
+    estado = peorEstado(estado, ESTADOS.ADVERTENCIA);
+  }
+
   return crearEntrada({
     id: tablero.id,
     tipo: "tablero",
@@ -233,9 +258,10 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []
  * @param {Array}  equipos   - array plano de equipos (con circuitoId)
  * @param {Array}  tableros  - array plano de tableros (con id, nombre...)
  * @param {Array}  fuentesEnergia - array plano de fuentes de energía (Batería/Generador)
+ * @param {Array}  nodosDiagrama - array plano de nodos del diagrama unifilar (con entidadId) — caso inverso de la sincronización, ver ARCHITECTURE.md §9
  * @returns {Array} lista plana de entradas para la UI
  */
-export function validarIntegridadReferencial(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = []) {
+export function validarIntegridadReferencial(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = []) {
   const idsVistos = new Set();
   const entradas = [];
   const proj = proyecto || { id: "proyecto" };
@@ -244,12 +270,12 @@ export function validarIntegridadReferencial(proyecto, circuitos = [], equipos =
   const listaTableros = tableros.length > 0 ? tableros : proj.tableros || [];
 
   listaTableros.forEach((t) => {
-    entradas.push(validarTablero(t, circuitos, idsVistos, proj.id, listaTableros, fuentesEnergia));
+    entradas.push(validarTablero(t, circuitos, idsVistos, proj.id, listaTableros, fuentesEnergia, nodosDiagrama));
   });
 
   circuitos.forEach((c) => {
     const equiposDelCircuito = equipos.filter((e) => e.circuitoId === c.id);
-    entradas.push(...validarCircuito(c, equiposDelCircuito, proj, idsVistos, listaTableros));
+    entradas.push(...validarCircuito(c, equiposDelCircuito, proj, idsVistos, listaTableros, nodosDiagrama));
   });
 
   // Equipos huérfanos (circuitoId que no existe)
