@@ -84,7 +84,7 @@ npm run dev
 - [x] Tableros jerárquicos, caída de tensión acumulada y balance de fases
 - [x] Validación referencial y eléctrica
 - [ ] Factores de simultaneidad del REBT (ITC-BT-10) a nivel de tablero/acometida
-- [ ] Diagrama unifilar sincronizado con la tabla
+- [ ] Diagrama unifilar sincronizado con la tabla — Fase 1 (modelo de datos: nodos, conexiones, biblioteca de ~25 componentes) lista; faltan el editor visual, el motor de dibujo (SVG) y la autoorganización
 - [ ] Memoria técnica / informe en PDF
 - [ ] Sistema de etiquetado y planos
 - [ ] Migración progresiva a TypeScript
