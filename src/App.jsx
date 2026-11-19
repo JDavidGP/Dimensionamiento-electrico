@@ -176,6 +176,7 @@ export default function App() {
                     error={errorCircuito}
                     editando={!!editandoCircuitoId}
                     normativaActiva={normativaActiva}
+                    tipoInstalacion={tipoInstalacion}
                     onCambiarFases={cambiarFasesCircuito}
                     cantidadEquiposCircuito={
                       editandoCircuitoId

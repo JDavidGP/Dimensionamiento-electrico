@@ -63,20 +63,43 @@ export const MAX_COSPHI = 1.0;
 export const MIN_TEMP_C = -10;
 export const MAX_TEMP_C = 60;
 
-// Tipo de instalación — DOMICILIARIA o INDUSTRIAL, elegido junto con
-// la normativa (ver SelectorNormativa.jsx y la nota larga en
-// modules/origen/index.js). Por ahora es puramente informativo: no
-// filtra ni agrega equipos/tablas todavía — eso es el siguiente paso,
-// pendiente de la investigación NEC/REBT sobre qué distingue
-// realmente a una instalación industrial (ver INVESTIGACION_
-// INSTALACION_INDUSTRIAL más abajo). Declarado como constante por el
-// mismo motivo que TIPOS_ORIGEN/TIPOS_EQUIPO_ESPECIAL: comparar contra
-// estos valores, no contra literales sueltos.
+// Tipo de instalación — 3 niveles, elegidos junto con la normativa
+// (ver SelectorNormativa.jsx). Declarado como constante por el mismo
+// motivo que TIPOS_ORIGEN/TIPOS_EQUIPO_ESPECIAL: comparar contra estos
+// valores, no contra literales sueltos.
+//
+// AMPLIADO de 2 a 3 niveles (usuario, 2026-11-19 — "dividiría el tipo
+// de proyecto desde el inicio... esto simplifica muchísimo la
+// interfaz"): el eje RESIDENCIAL_BASICO vs. RESIDENCIAL_AVANZADO es
+// una decisión de PRODUCTO/UX (progressive disclosure — ocultarle
+// trifásico al ~95% de usuarios que diseña viviendas simples, sin
+// limitar al profesional que sí lo necesita), NO una distinción
+// normativa — no tiene cita NEC/REBT propia, a diferencia del eje
+// RESIDENCIAL vs. COMERCIAL_INDUSTRIAL (ese sí respaldado por la
+// investigación de abajo: el umbral de 20 kW del REBT y el concepto de
+// "supervised industrial installation" del NEC).
+//
+//   - RESIDENCIAL_BASICO: mono/bifásico únicamente — sin trifásico
+//     (FormularioCircuito.jsx oculta el pill "Tri"). Valor por defecto.
+//   - RESIDENCIAL_AVANZADO: habilita trifásico (vivienda grande,
+//     bomba/aire acondicionado trifásico, etc.) sin pasar todavía a
+//     las herramientas de instalación comercial/industrial (balance de
+//     fases avanzado, motores de potencia media/alta) — esas siguen
+//     siendo las mismas para los 3 niveles por ahora, ESTE primer paso
+//     solo toca el filtro de fases en circuito/equipo (pedido explícito
+//     del usuario: "primera ronda chica").
+//   - COMERCIAL_INDUSTRIAL: todo visible desde el principio (trifásico,
+//     balance de fases, Transformador como origen — ver PanelTableros.jsx).
+//
+// Migración de archivos guardados con el enum viejo (2 valores):
+// "domiciliaria" → RESIDENCIAL_BASICO, "industrial" → COMERCIAL_INDUSTRIAL
+// (ver modules/persistencia/proyecto.js, deserializarProyecto).
 export const TIPOS_INSTALACION = {
-  DOMICILIARIA: "domiciliaria",
-  INDUSTRIAL: "industrial",
+  RESIDENCIAL_BASICO: "residencial_basico",
+  RESIDENCIAL_AVANZADO: "residencial_avanzado",
+  COMERCIAL_INDUSTRIAL: "comercial_industrial",
 };
-export const TIPO_INSTALACION_POR_DEFECTO = TIPOS_INSTALACION.DOMICILIARIA;
+export const TIPO_INSTALACION_POR_DEFECTO = TIPOS_INSTALACION.RESIDENCIAL_BASICO;
 
 // INVESTIGACIÓN — qué distingue a una instalación industrial en NEC y
 // REBT (pedida por el usuario, 2026-11-19, para decidir CON QUÉ
@@ -156,9 +179,14 @@ export const TIPO_INSTALACION_POR_DEFECTO = TIPOS_INSTALACION.DOMICILIARIA;
 // REBT sí tiene un número concreto: 20 kW), (b) si hay personal
 // calificado supervisando la instalación (el eje real del NEC), y
 // (c) el tipo de carga real conectada (motores, ubicaciones
-// peligrosas). El selector domiciliaria/industrial de la UI
+// peligrosas). El selector de tipo de instalación de la UI
 // probablemente deba traducirse a estos criterios concretos al
-// filtrar equipos/tablas, no tratarse como una etiqueta decorativa.
+// filtrar más equipos/tablas (balance de fases avanzado, motores de
+// potencia media/alta — ver la nota arriba de TIPOS_INSTALACION), no
+// tratarse como una etiqueta decorativa. Primer paso ya dado (2026-11-19):
+// RESIDENCIAL_BASICO oculta el pill "Tri" en circuito/equipo — el
+// resto (balance de fases, Transformador, motores) sigue pendiente de
+// diferenciarse entre RESIDENCIAL_AVANZADO y COMERCIAL_INDUSTRIAL.
 // Esto sigue sin ser una cita verificada palabra por palabra contra el
 // texto oficial (pendiente real: acceso directo a NFPA 70 y al BOE del
 // REBT) — es la mejor síntesis posible vía búsqueda web, ya con una

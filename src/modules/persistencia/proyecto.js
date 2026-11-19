@@ -1,5 +1,23 @@
 import { generarId } from "../../shared/utils/id.js";
-import { TIPO_INSTALACION_POR_DEFECTO } from "../../shared/constants/constantes.js";
+import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../../shared/constants/constantes.js";
+
+// Migración del enum viejo de tipoInstalacion (2 valores: domiciliaria/
+// industrial) al nuevo de 3 (ver la nota larga en shared/constants/
+// constantes.js) — un archivo guardado antes de 2026-11-19 trae el
+// valor viejo tal cual, nunca se reescribe el archivo del usuario, solo
+// se traduce al cargarlo. "industrial" mapea a COMERCIAL_INDUSTRIAL (el
+// nivel más cercano a su intención original); "domiciliaria" al nuevo
+// default RESIDENCIAL_BASICO.
+const MIGRACION_TIPO_INSTALACION = {
+  domiciliaria: TIPOS_INSTALACION.RESIDENCIAL_BASICO,
+  industrial: TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL,
+};
+
+function migrarTipoInstalacion(valor) {
+  if (!valor) return TIPO_INSTALACION_POR_DEFECTO;
+  if (Object.values(TIPOS_INSTALACION).includes(valor)) return valor;
+  return MIGRACION_TIPO_INSTALACION[valor] ?? TIPO_INSTALACION_POR_DEFECTO;
+}
 
 export function proyectoVacio() {
   return {
@@ -42,9 +60,10 @@ export function deserializarProyecto(data) {
   return {
     proyecto: data.proyecto ?? proyectoVacio(),
     normativaActiva: data.normativaActiva ?? "NEC",
-    // Compatibilidad: archivos guardados antes de esta sesión no traen
-    // tipoInstalacion — caen al valor por defecto, no se inventa otra cosa.
-    tipoInstalacion: data.tipoInstalacion ?? TIPO_INSTALACION_POR_DEFECTO,
+    // Compatibilidad: archivos sin tipoInstalacion caen al default; con
+    // el enum viejo (domiciliaria/industrial) se migran al nuevo de 3
+    // niveles — ver migrarTipoInstalacion arriba.
+    tipoInstalacion: migrarTipoInstalacion(data.tipoInstalacion),
     circuitos: data.circuitos,
     equipos: data.equipos,
     // Compatibilidad: archivos guardados antes de Fase 3 no traen tableros.

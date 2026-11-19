@@ -3,6 +3,7 @@ import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
 import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { TIPOS_INSTALACION } from "../shared/constants/constantes.js";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
@@ -541,7 +542,7 @@ export default function PanelTableros({
   const [nuevaFuenteAbierta, setNuevaFuenteAbierta] = useState(false);
   const [formFuente, setFormFuente] = useState(FORM_FUENTE_VACIO);
   // Mismo mini-formulario inline, para Transformador — solo visible
-  // cuando tipoInstalacion === "industrial" (ver TIPOS_ORIGEN.
+  // cuando tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL (ver TIPOS_ORIGEN.
   // TRANSFORMADOR en modules/origen/index.js).
   const [nuevoTransformadorAbierto, setNuevoTransformadorAbierto] = useState(false);
   const [formTransformador, setFormTransformador] = useState(FORM_TRANSFORMADOR_VACIO);
@@ -720,7 +721,7 @@ export default function PanelTableros({
               </div>
             </Campo>
           ) : (
-            <Campo label={`Origen (tablero padre, fuente de energía${tipoInstalacion === "industrial" ? " o transformador" : ""}, opcional)`}>
+            <Campo label={`Origen (tablero padre, fuente de energía${tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL ? " o transformador" : ""}, opcional)`}>
               <select
                 style={inputStyle()}
                 value={form.tableroPadreId}
@@ -747,7 +748,7 @@ export default function PanelTableros({
                 )}
                 {/* Transformador: origen seleccionable SOLO en instalación industrial — ver
                     TIPOS_ORIGEN.TRANSFORMADOR en modules/origen/index.js. */}
-                {tipoInstalacion === "industrial" && transformadores.length > 0 && (
+                {tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL && transformadores.length > 0 && (
                   <optgroup label="Transformadores">
                     {transformadores.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -832,7 +833,7 @@ export default function PanelTableros({
                 </div>
               )}
 
-              {tipoInstalacion === "industrial" && crearTransformador && (
+              {tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL && crearTransformador && (
                 <div style={{ marginTop: 8 }}>
                   {nuevoTransformadorAbierto ? (
                     <div style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>

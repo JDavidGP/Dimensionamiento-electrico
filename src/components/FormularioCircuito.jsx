@@ -2,6 +2,7 @@ import React from "react";
 import Campo, { inputStyle } from "./Campo";
 import { colores, fuentes } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { TIPOS_INSTALACION } from "../shared/constants/constantes.js";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
@@ -33,9 +34,15 @@ function BotonPill({ activo, onClick, children, flex = 1 }) {
 // Un Circuito es lo que tiene un breaker físico: voltaje, fases,
 // material, distancia, y su TIPO (dedicado/mixto). Los equipos se
 // agregan después, dentro del circuito ya creado.
-export default function FormularioCircuito({ form, setForm, onGuardar, onCancelar, error, editando, normativaActiva, onCambiarFases }) {
+export default function FormularioCircuito({ form, setForm, onGuardar, onCancelar, error, editando, normativaActiva, onCambiarFases, tipoInstalacion }) {
   const normativa = App.normativa.obtener(normativaActiva);
   const voltajesEstandar = normativa.voltajesPorFase[form.fases] ?? [];
+  // Residencial básico oculta "Tri" (pedido explícito del usuario, ver la
+  // nota larga en shared/constants/constantes.js, TIPOS_INSTALACION) — NO
+  // se le cambia la fase a un circuito que ya la tenía en tri si se
+  // cambió el nivel después (no se inventa/corrige un dato del usuario en
+  // silencio); el pill simplemente no aparece entre las opciones nuevas.
+  const fasesDisponibles = tipoInstalacion === TIPOS_INSTALACION.RESIDENCIAL_BASICO ? FASES.filter((f) => f.valor !== "tri") : FASES;
 
   function elegirVoltajeEstandar(v) {
     setForm({ ...form, voltaje: String(v), voltajeManual: false });
@@ -79,7 +86,7 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
 
       <Campo label="Fases">
         <div style={{ display: "flex", gap: 8 }}>
-          {FASES.map((f) => (
+          {fasesDisponibles.map((f) => (
             <BotonPill key={f.valor} activo={form.fases === f.valor} onClick={() => onCambiarFases(f.valor)}>
               {f.label}
             </BotonPill>

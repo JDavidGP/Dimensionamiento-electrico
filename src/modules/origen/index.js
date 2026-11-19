@@ -46,7 +46,8 @@ export const TIPOS_ORIGEN = {
  *     transformador ya resuelto. CONECTADO (usuario, 2026-11-19) SOLO
  *     como origen seleccionable (registro — "nos hace falta datos para
  *     desarrollar ese apartado"), gateado en la UI a
- *     tipoInstalacion === "industrial" (PanelTableros.jsx). Sigue
+ *     tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL
+ *     (ver shared/constants/constantes.js, PanelTableros.jsx). Sigue
  *     PENDIENTE, a propósito, todo lo que requeriría datos reales de un
  *     proyecto industrial que todavía no hay: que evaluarCaidaAcumulada
  *     (modules/motor/caidaTensionAcumulada.js) deje de asumir una sola

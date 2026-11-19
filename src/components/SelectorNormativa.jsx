@@ -6,9 +6,15 @@ const LISTA_NORMATIVAS = App.normativa.listar().map((meta) => App.normativa.obte
 import { colores, fuentes } from "../styles/colores";
 import { TIPOS_INSTALACION } from "../shared/constants/constantes.js";
 
+// 3 niveles (ver la nota larga en shared/constants/constantes.js, TIPOS_INSTALACION):
+// Residencial básico/avanzado es una distinción de UX (oculta trifásico al
+// uso típico, sin cita normativa propia); avanzado→comercial/industrial sí
+// tiene respaldo NEC/REBT (umbral de 20 kW del REBT, "supervised industrial
+// installation" del NEC).
 const OPCIONES_TIPO_INSTALACION = [
-  { valor: TIPOS_INSTALACION.DOMICILIARIA, label: "Domiciliaria" },
-  { valor: TIPOS_INSTALACION.INDUSTRIAL, label: "Industrial" },
+  { valor: TIPOS_INSTALACION.RESIDENCIAL_BASICO, label: "Residencial básico" },
+  { valor: TIPOS_INSTALACION.RESIDENCIAL_AVANZADO, label: "Residencial avanzado" },
+  { valor: TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL, label: "Comercial / Industrial" },
 ];
 
 // Agrupa por familia manteniendo el orden de LISTA_NORMATIVAS (NEC, CIEN, IEC...)
@@ -222,27 +228,32 @@ export default function SelectorNormativa({ normativaActiva, setNormativaActiva,
       </div>
 
       {/* Tipo de instalación — se aplica al toque, no necesita "Validar"
-          como la normativa: todavía no dispara ningún recálculo, es
-          puramente informativo (ver nota de investigación NEC/REBT en
-          shared/constants/constantes.js). */}
+          como la normativa. Desde que se agregó el 3er nivel (ver nota
+          larga en shared/constants/constantes.js, TIPOS_INSTALACION) SÍ
+          filtra algo: Residencial básico oculta el pill "Tri" en
+          circuito/equipo. El resto (balance de fases, Transformador,
+          motores) todavía no distingue entre avanzado y
+          comercial/industrial. */}
       {setTipoInstalacion && (
         <div style={{ marginTop: 10 }}>
           <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
             Tipo de instalación
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {OPCIONES_TIPO_INSTALACION.map((op) => (
               <button
                 key={op.valor}
                 onClick={() => setTipoInstalacion(op.valor)}
-                style={estiloBotonPrincipal(tipoInstalacion === op.valor)}
+                style={{ ...estiloBotonPrincipal(tipoInstalacion === op.valor), flex: "1 1 140px", textAlign: "center" }}
               >
                 {op.label}
               </button>
             ))}
           </div>
           <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, marginTop: 6 }}>
-            Por ahora es solo informativo — todavía no agrega ni quita equipos o tablas según el tipo elegido.
+            {tipoInstalacion === TIPOS_INSTALACION.RESIDENCIAL_BASICO
+              ? "Solo monofásico/bifásico — sin opción trifásica en circuitos y equipos."
+              : "Habilita trifásico en circuitos y equipos. El resto (balance de fases, Transformador como origen, motores) es igual en los 3 niveles por ahora."}
           </div>
         </div>
       )}
