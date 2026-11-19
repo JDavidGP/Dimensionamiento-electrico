@@ -19,12 +19,17 @@ import {
   liberarTablerosDeFuente,
   TIPOS_FUENTE_ENERGIA,
   ROLES_FUENTE_ENERGIA,
+  MODOS_CONMUTACION,
+  CONMUTACION_VACIA,
+  normalizarConmutacion,
 } from "../../modules/origen/index.js";
 
 export const OrigenMediator = {
   // Enums expuestos para la UI — mismo patrón que ValidacionMediator.ESTADOS.
   TIPOS_FUENTE_ENERGIA,
   ROLES_FUENTE_ENERGIA,
+  MODOS_CONMUTACION,
+  CONMUTACION_VACIA,
 
   /** Fábrica de una fuente de energía nueva (no la guarda — eso lo hace el hook). */
   crearFuente(datos) {
@@ -44,5 +49,10 @@ export const OrigenMediator = {
   /** Resuelve qué es un origenId (tableroPadreId) contra ambos catálogos. */
   resolver(origenId, tableros, fuentesEnergia) {
     return resolverOrigen(origenId, tableros ?? [], fuentesEnergia ?? []);
+  },
+
+  /** Normaliza un esquema de conmutación (tablero.conmutacion) antes de guardarlo. */
+  normalizarConmutacion(datos) {
+    return normalizarConmutacion(datos);
   },
 };

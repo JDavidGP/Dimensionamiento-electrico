@@ -198,6 +198,23 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []
     }
   }
 
+  // Esquema de conmutación (DOCUMENTAL, ver modules/origen/conmutacion.js)
+  // — mismo chequeo que tableroPadreId: "acometida" y "" (ninguna) son
+  // siempre válidos; cualquier otro valor debe ser una fuente real.
+  if (tablero.conmutacion?.activa) {
+    const camposFuente = [
+      ["fuentePrincipalId", tablero.conmutacion.fuentePrincipalId],
+      ["fuenteSecundariaId", tablero.conmutacion.fuenteSecundariaId],
+      ["fuenteAuxiliarId", tablero.conmutacion.fuenteAuxiliarId],
+    ];
+    for (const [campo, valor] of camposFuente) {
+      if (valor && valor !== "acometida" && !fuentesEnergia.some((f) => f.id === valor)) {
+        problemas.push(`Conmutación: ${campo} referencia una fuente de energía inexistente (${valor})`);
+        estado = ESTADOS.ERROR;
+      }
+    }
+  }
+
   return crearEntrada({
     id: tablero.id,
     tipo: "tablero",

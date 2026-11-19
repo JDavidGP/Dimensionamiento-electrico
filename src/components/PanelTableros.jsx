@@ -186,6 +186,209 @@ function colorSeveridadBalance(pct, limite) {
 // color = severidad) y, si excede el umbral, una sugerencia de qué
 // mover para mejorar el balance — nunca se aplica solo, es información
 // para que el instalador decida.
+const MODOS_CONMUTACION_UI = [
+  { valor: "falla_automatica", label: "Automática ante falla" },
+  { valor: "horario", label: "Por horario" },
+  { valor: "manual", label: "Manual" },
+];
+
+function nombreOrigenConmutacion(id, fuentesEnergia) {
+  if (!id) return "— Ninguna —";
+  if (id === "acometida") return "Red eléctrica local";
+  return fuentesEnergia.find((f) => f.id === id)?.nombre ?? "(fuente eliminada)";
+}
+
+// Esquema de conmutación entre fuentes de energía de un tablero —
+// pedido explícito del usuario, confirmando las 3 opciones: red
+// eléctrica local (acometida), autoconsumo con batería y auxiliar del
+// generador. Puramente DOCUMENTAL (ver modules/origen/conmutacion.js):
+// no recalcula nada, solo registra el esquema esperado en la memoria
+// del proyecto. Mismo patrón de edición inline que
+// SelectorLineasAlimentador: estado local propio, se guarda en el
+// tablero recién al confirmar.
+function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
+  const [editando, setEditando] = useState(false);
+  const [form, setForm] = useState(() => tablero.conmutacion ?? App.origen.CONMUTACION_VACIA);
+
+  const conf = tablero.conmutacion;
+  const opcionesSecundariaAuxiliar = [
+    { valor: "", label: "— Ninguna —" },
+    { valor: "acometida", label: "Red eléctrica local" },
+    ...fuentesEnergia.map((f) => ({ valor: f.id, label: f.nombre })),
+  ];
+  const opcionesPrincipal = [
+    { valor: "acometida", label: "Red eléctrica local" },
+    ...fuentesEnergia.map((f) => ({ valor: f.id, label: f.nombre })),
+  ];
+
+  function abrirEdicion() {
+    setForm(tablero.conmutacion ?? App.origen.CONMUTACION_VACIA);
+    setEditando(true);
+  }
+
+  function guardar() {
+    onEditarTablero(tablero.id, { conmutacion: App.origen.normalizarConmutacion({ ...form, activa: true }) });
+    setEditando(false);
+  }
+
+  function desactivar() {
+    onEditarTablero(tablero.id, { conmutacion: App.origen.normalizarConmutacion({ ...form, activa: false }) });
+    setEditando(false);
+  }
+
+  const titulo = (
+    <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+      Conmutación entre fuentes
+    </div>
+  );
+
+  if (!editando) {
+    return (
+      <div>
+        {titulo}
+        {conf?.activa ? (
+          <div style={{ fontSize: 11.5, color: colores.textMain, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span>
+              {MODOS_CONMUTACION_UI.find((m) => m.valor === conf.modo)?.label} —{" "}
+              <strong>{nombreOrigenConmutacion(conf.fuentePrincipalId, fuentesEnergia)}</strong> (principal)
+              {conf.fuenteSecundariaId && (
+                <>
+                  {" ⇄ "}
+                  <strong>{nombreOrigenConmutacion(conf.fuenteSecundariaId, fuentesEnergia)}</strong> (secundaria)
+                </>
+              )}
+              {conf.fuenteAuxiliarId && (
+                <>
+                  {" + "}
+                  <strong>{nombreOrigenConmutacion(conf.fuenteAuxiliarId, fuentesEnergia)}</strong> (auxiliar)
+                </>
+              )}
+              {conf.modo === "horario" && conf.horarioPrincipalInicio && conf.horarioPrincipalFin && (
+                <span style={{ color: colores.textDim }}>
+                  {" "}
+                  · principal {conf.horarioPrincipalInicio}–{conf.horarioPrincipalFin}
+                </span>
+              )}
+            </span>
+            <button type="button" onClick={abrirEdicion} style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+              ✎ Editar
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={abrirEdicion}
+            style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+          >
+            + Configurar conmutación entre fuentes
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: `1px solid ${colores.border}`, borderRadius: 4, padding: 10 }}>
+      {titulo}
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Modo de cambio:</div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        {MODOS_CONMUTACION_UI.map((m) => (
+          <BotonPill key={m.valor} activo={form.modo === m.valor} onClick={() => setForm({ ...form, modo: m.valor })}>
+            {m.label}
+          </BotonPill>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente principal:</div>
+      <select style={{ ...inputStyle(), marginBottom: 8 }} value={form.fuentePrincipalId} onChange={(e) => setForm({ ...form, fuentePrincipalId: e.target.value })}>
+        {opcionesPrincipal.map((o) => (
+          <option key={o.valor} value={o.valor}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente secundaria (autoconsumo, opcional):</div>
+      <select style={{ ...inputStyle(), marginBottom: 8 }} value={form.fuenteSecundariaId} onChange={(e) => setForm({ ...form, fuenteSecundariaId: e.target.value })}>
+        {opcionesSecundariaAuxiliar.map((o) => (
+          <option key={o.valor} value={o.valor}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente auxiliar (ej. generador ante falla, opcional):</div>
+      <select style={{ ...inputStyle(), marginBottom: 8 }} value={form.fuenteAuxiliarId} onChange={(e) => setForm({ ...form, fuenteAuxiliarId: e.target.value })}>
+        {opcionesSecundariaAuxiliar.map((o) => (
+          <option key={o.valor} value={o.valor}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
+      {form.modo === "horario" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <div>
+            <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Principal desde:</div>
+            <input
+              type="time"
+              style={inputStyle()}
+              value={form.horarioPrincipalInicio}
+              onChange={(e) => setForm({ ...form, horarioPrincipalInicio: e.target.value })}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Principal hasta:</div>
+            <input
+              type="time"
+              style={inputStyle()}
+              value={form.horarioPrincipalFin}
+              onChange={(e) => setForm({ ...form, horarioPrincipalFin: e.target.value })}
+            />
+          </div>
+        </div>
+      )}
+
+      <input
+        style={{ ...inputStyle(), marginBottom: 8 }}
+        placeholder="Notas (opcional)"
+        value={form.notas}
+        onChange={(e) => setForm({ ...form, notas: e.target.value })}
+      />
+
+      <div style={{ fontSize: 10, color: colores.textDim, lineHeight: 1.4, marginBottom: 8 }}>
+        Solo queda registrado en la memoria del proyecto — todavía no cambia ningún cálculo según la fuente activa.
+      </div>
+
+      <div style={{ display: "flex", gap: 6 }}>
+        <button
+          type="button"
+          onClick={guardar}
+          style={{ flex: 1, padding: "6px 0", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+        >
+          Guardar
+        </button>
+        {conf?.activa && (
+          <button
+            type="button"
+            onClick={desactivar}
+            style={{ padding: "6px 10px", background: "transparent", color: colores.error, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+          >
+            Desactivar
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setEditando(false)}
+          style={{ padding: "6px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BloqueBalanceFases({ balance }) {
   if (!balance || !balance.aplica) return null;
 
@@ -778,6 +981,8 @@ export default function PanelTableros({
                     )}
 
                     <BloqueBalanceFases balance={balancesFases?.[t.id]} />
+
+                    <BloqueConmutacion tablero={t} fuentesEnergia={fuentesEnergia} onEditarTablero={editarTablero} />
 
                     <div>
                       <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>

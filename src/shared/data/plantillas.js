@@ -70,4 +70,8 @@ export const TABLERO_VACIO = {
   // tableroPadreId es null (alimentado de la acometida, no hay "líneas
   // del padre" que elegir todavía — ver módulo origen).
   lineasAlimentador: [],
+  // Esquema de conmutación entre fuentes de energía — DOCUMENTAL, no
+  // alimenta ningún cálculo (ver modules/origen/conmutacion.js). null
+  // = sin configurar.
+  conmutacion: null,
 };

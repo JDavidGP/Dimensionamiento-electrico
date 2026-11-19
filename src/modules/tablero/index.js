@@ -32,6 +32,14 @@ function normalizar(datos = {}) {
     // asignar, no participa en el balance del padre todavía. Sin UI
     // propia esta sesión — ver modules/motor/balanceFases.js.
     lineasAlimentador: Array.isArray(datos.lineasAlimentador) ? datos.lineasAlimentador : [],
+    // Esquema de conmutación entre fuentes de energía — DOCUMENTAL,
+    // null = sin configurar (comportamiento actual, sin cambios). Este
+    // módulo no valida su forma interna a propósito (ese es trabajo de
+    // normalizarConmutacion en modules/origen/conmutacion.js, que vive
+    // en otro dominio — este módulo no lo importa, solo pasa el campo
+    // de largo) — mismo criterio de aislamiento entre módulos que ya
+    // sigue tableroPadreId con resolverOrigen.
+    conmutacion: datos.conmutacion && typeof datos.conmutacion === "object" ? datos.conmutacion : null,
   };
 }
 

@@ -90,21 +90,21 @@ export const TIPOS_ORIGEN = {
  *        cadena — ver la nota de alcance en ese archivo, es el mismo
  *        pendiente visto desde el otro lado.
  *
- * NOTAS PARA MÁS ADELANTE (usuario, 2026-11-19 — todavía sin
- * desarrollar, quedan registradas para no perderlas; no implementar
+ * NOTAS PARA MÁS ADELANTE (usuario, 2026-11-19 — algunas ya resueltas,
+ * quedan registradas para no perderlas; no implementar lo pendiente
  * sin que haya un proyecto real que lo necesite):
  *
- *   - Fuentes configurables EN PARALELO o POR TURNOS: varios países
- *     alternan red pública de día y autoconsumo (solar/batería) de
- *     noche, o al revés — esto es un concepto de CONMUTACIÓN/HORARIO
- *     entre fuentes, distinto de "de dónde cuelga un tablero" (que es
- *     una relación fija). El caso del Generador diesel "auxiliar ante
- *     fallas" (ya modelado como `rol` en fuentesEnergia.js) es el
- *     mismo concepto con otro disparador: conmutación AUTOMÁTICA/por
- *     transferencia ante un corte, no por horario. Probablemente
- *     necesite su propia entidad (un "esquema de conmutación" con una
- *     lista de fuentes + la condición de cambio entre ellas), no un
- *     campo más en Tablero ni en Fuente.
+ *   - Fuentes configurables EN PARALELO o POR TURNOS: YA CONECTADO
+ *     (usuario, mensaje posterior) — ver modules/origen/conmutacion.js
+ *     (MODOS_CONMUTACION: falla_automatica/horario/manual,
+ *     CONMUTACION_VACIA, normalizarConmutacion) y el bloque
+ *     "Conmutación entre fuentes" en PanelTableros.jsx. Vive en
+ *     `tablero.conmutacion` (campo opcional, DOCUMENTAL — no
+ *     reemplaza tableroPadreId, que sigue siendo lo único que usan los
+ *     cálculos). CERO cálculo todavía: no recalcula nada contra una
+ *     fuente distinta según hora/estado — solo registra el esquema
+ *     esperado (principal/secundaria/auxiliar + modo de cambio) para
+ *     la memoria del proyecto.
  *   - Tipo de instalación — domiciliaria o industrial: YA CONECTADO
  *     (ver SelectorNormativa.jsx) pero todavía puramente informativo
  *     — no filtra equipos/tablas todavía (ver
@@ -151,3 +151,9 @@ export {
   editarFuenteEnergia,
   liberarTablerosDeFuente,
 } from "./fuentesEnergia.js";
+
+export {
+  MODOS_CONMUTACION,
+  CONMUTACION_VACIA,
+  normalizarConmutacion,
+} from "./conmutacion.js";
