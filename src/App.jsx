@@ -12,6 +12,16 @@ import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
 
+// NOTA PARA MÁS ADELANTE (usuario, 2026-11-20 — "puede esperar" según
+// sus propias palabras, no implementar sin que lo pida de nuevo):
+// la columna izquierda (Normativa → Tableros → Circuito → Equipo) ya
+// acumuló bastante — tipo de instalación, fuentes de energía,
+// conmutación — y se está volviendo larga de recorrer con scroll. El
+// usuario pensó en pasar la UI a un layout por pestañas (tab layout /
+// ViewPager2) en vez de todo apilado en una sola columna. No hay un
+// diseño concreto decidido todavía (qué va en cada pestaña) — solo
+// queda registrada la intención, para retomarla cuando el usuario
+// confirme que quiere avanzar con esto.
 export default function App() {
   const {
     proyecto,

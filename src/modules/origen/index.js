@@ -68,6 +68,22 @@ export const TIPOS_ORIGEN = {
  *   pieza, acotada a ese uso, sin esperar al desarrollo completo de
  *   media tensión.
  *
+ *   ESA EXCEPCIÓN YA TIENE UN DISPARADOR CONCRETO (usuario,
+ *   2026-11-20 — todavía sin implementar, solo registrado; "puede
+ *   esperar" según sus propias palabras): Transformador entra al mismo
+ *   selector de origen que Batería/Generador, pero SOLO cuando
+ *   tipoInstalacion === "industrial" (ver shared/constants/
+ *   constantes.js TIPOS_INSTALACION, ya conectado en
+ *   SelectorNormativa.jsx). Tiene sentido con la propia investigación
+ *   NEC/REBT sobre instalación industrial anotada en ese archivo: la
+ *   escala/potencia que distingue a una instalación industrial es
+ *   justamente donde aparecen transformadores reductores/de
+ *   aislamiento propios con más frecuencia que en una domiciliaria.
+ *   Cuando se implemente: PanelTableros.jsx necesita a `tipoInstalacion`
+ *   como prop (hoy no la tiene) para condicionar el <optgroup> de
+ *   Transformador en el selector de "Origen", igual patrón que ya usa
+ *   para el <optgroup> de "Fuentes de energía".
+ *
  *   Un Transformador es un tipo de origen conceptualmente distinto a
  *   Tablero Y a Batería/Generador: cambia el nivel de tensión
  *   (primario ≠ secundario), no tiene "alimentador" en el mismo
