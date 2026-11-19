@@ -29,6 +29,16 @@ const FORM_VACIO = {
 
 const FORM_FUENTE_VACIO = { nombre: "", tipo: "bateria", rol: "auxiliar" };
 
+// Mini-formulario inline para crear un Transformador — solo los campos
+// mínimos para darle identidad como origen (nombre + fases + tensiones
+// para que calcularCorrientesNominales pueda calcular algo si hace
+// falta más adelante); capacidadKVA/conexiones/%Z quedan sin UI
+// todavía, "nos hace falta datos para desarrollar ese apartado"
+// (usuario, 2026-11-19) — se completan directo en el archivo JSON por
+// ahora si hace falta, igual criterio que varios campos "sin UI
+// todavía" ya documentados en el resto de la app.
+const FORM_TRANSFORMADOR_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "" };
+
 // Exportadas para que PanelFuentesEnergia.jsx (lista propia de fuentes
 // de energía, con su CRUD completo) use las mismas etiquetas — nunca
 // un segundo mapeo que se pueda desincronizar del de acá.
@@ -509,8 +519,11 @@ export default function PanelTableros({
   eliminarTablero,
   listaIntegridad = [],
   normativaActiva,
+  tipoInstalacion,
   fuentesEnergia = [],
   crearFuenteEnergia,
+  transformadores = [],
+  crearTransformador,
 }) {
   const [tableroActivoId, setTableroActivoId] = useState(null);
   const [formAbierto, setFormAbierto] = useState(false);
@@ -527,6 +540,11 @@ export default function PanelTableros({
   // padre" es el lugar elegido para esto.
   const [nuevaFuenteAbierta, setNuevaFuenteAbierta] = useState(false);
   const [formFuente, setFormFuente] = useState(FORM_FUENTE_VACIO);
+  // Mismo mini-formulario inline, para Transformador — solo visible
+  // cuando tipoInstalacion === "industrial" (ver TIPOS_ORIGEN.
+  // TRANSFORMADOR en modules/origen/index.js).
+  const [nuevoTransformadorAbierto, setNuevoTransformadorAbierto] = useState(false);
+  const [formTransformador, setFormTransformador] = useState(FORM_TRANSFORMADOR_VACIO);
 
   const normativa = App.normativa.obtener(normativaActiva);
   const voltajesEstandar = normativa.voltajesPorFase?.[form.fases] ?? [];
@@ -588,6 +606,8 @@ export default function PanelTableros({
     setFormAbierto(false);
     setNuevaFuenteAbierta(false);
     setFormFuente(FORM_FUENTE_VACIO);
+    setNuevoTransformadorAbierto(false);
+    setFormTransformador(FORM_TRANSFORMADOR_VACIO);
   }
 
   function alGuardar(e) {
@@ -700,7 +720,7 @@ export default function PanelTableros({
               </div>
             </Campo>
           ) : (
-            <Campo label="Origen (tablero padre o fuente de energía, opcional)">
+            <Campo label={`Origen (tablero padre, fuente de energía${tipoInstalacion === "industrial" ? " o transformador" : ""}, opcional)`}>
               <select
                 style={inputStyle()}
                 value={form.tableroPadreId}
@@ -721,6 +741,18 @@ export default function PanelTableros({
                     {fuentesEnergia.map((f) => (
                       <option key={f.id} value={f.id}>
                         {f.nombre} ({TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label} · {ROLES_FUENTE_UI.find((r) => r.valor === f.rol)?.label})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {/* Transformador: origen seleccionable SOLO en instalación industrial — ver
+                    TIPOS_ORIGEN.TRANSFORMADOR en modules/origen/index.js. */}
+                {tipoInstalacion === "industrial" && transformadores.length > 0 && (
+                  <optgroup label="Transformadores">
+                    {transformadores.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre} ({t.fases}
+                        {t.tensionPrimariaV && t.tensionSecundariaV ? ` · ${t.tensionPrimariaV}V→${t.tensionSecundariaV}V` : ""})
                       </option>
                     ))}
                   </optgroup>
@@ -799,6 +831,91 @@ export default function PanelTableros({
                   )}
                 </div>
               )}
+
+              {tipoInstalacion === "industrial" && crearTransformador && (
+                <div style={{ marginTop: 8 }}>
+                  {nuevoTransformadorAbierto ? (
+                    <div style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
+                      <input
+                        style={{ ...inputStyle(), marginBottom: 6 }}
+                        value={formTransformador.nombre}
+                        onChange={(e) => setFormTransformador({ ...formTransformador, nombre: e.target.value })}
+                        placeholder="Ej: Transformador reductor 480V→240V"
+                      />
+                      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                        {FASES.filter((f) => f.valor !== "bi").map((f) => (
+                          <BotonPill key={f.valor} activo={formTransformador.fases === f.valor} onClick={() => setFormTransformador({ ...formTransformador, fases: f.valor })}>
+                            {f.label}
+                          </BotonPill>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                        <input
+                          style={inputStyle()}
+                          type="number"
+                          value={formTransformador.tensionPrimariaV}
+                          onChange={(e) => setFormTransformador({ ...formTransformador, tensionPrimariaV: e.target.value })}
+                          placeholder="Tensión primaria (V)"
+                        />
+                        <input
+                          style={inputStyle()}
+                          type="number"
+                          value={formTransformador.tensionSecundariaV}
+                          onChange={(e) => setFormTransformador({ ...formTransformador, tensionSecundariaV: e.target.value })}
+                          placeholder="Tensión secundaria (V)"
+                        />
+                      </div>
+                      <div style={{ fontSize: 10.5, color: colores.textDim, marginBottom: 8 }}>
+                        Capacidad (kVA), conexión Y/Δ y %Z todavía no tienen campo acá — se completan más adelante, cuando
+                        haya un proyecto industrial real que los necesite.
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          disabled={!formTransformador.nombre.trim()}
+                          onClick={() => {
+                            const transformador = crearTransformador(formTransformador);
+                            setForm({ ...form, tableroPadreId: transformador.id });
+                            setFormTransformador(FORM_TRANSFORMADOR_VACIO);
+                            setNuevoTransformadorAbierto(false);
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: "6px 0",
+                            borderRadius: 3,
+                            border: "none",
+                            background: formTransformador.nombre.trim() ? colores.copper : colores.border,
+                            color: formTransformador.nombre.trim() ? "#171512" : colores.textDim,
+                            fontWeight: 700,
+                            fontSize: 11.5,
+                            cursor: formTransformador.nombre.trim() ? "pointer" : "not-allowed",
+                          }}
+                        >
+                          + Crear y usar como origen
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormTransformador(FORM_TRANSFORMADOR_VACIO);
+                            setNuevoTransformadorAbierto(false);
+                          }}
+                          style={{ padding: "6px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setNuevoTransformadorAbierto(true)}
+                      style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+                    >
+                      + Nuevo transformador
+                    </button>
+                  )}
+                </div>
+              )}
             </Campo>
           )}
 
@@ -867,12 +984,13 @@ export default function PanelTableros({
             // (Batería/Generador) — se resuelven por separado porque
             // solo un tablero tiene `fases` (relevante para el
             // selector de líneas del alimentador más abajo).
-            const origenResuelto = t.tableroPadreId ? App.origen.resolver(t.tableroPadreId, tableros, fuentesEnergia) : { tipo: "acometida" };
+            const origenResuelto = t.tableroPadreId ? App.origen.resolver(t.tableroPadreId, tableros, fuentesEnergia, transformadores) : { tipo: "acometida" };
             const padre = origenResuelto.tipo === "tablero" ? origenResuelto.tablero : null;
             const padreFuente =
               origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.BATERIA || origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.GENERADOR
                 ? origenResuelto.fuente
                 : null;
+            const padreTransformador = origenResuelto.tipo === "transformador" ? origenResuelto.transformador : null;
             const activo = tableroActivoId === t.id;
             // Integridad de ESTE tablero (tableroPadreId inexistente,
             // auto-referencia, sin circuitos asociados) — mismo patrón
@@ -962,7 +1080,9 @@ export default function PanelTableros({
                             ? padre.nombre
                             : padreFuente
                               ? `${padreFuente.nombre} (${TIPOS_FUENTE_UI.find((ti) => ti.valor === padreFuente.tipo)?.label} · ${ROLES_FUENTE_UI.find((r) => r.valor === padreFuente.rol)?.label})`
-                              : "Acometida / poste"}
+                              : padreTransformador
+                                ? `${padreTransformador.nombre} (Transformador${padreTransformador.tensionPrimariaV && padreTransformador.tensionSecundariaV ? ` · ${padreTransformador.tensionPrimariaV}V→${padreTransformador.tensionSecundariaV}V` : ""})`
+                                : "Acometida / poste"}
                         </strong>
                         {t.longitudAlimentador > 0 && ` · ${t.longitudAlimentador}m de ${t.materialAlimentador}`}
                       </span>

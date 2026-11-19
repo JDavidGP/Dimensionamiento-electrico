@@ -23,9 +23,8 @@
 export const TIPOS_ORIGEN = {
   TABLERO: "tablero",
   ACOMETIDA: "acometida",
+  TRANSFORMADOR: "transformador",
   DESCONOCIDO: "desconocido",
-  // TRANSFORMADOR: "transformador", — sigue sin conectar, ver el
-  // bloque PENDIENTE más abajo antes de descomentar esto.
 };
 
 /**
@@ -41,70 +40,28 @@ export const TIPOS_ORIGEN = {
  *   - Un id que matchea una fuente de energía real en `fuentesEnergia`
  *     (Batería o Generador — ver modules/origen/fuentesEnergia.js) →
  *     el `tipo` de ESA fuente ("bateria" | "generador"), con la fuente
- *     ya resuelta. CONECTADO (usuario, 2026-11-19): a diferencia de
- *     Transformador (ver PENDIENTE abajo), Batería y Generador sí se
- *     conectaron esta sesión — PanelTableros.jsx ya las ofrece en el
- *     selector de "Tablero padre".
- *   - Cualquier otro valor (id que no existe en ninguno de los dos
- *     catálogos) → DESCONOCIDO. NO se asume que es un futuro
- *     Transformador ni ninguna otra cosa — es una referencia rota, y
- *     se reporta como tal (ValidacionMediator ya tiene su propio
- *     chequeo de tableroPadreId inexistente, extendido para aceptar
- *     también fuentes válidas; este módulo no lo duplica, solo no
- *     miente sobre qué encontró).
- *
- * PENDIENTE — Transformador (documentado a propósito, NO conectar
- * todavía; no hay un proyecto real que lo necesite para validar el
- * diseño contra datos reales):
- *
- *   DECISIÓN DE PLANIFICACIÓN (no técnica, para ubicar el trabajo en
- *   el tiempo): Transformador se integra junto con el sistema de media
- *   tensión, cuando ese sistema se desarrolle — no antes, y no como
- *   pieza aislada. Única excepción: si aparece la necesidad real de
- *   darle identidad propia a un transformador en BAJA tensión (ej. un
- *   transformador de aislamiento o reductor 240V→120V dentro de una
- *   instalación de baja tensión, sin que medie todavía el sistema de
- *   media tensión completo) — en ese caso puntual sí se adelanta esta
- *   pieza, acotada a ese uso, sin esperar al desarrollo completo de
- *   media tensión.
- *
- *   ESA EXCEPCIÓN YA TIENE UN DISPARADOR CONCRETO (usuario,
- *   2026-11-20 — todavía sin implementar, solo registrado; "puede
- *   esperar" según sus propias palabras): Transformador entra al mismo
- *   selector de origen que Batería/Generador, pero SOLO cuando
- *   tipoInstalacion === "industrial" (ver shared/constants/
- *   constantes.js TIPOS_INSTALACION, ya conectado en
- *   SelectorNormativa.jsx). Tiene sentido con la propia investigación
- *   NEC/REBT sobre instalación industrial anotada en ese archivo: la
- *   escala/potencia que distingue a una instalación industrial es
- *   justamente donde aparecen transformadores reductores/de
- *   aislamiento propios con más frecuencia que en una domiciliaria.
- *   Cuando se implemente: PanelTableros.jsx necesita a `tipoInstalacion`
- *   como prop (hoy no la tiene) para condicionar el <optgroup> de
- *   Transformador en el selector de "Origen", igual patrón que ya usa
- *   para el <optgroup> de "Fuentes de energía".
- *
- *   Un Transformador es un tipo de origen conceptualmente distinto a
- *   Tablero Y a Batería/Generador: cambia el nivel de tensión
- *   (primario ≠ secundario), no tiene "alimentador" en el mismo
- *   sentido que un tablero (tiene devanados, %Z, relación de
- *   transformación, conexión Y/Δ). La entidad ya existe —
- *   `modules/motor/transformador.js` (TRANSFORMADOR_VACIO,
- *   normalizarTransformador, calcularCorrientesNominales), creada sin
- *   conectar a pedido explícito del usuario.
- *
- *   Para conectarla (el mecanismo de "segundo catálogo" ya existe,
- *   fuentesEnergia demuestra que funciona — falta sumar un tercero):
- *     1. Sumar `transformadores` como tercer catálogo a resolverOrigen
- *        además de `tableros` y `fuentesEnergia`.
- *     2. Que quien consuma `resolverOrigen` sepa tratar el caso
- *        TRANSFORMADOR distinto de TABLERO/BATERIA/GENERADOR: un
- *        transformador cambia la tensión de referencia del tramo
- *        siguiente, los demás no.
- *     3. Que evaluarCaidaAcumulada (modules/motor/caidaTensionAcumulada.js)
- *        deje de asumir una sola tensión de referencia para toda la
- *        cadena — ver la nota de alcance en ese archivo, es el mismo
- *        pendiente visto desde el otro lado.
+ *     ya resuelta.
+ *   - Un id que matchea un transformador real en `transformadores`
+ *     (ver modules/motor/transformador.js) → TRANSFORMADOR, con el
+ *     transformador ya resuelto. CONECTADO (usuario, 2026-11-19) SOLO
+ *     como origen seleccionable (registro — "nos hace falta datos para
+ *     desarrollar ese apartado"), gateado en la UI a
+ *     tipoInstalacion === "industrial" (PanelTableros.jsx). Sigue
+ *     PENDIENTE, a propósito, todo lo que requeriría datos reales de un
+ *     proyecto industrial que todavía no hay: que evaluarCaidaAcumulada
+ *     (modules/motor/caidaTensionAcumulada.js) deje de asumir una sola
+ *     tensión de referencia para toda la cadena (un transformador
+ *     cambia el nivel de tensión primario≠secundario, los demás
+ *     orígenes no) y cualquier cálculo que dependa de eso (%Z,
+ *     cortocircuito aguas abajo del transformador). Este módulo NO
+ *     calcula nada — solo resuelve identidad, igual que con tableros y
+ *     fuentesEnergia.
+ *   - Cualquier otro valor (id que no existe en ningún catálogo) →
+ *     DESCONOCIDO. Referencia rota, reportada como tal
+ *     (ValidacionMediator ya tiene su propio chequeo de
+ *     tableroPadreId inexistente, extendido para aceptar también
+ *     fuentes y transformadores válidos; este módulo no lo duplica,
+ *     solo no miente sobre qué encontró).
  *
  * NOTAS PARA MÁS ADELANTE (usuario, 2026-11-19 — algunas ya resueltas,
  * quedan registradas para no perderlas; no implementar lo pendiente
@@ -134,14 +91,16 @@ export const TIPOS_ORIGEN = {
  * @param {string|null|undefined} origenId
  * @param {object[]} tableros
  * @param {object[]} [fuentesEnergia] — ver modules/origen/fuentesEnergia.js
+ * @param {object[]} [transformadores] — ver modules/motor/transformador.js
  * @returns {
  *   { tipo: "acometida" } |
  *   { tipo: "tablero", tablero: object } |
  *   { tipo: "bateria"|"generador", fuente: object } |
+ *   { tipo: "transformador", transformador: object } |
  *   { tipo: "desconocido", origenId: string }
  * }
  */
-export function resolverOrigen(origenId, tableros = [], fuentesEnergia = []) {
+export function resolverOrigen(origenId, tableros = [], fuentesEnergia = [], transformadores = []) {
   if (origenId == null) {
     return { tipo: TIPOS_ORIGEN.ACOMETIDA };
   }
@@ -154,6 +113,11 @@ export function resolverOrigen(origenId, tableros = [], fuentesEnergia = []) {
   const fuente = fuentesEnergia.find((f) => f.id === origenId);
   if (fuente) {
     return { tipo: fuente.tipo, fuente };
+  }
+
+  const transformador = transformadores.find((tr) => tr.id === origenId);
+  if (transformador) {
+    return { tipo: TIPOS_ORIGEN.TRANSFORMADOR, transformador };
   }
 
   return { tipo: TIPOS_ORIGEN.DESCONOCIDO, origenId };

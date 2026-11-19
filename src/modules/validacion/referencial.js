@@ -181,7 +181,7 @@ function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tabl
   return [entradaCircuito, ...entradasEquipos];
 }
 
-function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = [], fuentesEnergia = [], nodosDiagrama = []) {
+function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = [], fuentesEnergia = [], nodosDiagrama = [], transformadores = []) {
   const problemas = [];
   let estado = ESTADOS.OK;
 
@@ -199,9 +199,11 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []
 
   // tableroPadreId es opcional: null significa alimentado directo de la
   // acometida/poste, no de otro tablero — no es un error. Puede
-  // apuntar a OTRO tablero o a una fuente de energía (Batería/
-  // Generador, ver modules/origen/fuentesEnergia.js) — mismo campo,
-  // dos catálogos posibles a buscar (ver OrigenMediator.resolver).
+  // apuntar a OTRO tablero, a una fuente de energía (Batería/
+  // Generador, ver modules/origen/fuentesEnergia.js) o a un
+  // Transformador (ver modules/motor/transformador.js, origen
+  // seleccionable solo en instalaciones industriales) — mismo campo,
+  // tres catálogos posibles a buscar (ver OrigenMediator.resolver).
   // NO se valida la cadena hacia arriba (ciclos) todavía — es el
   // siguiente paso, no esta sesión.
   if (tablero.tableroPadreId) {
@@ -210,9 +212,10 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []
       estado = ESTADOS.ERROR;
     } else if (
       !tableros.some((t) => t.id === tablero.tableroPadreId) &&
-      !fuentesEnergia.some((f) => f.id === tablero.tableroPadreId)
+      !fuentesEnergia.some((f) => f.id === tablero.tableroPadreId) &&
+      !transformadores.some((tr) => tr.id === tablero.tableroPadreId)
     ) {
-      problemas.push(`Referencia a tablero padre o fuente de energía inexistente (${tablero.tableroPadreId})`);
+      problemas.push(`Referencia a tablero padre, fuente de energía o transformador inexistente (${tablero.tableroPadreId})`);
       estado = ESTADOS.ERROR;
     }
   }
@@ -294,9 +297,10 @@ function validarFuenteEnergia(fuente, idsVistos, proyectoId, nodosDiagrama = [])
  * @param {Array}  tableros  - array plano de tableros (con id, nombre...)
  * @param {Array}  fuentesEnergia - array plano de fuentes de energía (Batería/Generador)
  * @param {Array}  nodosDiagrama - array plano de nodos del diagrama unifilar (con entidadId) — caso inverso de la sincronización, ver ARCHITECTURE.md §9
+ * @param {Array}  transformadores - array plano de transformadores (ver modules/motor/transformador.js) — origen seleccionable solo en instalaciones industriales
  * @returns {Array} lista plana de entradas para la UI
  */
-export function validarIntegridadReferencial(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = []) {
+export function validarIntegridadReferencial(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = [], transformadores = []) {
   const idsVistos = new Set();
   const entradas = [];
   const proj = proyecto || { id: "proyecto" };
@@ -305,7 +309,7 @@ export function validarIntegridadReferencial(proyecto, circuitos = [], equipos =
   const listaTableros = tableros.length > 0 ? tableros : proj.tableros || [];
 
   listaTableros.forEach((t) => {
-    entradas.push(validarTablero(t, circuitos, idsVistos, proj.id, listaTableros, fuentesEnergia, nodosDiagrama));
+    entradas.push(validarTablero(t, circuitos, idsVistos, proj.id, listaTableros, fuentesEnergia, nodosDiagrama, transformadores));
   });
 
   fuentesEnergia.forEach((f) => {

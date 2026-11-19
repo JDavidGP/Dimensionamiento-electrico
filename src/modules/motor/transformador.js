@@ -1,19 +1,25 @@
 // Entidad Transformador — creada a pedido explícito del usuario
 // ("crea el objeto pero no lo conectes"), en el mismo nivel que
-// canalizacion.js y cortocircuito.js en este archivo: módulo puro,
-// exportado desde modules/motor/index.js y expuesto en
-// MotorCalculoMediator, pero SIN llamador — ni useCircuitos.js, ni
-// ningún componente, ni resolverOrigen() (modules/origen/index.js) lo
-// invocan todavía. Ese comentario en origen/index.js sigue vigente:
-// Transformador se conecta cuando se desarrolle el sistema de media
-// tensión, o antes si aparece una necesidad real de baja tensión.
+// canalizacion.js y cortocircuito.js en este archivo.
 //
-// Por eso esto es deliberadamente chico: la forma del dato y el único
+// CONECTADO (usuario, 2026-11-19): "Transformador solo es origen
+// seleccionable cuando se seleccione que la instalación es industrial
+// [...] nos hace falta datos para desarrollar ese apartado" — por eso
+// se conecta SOLO como origen seleccionable (registro, igual criterio
+// que fuentesEnergia/conmutación: "registrar primero, calcular
+// después"), NUNCA se integró evaluarCaidaAcumulada ni cortocircuito
+// para que atraviesen un cambio de nivel de tensión primario/
+// secundario — eso sigue siendo el pendiente real (ver el bloque
+// PENDIENTE — Transformador, pasos 2 y 3, en modules/origen/index.js),
+// necesita datos de un proyecto industrial real que todavía no hay.
+//
+// Por eso esto es deliberadamente chico: la forma del dato, su CRUD
+// (igual patrón que fuentesEnergia.js: crear/editar/liberar) y el único
 // cálculo que se desprende directamente de su identidad (corriente
 // nominal primaria/secundaria). NO incluye %Z aplicado a cortocircuito,
-// ni derateo térmico, ni acoplamiento con caídaTensionAcumulada — eso
-// queda para cuando haya un proyecto real que lo necesite (mismo
-// criterio que el resto del "pendiente" documentado en origen/index.js).
+// ni derateo térmico, ni acoplamiento con caídaTensionAcumulada.
+
+import { generarId } from "../../shared/utils/id.js";
 
 /** Forma de un Transformador. conexionPrimaria/Secundaria toman valores
  * de TIPOS_CONEXION_EQUIPO (shared/data/equiposEspeciales.js) — delta o
@@ -39,6 +45,25 @@ export const TRANSFORMADOR_VACIO = {
  */
 export function normalizarTransformador(datos = {}) {
   return { ...TRANSFORMADOR_VACIO, ...datos };
+}
+
+/** Fábrica de un transformador nuevo — mismo patrón que crearFuenteEnergia (modules/origen/fuentesEnergia.js). */
+export function crearTransformador(datos) {
+  return { id: generarId(), ...normalizarTransformador(datos) };
+}
+
+/** Devuelve el transformador con los cambios aplicados — no muta el original. */
+export function editarTransformador(transformador, cambios) {
+  return { ...transformador, ...normalizarTransformador({ ...transformador, ...cambios }) };
+}
+
+/**
+ * Al eliminar un transformador, los tableros que lo tenían como
+ * `tableroPadreId` quedan sin padre (null = acometida), no apuntando a
+ * un ID muerto — mismo criterio que liberarTablerosDeFuente.
+ */
+export function liberarTablerosDeTransformador(transformadorId, tableros = []) {
+  return tableros.map((t) => (t.tableroPadreId === transformadorId ? { ...t, tableroPadreId: null } : t));
 }
 
 /**

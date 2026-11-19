@@ -49,6 +49,7 @@ export const ApplicationMediator = {
     equipos,
     tableros,
     fuentesEnergia,
+    transformadores,
     nodosDiagrama,
     conexionesDiagrama,
     normativaActiva,
@@ -60,6 +61,7 @@ export const ApplicationMediator = {
     if (equipos !== undefined) partial.equipos = equipos;
     if (tableros !== undefined) partial.tableros = tableros;
     if (fuentesEnergia !== undefined) partial.fuentesEnergia = fuentesEnergia;
+    if (transformadores !== undefined) partial.transformadores = transformadores;
     if (nodosDiagrama !== undefined) partial.nodosDiagrama = nodosDiagrama;
     if (conexionesDiagrama !== undefined) partial.conexionesDiagrama = conexionesDiagrama;
     if (normativaActiva !== undefined) partial.normativaActiva = normativaActiva;

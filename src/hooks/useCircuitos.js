@@ -16,6 +16,7 @@ export function useCircuitos() {
   const [equipos, setEquipos] = useState([]);
   const [tableros, setTableros] = useState([]);
   const [fuentesEnergia, setFuentesEnergia] = useState([]);
+  const [transformadores, setTransformadores] = useState([]);
   const [nodosDiagrama, setNodosDiagrama] = useState([]);
   const [conexionesDiagrama, setConexionesDiagrama] = useState([]);
   const [normativaActiva, setNormativaActivaBase] = useState(
@@ -64,12 +65,13 @@ export function useCircuitos() {
       equipos,
       tableros,
       fuentesEnergia,
+      transformadores,
       nodosDiagrama,
       conexionesDiagrama,
       normativaActiva,
       resultados,
     });
-  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, conexionesDiagrama, normativaActiva, resultados]);
+  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, normativaActiva, resultados]);
 
   const totales = useMemo(() => {
     const potenciaTotal = resultados.reduce(
@@ -164,13 +166,13 @@ export function useCircuitos() {
 
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
-    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama),
-    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama]
+    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores]
   );
 
   const resumenInt = useMemo(
-    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama),
-    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama]
+    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores]
   );
 
   const detalleElectrico = useCallback(
@@ -350,6 +352,20 @@ export function useCircuitos() {
     setFuentesEnergia(fuentesEnergia.filter((f) => f.id !== id));
   }
 
+  // --- TRANSFORMADOR (origen alternativo de un tablero, solo instalaciones
+  // industriales — ver tipoInstalacion arriba) ---
+  // Deliberadamente solo "crear" por ahora, igual criterio que
+  // fuentesEnergia tuvo al principio: "nos hace falta datos para
+  // desarrollar ese apartado" (usuario, 2026-11-19) — editar/eliminar
+  // (y una lista propia tipo PanelFuentesEnergia) quedan para cuando
+  // haya un proyecto industrial real que lo pida, igual que pasó con
+  // fuentesEnergia.
+  function crearTransformador(datos) {
+    const transformador = App.origen.crearTransformador(datos);
+    setTransformadores([...transformadores, transformador]);
+    return transformador;
+  }
+
   // --- DIAGRAMA UNIFILAR (Fase 1: modelo de datos — nodos y conexiones) ---
   function crearNodoDiagrama(datos) {
     const nodo = App.diagrama.crearNodo(datos);
@@ -443,6 +459,7 @@ export function useCircuitos() {
       equipos,
       tableros,
       fuentesEnergia,
+      transformadores,
       nodosDiagrama,
       conexionesDiagrama,
     });
@@ -460,6 +477,7 @@ export function useCircuitos() {
         setEquipos(cargado.equipos);
         setTableros(cargado.tableros ?? []);
         setFuentesEnergia(cargado.fuentesEnergia ?? []);
+        setTransformadores(cargado.transformadores ?? []);
         setNodosDiagrama(cargado.nodosDiagrama ?? []);
         setConexionesDiagrama(cargado.conexionesDiagrama ?? []);
         setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
@@ -478,6 +496,7 @@ export function useCircuitos() {
     setEquipos([]);
     setTableros([]);
     setFuentesEnergia([]);
+    setTransformadores([]);
     setNodosDiagrama([]);
     setConexionesDiagrama([]);
     setCircuitoActivoId(null);
@@ -544,6 +563,8 @@ export function useCircuitos() {
     crearFuenteEnergia,
     editarFuenteEnergia,
     eliminarFuenteEnergia,
+    transformadores,
+    crearTransformador,
     nodosDiagrama,
     crearNodoDiagrama,
     editarNodoDiagrama,

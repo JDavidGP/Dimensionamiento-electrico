@@ -92,7 +92,7 @@ export const DiagramaMediator = {
    * tablero/equipo/fuente dos veces). `nodoId` excluye al propio nodo
    * de esa exclusión cuando se está reeditando su vínculo.
    */
-  candidatosEntidad(tipoNodo, { tableros = [], equipos = [], fuentesEnergia = [], nodos = [], nodoId = null } = {}) {
+  candidatosEntidad(tipoNodo, { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [], nodos = [], nodoId = null } = {}) {
     const comp = obtenerComponente(tipoNodo);
     if (!comp?.entidadVinculada) return [];
     const vinculados = new Set(nodos.filter((n) => n.id !== nodoId && n.entidadId).map((n) => n.entidadId));
@@ -108,16 +108,20 @@ export const DiagramaMediator = {
       const tipoFuente = tipoNodo === "generador" ? GENERADOR : tipoNodo === "banco_baterias" ? BATERIA : null;
       return fuentesEnergia.filter((f) => (!tipoFuente || f.tipo === tipoFuente) && !vinculados.has(f.id));
     }
+    if (comp.entidadVinculada === "transformador") {
+      return transformadores.filter((t) => !vinculados.has(t.id));
+    }
     return [];
   },
 
-  /** La entidad real (tablero/equipo/fuenteEnergia) que representa este nodo, o null si no tiene vínculo o la entidad ya no existe. */
-  resolverEntidad(nodo, { tableros = [], equipos = [], fuentesEnergia = [] } = {}) {
+  /** La entidad real (tablero/equipo/fuenteEnergia/transformador) que representa este nodo, o null si no tiene vínculo o la entidad ya no existe. */
+  resolverEntidad(nodo, { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [] } = {}) {
     if (!nodo?.entidadId) return null;
     const comp = obtenerComponente(nodo.tipo);
     if (comp?.entidadVinculada === "tablero") return tableros.find((t) => t.id === nodo.entidadId) ?? null;
     if (comp?.entidadVinculada === "equipo") return equipos.find((e) => e.id === nodo.entidadId) ?? null;
     if (comp?.entidadVinculada === "fuenteEnergia") return fuentesEnergia.find((f) => f.id === nodo.entidadId) ?? null;
+    if (comp?.entidadVinculada === "transformador") return transformadores.find((t) => t.id === nodo.entidadId) ?? null;
     return null;
   },
 

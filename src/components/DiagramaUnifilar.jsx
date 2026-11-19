@@ -64,6 +64,7 @@ export default function DiagramaUnifilar({
   equipos = [],
   circuitos = [],
   fuentesEnergia = [],
+  transformadores = [],
 }) {
   const svgRef = useRef(null);
   const categorias = App.diagrama.componentesPorCategoria();
@@ -79,7 +80,7 @@ export default function DiagramaUnifilar({
   const [nodoVinculando, setNodoVinculando] = useState(null); // id del nodo cuyo vínculo se está editando
   const [entidadEdicion, setEntidadEdicion] = useState("");
 
-  const entidadesPorRef = { tableros, equipos, fuentesEnergia };
+  const entidadesPorRef = { tableros, equipos, fuentesEnergia, transformadores };
 
   function mostrarAviso(texto) {
     setAviso(texto);
@@ -243,7 +244,7 @@ export default function DiagramaUnifilar({
           >
             <option value="">— Vincular a (opcional) —</option>
             {App.diagrama
-              .candidatosEntidad(tipoSeleccionado, { tableros, equipos, fuentesEnergia, nodos: nodosDiagrama })
+              .candidatosEntidad(tipoSeleccionado, { tableros, equipos, fuentesEnergia, transformadores, nodos: nodosDiagrama })
               .map((c) => (
                 <option key={c.id} value={c.id}>
                   {etiquetaEntidad(tipoSeleccionado, c)}
@@ -285,6 +286,7 @@ export default function DiagramaUnifilar({
             tableros,
             equipos,
             fuentesEnergia,
+            transformadores,
             nodos: nodosDiagrama,
             nodoId: nodo.id,
           });

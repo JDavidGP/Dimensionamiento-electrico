@@ -24,16 +24,16 @@ export {
 import { validarIntegridadReferencial, ESTADOS } from "./referencial.js";
 import { validarIntegridadElectrica } from "./electrica.js";
 
-export function obtenerListaIntegridad(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = []) {
-  return validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama);
+export function obtenerListaIntegridad(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = [], transformadores = []) {
+  return validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores);
 }
 
 export function obtenerDetalleElectrico(id, proyecto, circuitos = [], equipos = [], opts = {}) {
   return validarIntegridadElectrica(id, proyecto, circuitos, equipos, opts);
 }
 
-export function resumenIntegridad(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = []) {
-  const lista = validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama);
+export function resumenIntegridad(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = [], transformadores = []) {
+  const lista = validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores);
   return lista.reduce(
     (acc, entrada) => {
       acc[entrada.estado] = (acc[entrada.estado] || 0) + 1;

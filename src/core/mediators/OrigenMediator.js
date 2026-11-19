@@ -1,16 +1,23 @@
 /**
  * OrigenMediator
  * Responsabilidad: dominio Origen — de dónde viene la alimentación de
- * un tablero (acometida, otro tablero, o una fuente de energía
- * propia: Batería/Generador). CRUD de fuentes de energía + resolución
- * de un origenId contra ambos catálogos (tableros y fuentesEnergia).
+ * un tablero (acometida, otro tablero, una fuente de energía propia
+ * Batería/Generador, o un Transformador — este último solo cuando la
+ * instalación es industrial, ver PanelTableros.jsx). CRUD de fuentes de
+ * energía y de transformadores + resolución de un origenId contra los
+ * tres catálogos (tableros, fuentesEnergia, transformadores).
  *
  * Mismo criterio que TableroMediator: NO muta el proyecto. Devuelve
  * datos ya calculados/transformados; la escritura real la hace la
  * capa de aplicación (hook).
  *
- * Dependencias permitidas: funciones internas de modules/origen. Lo
- * que sigue prohibido: UI, Documento, Diagrama.
+ * Dependencias permitidas: funciones internas de modules/origen y de
+ * modules/motor/transformador.js (la entidad Transformador vive ahí,
+ * junto a su único cálculo de identidad — corrientes nominales — no se
+ * duplicó acá; cruzar hacia ese módulo puro está permitido a nivel
+ * mediador, ver ARCHITECTURE.md §11, mismo patrón que
+ * DiagramaMediator → OrigenMediator). Lo que sigue prohibido: UI,
+ * Documento, Diagrama.
  */
 import {
   resolverOrigen,
@@ -23,6 +30,12 @@ import {
   CONMUTACION_VACIA,
   normalizarConmutacion,
 } from "../../modules/origen/index.js";
+import {
+  TRANSFORMADOR_VACIO,
+  crearTransformador,
+  editarTransformador,
+  liberarTablerosDeTransformador,
+} from "../../modules/motor/transformador.js";
 
 export const OrigenMediator = {
   // Enums expuestos para la UI — mismo patrón que ValidacionMediator.ESTADOS.
@@ -30,6 +43,7 @@ export const OrigenMediator = {
   ROLES_FUENTE_ENERGIA,
   MODOS_CONMUTACION,
   CONMUTACION_VACIA,
+  TRANSFORMADOR_VACIO,
 
   /** Fábrica de una fuente de energía nueva (no la guarda — eso lo hace el hook). */
   crearFuente(datos) {
@@ -46,9 +60,24 @@ export const OrigenMediator = {
     return liberarTablerosDeFuente(fuenteId, tableros ?? []);
   },
 
-  /** Resuelve qué es un origenId (tableroPadreId) contra ambos catálogos. */
-  resolver(origenId, tableros, fuentesEnergia) {
-    return resolverOrigen(origenId, tableros ?? [], fuentesEnergia ?? []);
+  /** Fábrica de un transformador nuevo (no lo guarda — eso lo hace el hook). */
+  crearTransformador(datos) {
+    return crearTransformador(datos);
+  },
+
+  /** Devuelve el transformador editado; el hook decide cómo guardarlo. */
+  editarTransformador(transformador, cambios) {
+    return editarTransformador(transformador, cambios);
+  },
+
+  /** Al eliminar un transformador, los tableros que lo tenían como padre quedan libres (null), no rotos. */
+  liberarTablerosDeTransformador(transformadorId, tableros) {
+    return liberarTablerosDeTransformador(transformadorId, tableros ?? []);
+  },
+
+  /** Resuelve qué es un origenId (tableroPadreId) contra los tres catálogos. */
+  resolver(origenId, tableros, fuentesEnergia, transformadores) {
+    return resolverOrigen(origenId, tableros ?? [], fuentesEnergia ?? [], transformadores ?? []);
   },
 
   /** Normaliza un esquema de conmutación (tablero.conmutacion) antes de guardarlo. */

@@ -21,4 +21,11 @@ export { seleccionarSeccion } from "./seleccionSeccion.js";
 export { combinarResultadosCircuitos } from "./combinarResultadosCircuitos.js";
 export { calcularAlimentador } from "./calcularAlimentador.js";
 export { balanceFases } from "./balanceFases.js";
-export { TRANSFORMADOR_VACIO, normalizarTransformador, calcularCorrientesNominales } from "./transformador.js";
+export {
+  TRANSFORMADOR_VACIO,
+  normalizarTransformador,
+  calcularCorrientesNominales,
+  crearTransformador,
+  editarTransformador,
+  liberarTablerosDeTransformador,
+} from "./transformador.js";

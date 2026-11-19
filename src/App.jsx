@@ -81,6 +81,8 @@ export default function App() {
     crearFuenteEnergia,
     editarFuenteEnergia,
     eliminarFuenteEnergia,
+    transformadores,
+    crearTransformador,
     nodosDiagrama,
     crearNodoDiagrama,
     editarNodoDiagrama,
@@ -141,8 +143,11 @@ export default function App() {
                   editarTablero={editarTablero}
                   eliminarTablero={eliminarTablero}
                   normativaActiva={normativaActiva}
+                  tipoInstalacion={tipoInstalacion}
                   fuentesEnergia={fuentesEnergia}
                   crearFuenteEnergia={crearFuenteEnergia}
+                  transformadores={transformadores}
+                  crearTransformador={crearTransformador}
                 />
 
                 <div style={{ marginTop: 16 }}>
@@ -237,6 +242,7 @@ export default function App() {
                   equipos={equipos}
                   circuitos={circuitos}
                   fuentesEnergia={fuentesEnergia}
+                  transformadores={transformadores}
                 />
               </div>
             ),

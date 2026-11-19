@@ -13,7 +13,7 @@ export function proyectoVacio() {
 // Empaqueta el estado completo de la app en un solo objeto serializable.
 // Este es el "documento" que se guarda/abre — versión de formato incluida
 // por si en el futuro cambia la estructura y hay que migrar archivos viejos.
-export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, conexionesDiagrama }) {
+export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama }) {
   return {
     formatoVersion: 1,
     proyecto: { ...proyecto, fechaModificacion: new Date().toISOString() },
@@ -23,6 +23,7 @@ export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion,
     equipos,
     tableros: tableros ?? [],
     fuentesEnergia: fuentesEnergia ?? [],
+    transformadores: transformadores ?? [],
     nodosDiagrama: nodosDiagrama ?? [],
     conexionesDiagrama: conexionesDiagrama ?? [],
   };
@@ -51,6 +52,9 @@ export function deserializarProyecto(data) {
     // Compatibilidad: archivos guardados antes de esta sesión no traen
     // fuentesEnergia.
     fuentesEnergia: Array.isArray(data.fuentesEnergia) ? data.fuentesEnergia : [],
+    // Compatibilidad: archivos guardados antes de conectar Transformador
+    // como origen seleccionable no traen transformadores.
+    transformadores: Array.isArray(data.transformadores) ? data.transformadores : [],
     // Compatibilidad: archivos guardados antes del diagrama unifilar
     // (Fase 1) no traen nodos/conexiones.
     nodosDiagrama: Array.isArray(data.nodosDiagrama) ? data.nodosDiagrama : [],
