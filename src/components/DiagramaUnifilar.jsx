@@ -1,21 +1,25 @@
 import React, { useState, useRef } from "react";
 import { colores, fuentes } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
 
 // Editor mínimo del diagrama unifilar — Fase 3 de la spec del usuario
 // (2026-11-20, segunda ronda: "primero lo mínimo"). Sin cálculos,
 // sin autoorganización, sin zoom/pan todavía — exactamente lo que
 // pidió: área de dibujo, agregar nodos del catálogo (Fase 1), crear
 // conexiones arrastrando/clickeando (validadas por el motor de reglas
-// de Fase 2), símbolos básicos (cajas con texto, no símbolos IEC
-// todavía — "al inicio pueden ser SVG básicos", palabras del usuario).
+// de Fase 2). Símbolos dibujados a mano (ver simbolosDiagrama.jsx) tras
+// investigar fuentes externas y no encontrar ninguna que cubriera el
+// catálogo completo con licencia y estilo consistentes — decisión
+// explícita del usuario: "Dibujalo tu mismo".
 //
 // Reusa el modelo de datos y la validación YA construidos
 // (modules/diagrama/*, DiagramaMediator) — este componente es
 // puramente la vista, no duplica ninguna regla acá.
 
-const ANCHO_NODO = 110;
-const ALTO_NODO = 50;
+const ANCHO_NODO = 120;
+const ALTO_NODO = 68;
+const TAMANO_SIMBOLO = 30;
 
 const COLOR_POR_CATEGORIA = {
   fuente: colores.ok,
@@ -57,7 +61,7 @@ export default function DiagramaUnifilar({
 
   function posicionPorDefecto() {
     const n = nodosDiagrama.length;
-    return { x: 40 + (n % 6) * 140, y: 30 + Math.floor(n / 6) * 110 };
+    return { x: 40 + (n % 6) * 150, y: 20 + Math.floor(n / 6) * 125 };
   }
 
   function agregarNodo() {
@@ -256,10 +260,17 @@ export default function DiagramaUnifilar({
                 stroke={seleccionado ? colores.copper : colorDeNodo(nodo.tipo)}
                 strokeWidth={seleccionado ? 3 : 1.5}
               />
-              <text x={ANCHO_NODO / 2} y={20} textAnchor="middle" fontSize={11} fontFamily={fuentes.display} fill={colores.textMain}>
+              <SimboloDiagrama
+                tipo={nodo.tipo}
+                x={(ANCHO_NODO - TAMANO_SIMBOLO) / 2}
+                y={4}
+                size={TAMANO_SIMBOLO}
+                color={seleccionado ? colores.copper : colorDeNodo(nodo.tipo)}
+              />
+              <text x={ANCHO_NODO / 2} y={48} textAnchor="middle" fontSize={11} fontFamily={fuentes.display} fill={colores.textMain}>
                 {nodo.nombre.length > 16 ? `${nodo.nombre.slice(0, 15)}…` : nodo.nombre}
               </text>
-              <text x={ANCHO_NODO / 2} y={36} textAnchor="middle" fontSize={9} fontFamily={fuentes.mono} fill={colores.textDim}>
+              <text x={ANCHO_NODO / 2} y={60} textAnchor="middle" fontSize={8.5} fontFamily={fuentes.mono} fill={colores.textDim}>
                 {comp?.nombre ?? nodo.tipo}
               </text>
             </g>
