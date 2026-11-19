@@ -16,6 +16,8 @@ export function useCircuitos() {
   const [equipos, setEquipos] = useState([]);
   const [tableros, setTableros] = useState([]);
   const [fuentesEnergia, setFuentesEnergia] = useState([]);
+  const [nodosDiagrama, setNodosDiagrama] = useState([]);
+  const [conexionesDiagrama, setConexionesDiagrama] = useState([]);
   const [normativaActiva, setNormativaActivaBase] = useState(
     App.config.normativaPorDefecto
   );
@@ -62,10 +64,12 @@ export function useCircuitos() {
       equipos,
       tableros,
       fuentesEnergia,
+      nodosDiagrama,
+      conexionesDiagrama,
       normativaActiva,
       resultados,
     });
-  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, normativaActiva, resultados]);
+  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, conexionesDiagrama, normativaActiva, resultados]);
 
   const totales = useMemo(() => {
     const potenciaTotal = resultados.reduce(
@@ -330,6 +334,47 @@ export function useCircuitos() {
     setFuentesEnergia(fuentesEnergia.filter((f) => f.id !== id));
   }
 
+  // --- DIAGRAMA UNIFILAR (Fase 1: modelo de datos — nodos y conexiones) ---
+  function crearNodoDiagrama(datos) {
+    const nodo = App.diagrama.crearNodo(datos);
+    setNodosDiagrama([...nodosDiagrama, nodo]);
+    return nodo;
+  }
+
+  function editarNodoDiagrama(id, cambios) {
+    const nodo = nodosDiagrama.find((n) => n.id === id);
+    if (!nodo) return;
+    const actualizado = App.diagrama.editarNodo(nodo, cambios);
+    setNodosDiagrama(nodosDiagrama.map((n) => (n.id === id ? actualizado : n)));
+  }
+
+  function eliminarNodoDiagrama(id) {
+    // Sus conexiones se eliminan con él (no quedan apuntando a un nodo muerto).
+    setConexionesDiagrama(App.diagrama.conexionesTrasEliminarNodo(id, conexionesDiagrama));
+    setNodosDiagrama(nodosDiagrama.filter((n) => n.id !== id));
+  }
+
+  // Validada contra cardinalidad (ver DiagramaMediator.crearConexionValidada)
+  // antes de crearla — devuelve {ok:false, motivo} sin tocar el estado si
+  // la conexión propuesta no es válida, en vez de crearla igual.
+  function crearConexionDiagrama(datos) {
+    const resultado = App.diagrama.crearConexionValidada(datos, nodosDiagrama, conexionesDiagrama);
+    if (!resultado.ok) return resultado;
+    setConexionesDiagrama([...conexionesDiagrama, resultado.conexion]);
+    return resultado;
+  }
+
+  function editarConexionDiagrama(id, cambios) {
+    const conexion = conexionesDiagrama.find((c) => c.id === id);
+    if (!conexion) return;
+    const actualizada = App.diagrama.editarConexion(conexion, cambios);
+    setConexionesDiagrama(conexionesDiagrama.map((c) => (c.id === id ? actualizada : c)));
+  }
+
+  function eliminarConexionDiagrama(id) {
+    setConexionesDiagrama(conexionesDiagrama.filter((c) => c.id !== id));
+  }
+
   function asignarCircuitoATablero(circuitoId, tableroId) {
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return;
@@ -382,6 +427,8 @@ export function useCircuitos() {
       equipos,
       tableros,
       fuentesEnergia,
+      nodosDiagrama,
+      conexionesDiagrama,
     });
     setAvisoArchivo(`Guardado como ${nombre}`);
     setTimeout(() => setAvisoArchivo(""), 4000);
@@ -397,6 +444,8 @@ export function useCircuitos() {
         setEquipos(cargado.equipos);
         setTableros(cargado.tableros ?? []);
         setFuentesEnergia(cargado.fuentesEnergia ?? []);
+        setNodosDiagrama(cargado.nodosDiagrama ?? []);
+        setConexionesDiagrama(cargado.conexionesDiagrama ?? []);
         setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
         setAvisoArchivo(`Proyecto "${cargado.proyecto.nombre}" cargado.`);
         setTimeout(() => setAvisoArchivo(""), 5000);
@@ -413,6 +462,8 @@ export function useCircuitos() {
     setEquipos([]);
     setTableros([]);
     setFuentesEnergia([]);
+    setNodosDiagrama([]);
+    setConexionesDiagrama([]);
     setCircuitoActivoId(null);
     setFormCircuito(CIRCUITO_VACIO);
     setFormEquipo(EQUIPO_VACIO);
@@ -477,6 +528,14 @@ export function useCircuitos() {
     crearFuenteEnergia,
     editarFuenteEnergia,
     eliminarFuenteEnergia,
+    nodosDiagrama,
+    crearNodoDiagrama,
+    editarNodoDiagrama,
+    eliminarNodoDiagrama,
+    conexionesDiagrama,
+    crearConexionDiagrama,
+    editarConexionDiagrama,
+    eliminarConexionDiagrama,
     listaIntegridad,
     resumenIntegridad: resumenInt,
     detalleElectrico,

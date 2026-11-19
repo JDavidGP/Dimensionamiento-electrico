@@ -17,6 +17,8 @@ let snapshot = {
   equipos: [],
   tableros: [],
   fuentesEnergia: [],
+  nodosDiagrama: [],
+  conexionesDiagrama: [],
   normativaActiva: "NEC",
   resultados: [],
 };
@@ -69,6 +71,14 @@ export const DataProvider = {
 
   getFuenteEnergia(id) {
     return snapshot.fuentesEnergia.find((f) => f.id === id) ?? null;
+  },
+
+  getNodosDiagrama() {
+    return snapshot.nodosDiagrama;
+  },
+
+  getConexionesDiagrama() {
+    return snapshot.conexionesDiagrama;
   },
 
   getNormativaActivaId() {

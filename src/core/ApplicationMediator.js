@@ -49,6 +49,8 @@ export const ApplicationMediator = {
     equipos,
     tableros,
     fuentesEnergia,
+    nodosDiagrama,
+    conexionesDiagrama,
     normativaActiva,
     resultados,
   } = {}) {
@@ -58,6 +60,8 @@ export const ApplicationMediator = {
     if (equipos !== undefined) partial.equipos = equipos;
     if (tableros !== undefined) partial.tableros = tableros;
     if (fuentesEnergia !== undefined) partial.fuentesEnergia = fuentesEnergia;
+    if (nodosDiagrama !== undefined) partial.nodosDiagrama = nodosDiagrama;
+    if (conexionesDiagrama !== undefined) partial.conexionesDiagrama = conexionesDiagrama;
     if (normativaActiva !== undefined) partial.normativaActiva = normativaActiva;
     if (resultados !== undefined) partial.resultados = resultados;
     DataProvider.setSnapshot(partial);
