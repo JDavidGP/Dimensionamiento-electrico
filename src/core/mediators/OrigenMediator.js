@@ -25,7 +25,6 @@ import {
   editarFuenteEnergia,
   liberarTablerosDeFuente,
   TIPOS_FUENTE_ENERGIA,
-  ROLES_FUENTE_ENERGIA,
   MODOS_CONMUTACION,
   CONMUTACION_VACIA,
   normalizarConmutacion,
@@ -40,7 +39,6 @@ import {
 export const OrigenMediator = {
   // Enums expuestos para la UI — mismo patrón que ValidacionMediator.ESTADOS.
   TIPOS_FUENTE_ENERGIA,
-  ROLES_FUENTE_ENERGIA,
   MODOS_CONMUTACION,
   CONMUTACION_VACIA,
   TRANSFORMADOR_VACIO,

@@ -252,7 +252,8 @@ export default function InformeTecnico({
           <Seccion titulo="Fuentes de energía y transformadores">
             {informe.fuentesEnergia.map((f) => (
               <div key={f.id} style={{ fontSize: 12, marginBottom: 2 }}>
-                {f.nombre} — {f.tipo === "bateria" ? "Batería" : "Generador"} ({f.rol})
+                {f.nombre} — {f.tipo === "bateria" ? "Batería" : "Generador"}
+                {f.capacidadKW !== "" && f.capacidadKW != null ? ` (${f.capacidadKW} kW)` : ""}
               </div>
             ))}
             {informe.transformadores.map((t) => (

@@ -45,7 +45,7 @@ const FORM_VACIO = {
   notas: "",
 };
 
-const FORM_FUENTE_VACIO = { nombre: "", tipo: "bateria", rol: "auxiliar" };
+const FORM_FUENTE_VACIO = { nombre: "", tipo: "bateria" };
 
 // Mini-formulario inline para crear un Transformador — solo los campos
 // mínimos para darle identidad como origen (nombre + fases + tensiones
@@ -63,12 +63,6 @@ const FORM_TRANSFORMADOR_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "
 export const TIPOS_FUENTE_UI = [
   { valor: "bateria", label: "Batería" },
   { valor: "generador", label: "Generador" },
-];
-
-export const ROLES_FUENTE_UI = [
-  { valor: "principal", label: "Principal" },
-  { valor: "secundaria", label: "Secundaria" },
-  { valor: "auxiliar", label: "Auxiliar" },
 ];
 
 export function BotonPill({ activo, onClick, children, flex = 1 }) {
@@ -237,7 +231,7 @@ function nombreOrigenConmutacion(id, fuentesEnergia) {
 function etiquetaFuentePrincipal(padre, padreFuente, padreTransformador) {
   if (padre) return padre.nombre;
   if (padreFuente) {
-    return `${padreFuente.nombre} (${TIPOS_FUENTE_UI.find((ti) => ti.valor === padreFuente.tipo)?.label} · ${ROLES_FUENTE_UI.find((r) => r.valor === padreFuente.rol)?.label})`;
+    return `${padreFuente.nombre} (${TIPOS_FUENTE_UI.find((ti) => ti.valor === padreFuente.tipo)?.label})`;
   }
   if (padreTransformador) {
     return `${padreTransformador.nombre} (Transformador${padreTransformador.tensionPrimariaV && padreTransformador.tensionSecundariaV ? ` · ${padreTransformador.tensionPrimariaV}V→${padreTransformador.tensionSecundariaV}V` : ""})`;
@@ -870,7 +864,7 @@ export default function PanelTableros({
                   <optgroup label="Fuentes de energía">
                     {fuentesEnergia.map((f) => (
                       <option key={f.id} value={f.id}>
-                        {f.nombre} ({TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label} · {ROLES_FUENTE_UI.find((r) => r.valor === f.rol)?.label})
+                        {f.nombre} ({TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label})
                       </option>
                     ))}
                   </optgroup>
@@ -903,14 +897,6 @@ export default function PanelTableros({
                         {TIPOS_FUENTE_UI.map((t) => (
                           <BotonPill key={t.valor} activo={formFuente.tipo === t.valor} onClick={() => setFormFuente({ ...formFuente, tipo: t.valor })}>
                             {t.label}
-                          </BotonPill>
-                        ))}
-                      </div>
-                      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Rol de esta fuente:</div>
-                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                        {ROLES_FUENTE_UI.map((r) => (
-                          <BotonPill key={r.valor} activo={formFuente.rol === r.valor} onClick={() => setFormFuente({ ...formFuente, rol: r.valor })}>
-                            {r.label}
                           </BotonPill>
                         ))}
                       </div>

@@ -284,7 +284,7 @@ function validarFuenteEnergia(fuente, idsVistos, proyectoId, nodosDiagrama = [])
     nombre: fuente.nombre || fuente.id,
     parentId: proyectoId,
     estado,
-    resumen: `${fuente.tipo} · ${fuente.rol}`,
+    resumen: fuente.tipo,
     problemas,
   });
 }

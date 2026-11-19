@@ -126,7 +126,6 @@ export function resolverOrigen(origenId, tableros = [], fuentesEnergia = [], tra
 
 export {
   TIPOS_FUENTE_ENERGIA,
-  ROLES_FUENTE_ENERGIA,
   FUENTE_ENERGIA_VACIA,
   crearFuenteEnergia,
   editarFuenteEnergia,

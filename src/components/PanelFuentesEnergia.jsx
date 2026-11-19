@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
-import { TIPOS_FUENTE_UI, ROLES_FUENTE_UI, BotonPill } from "./PanelTableros";
+import { TIPOS_FUENTE_UI, BotonPill } from "./PanelTableros";
 
 // Lista propia de fuentes de energía (Batería/Generador), con su CRUD
 // completo — antes solo se podían CREAR desde un mini-formulario
@@ -15,7 +15,16 @@ import { TIPOS_FUENTE_UI, ROLES_FUENTE_UI, BotonPill } from "./PanelTableros";
 // propias, mismo patrón que las de tablero en PanelTableros.jsx
 // (acordeón: fila colapsada con un punto de color por integridad,
 // click para expandir y ver detalle + editar/eliminar).
-const FORM_VACIO = { nombre: "", tipo: "bateria", rol: "auxiliar", capacidadKW: "", notas: "" };
+//
+// Este panel YA NO tiene campo "Rol" (principal/secundaria/auxiliar):
+// el usuario notó el conflicto — una fuente se podía editar acá con un
+// rol fijo, que contradecía el rol real que ya se había elegido POR
+// TABLERO en PanelTableros.jsx (donde una misma fuente puede ser
+// principal para un tablero y auxiliar para otro). El rol es
+// contextual a cada tablero, nunca una propiedad de la fuente — acá
+// solo se edita QUÉ ES la fuente (nombre/tipo/capacidad/notas), sin
+// pisar esa otra fuente de verdad.
+const FORM_VACIO = { nombre: "", tipo: "bateria", capacidadKW: "", notas: "" };
 
 function colorEstadoDe(entrada) {
   if (!entrada) return colores.ok;
@@ -40,7 +49,6 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
     setForm({
       nombre: f.nombre,
       tipo: f.tipo,
-      rol: f.rol,
       capacidadKW: f.capacidadKW === "" || f.capacidadKW == null ? "" : String(f.capacidadKW),
       notas: f.notas || "",
     });
@@ -76,7 +84,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
     <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-          Fuentes de energía
+          Editar fuentes de energía
         </div>
         {!formAbierto && (
           <button
@@ -108,16 +116,6 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
               {TIPOS_FUENTE_UI.map((t) => (
                 <BotonPill key={t.valor} activo={form.tipo === t.valor} onClick={() => setForm({ ...form, tipo: t.valor })}>
                   {t.label}
-                </BotonPill>
-              ))}
-            </div>
-          </Campo>
-
-          <Campo label="Rol">
-            <div style={{ display: "flex", gap: 6 }}>
-              {ROLES_FUENTE_UI.map((r) => (
-                <BotonPill key={r.valor} activo={form.rol === r.valor} onClick={() => setForm({ ...form, rol: r.valor })}>
-                  {r.label}
                 </BotonPill>
               ))}
             </div>
@@ -184,7 +182,6 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
             const entradaIntegridad = listaIntegridad.find((e) => e.tipo === "fuenteEnergia" && e.id === f.id);
             const colorEstado = colorEstadoDe(entradaIntegridad);
             const tipoLabel = TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label ?? f.tipo;
-            const rolLabel = ROLES_FUENTE_UI.find((r) => r.valor === f.rol)?.label ?? f.rol;
             return (
               <div key={f.id} style={{ border: `1px solid ${activa ? colores.copper : colores.border}`, borderRadius: 4, overflow: "hidden" }}>
                 <div
@@ -203,7 +200,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13.5, color: colores.textMain }}>{f.nombre}</div>
                     <div style={{ fontFamily: fuentes.mono, fontSize: 11, color: colores.textDim }}>
-                      {tipoLabel} · {rolLabel}
+                      {tipoLabel}
                       {f.capacidadKW !== "" && f.capacidadKW != null ? ` · ${f.capacidadKW} kW` : ""}
                     </div>
                   </div>
