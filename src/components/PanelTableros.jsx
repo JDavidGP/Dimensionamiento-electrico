@@ -212,25 +212,44 @@ function nombreOrigenConmutacion(id, fuentesEnergia) {
   return fuentesEnergia.find((f) => f.id === id)?.nombre ?? "(fuente eliminada)";
 }
 
-// Esquema de conmutación entre fuentes de energía de un tablero —
-// pedido explícito del usuario, confirmando las 3 opciones: red
-// eléctrica local (acometida), autoconsumo con batería y auxiliar del
-// generador. Puramente DOCUMENTAL (ver modules/origen/conmutacion.js):
-// no recalcula nada, solo registra el esquema esperado en la memoria
-// del proyecto. Mismo patrón de edición inline que
-// SelectorLineasAlimentador: estado local propio, se guarda en el
-// tablero recién al confirmar.
-function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
+// Etiqueta legible de la fuente de energía PRINCIPAL de un tablero —
+// compartida entre "Alimenta desde:" (vista colapsada) y
+// BloqueConmutacion (que ya no tiene su propio selector de "principal":
+// ver la nota ahí sobre por qué se eliminó, para que no quede
+// desincronizado de este mismo valor).
+function etiquetaFuentePrincipal(padre, padreFuente, padreTransformador) {
+  if (padre) return padre.nombre;
+  if (padreFuente) {
+    return `${padreFuente.nombre} (${TIPOS_FUENTE_UI.find((ti) => ti.valor === padreFuente.tipo)?.label} · ${ROLES_FUENTE_UI.find((r) => r.valor === padreFuente.rol)?.label})`;
+  }
+  if (padreTransformador) {
+    return `${padreTransformador.nombre} (Transformador${padreTransformador.tensionPrimariaV && padreTransformador.tensionSecundariaV ? ` · ${padreTransformador.tensionPrimariaV}V→${padreTransformador.tensionSecundariaV}V` : ""})`;
+  }
+  return "Red eléctrica local (acometida / poste)";
+}
+
+// Fuentes de energía secundaria/auxiliar de un tablero — pedido
+// explícito del usuario, confirmando las 3 opciones: red eléctrica
+// local (acometida), autoconsumo con batería y auxiliar del generador.
+// La fuente PRINCIPAL ya NO se elige acá: se deriva siempre de
+// `tablero.tableroPadreId` (el selector "Fuente de energía" de arriba,
+// en el formulario) — antes este bloque tenía su PROPIO selector de
+// "Fuente principal" en `conmutacion.fuentePrincipalId`, independiente
+// del de arriba, y podían desincronizarse (el usuario elegía una
+// fuente distinta en cada lado sin darse cuenta). Se guarda siempre en
+// sincro con tableroPadreId para que la memoria del proyecto no
+// contradiga al resto de los cálculos. Puramente DOCUMENTAL en cuanto
+// a secundaria/auxiliar (ver modules/origen/conmutacion.js): no
+// recalcula nada, solo registra el esquema esperado en la memoria del
+// proyecto. Mismo patrón de edición inline que SelectorLineasAlimentador:
+// estado local propio, se guarda en el tablero recién al confirmar.
+function BloqueConmutacion({ tablero, fuentesEnergia, nombreFuentePrincipal, onEditarTablero }) {
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState(() => tablero.conmutacion ?? App.origen.CONMUTACION_VACIA);
 
   const conf = tablero.conmutacion;
   const opcionesSecundariaAuxiliar = [
     { valor: "", label: "— Ninguna —" },
-    { valor: "acometida", label: "Red eléctrica local" },
-    ...fuentesEnergia.map((f) => ({ valor: f.id, label: f.nombre })),
-  ];
-  const opcionesPrincipal = [
     { valor: "acometida", label: "Red eléctrica local" },
     ...fuentesEnergia.map((f) => ({ valor: f.id, label: f.nombre })),
   ];
@@ -241,18 +260,22 @@ function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
   }
 
   function guardar() {
-    onEditarTablero(tablero.id, { conmutacion: App.origen.normalizarConmutacion({ ...form, activa: true }) });
+    onEditarTablero(tablero.id, {
+      conmutacion: App.origen.normalizarConmutacion({ ...form, fuentePrincipalId: tablero.tableroPadreId || "acometida", activa: true }),
+    });
     setEditando(false);
   }
 
   function desactivar() {
-    onEditarTablero(tablero.id, { conmutacion: App.origen.normalizarConmutacion({ ...form, activa: false }) });
+    onEditarTablero(tablero.id, {
+      conmutacion: App.origen.normalizarConmutacion({ ...form, fuentePrincipalId: tablero.tableroPadreId || "acometida", activa: false }),
+    });
     setEditando(false);
   }
 
   const titulo = (
     <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-      Conmutación entre fuentes
+      Fuentes de energía — secundaria / auxiliar
     </div>
   );
 
@@ -264,7 +287,7 @@ function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
           <div style={{ fontSize: 11.5, color: colores.textMain, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span>
               {MODOS_CONMUTACION_UI.find((m) => m.valor === conf.modo)?.label} —{" "}
-              <strong>{nombreOrigenConmutacion(conf.fuentePrincipalId, fuentesEnergia)}</strong> (principal)
+              <strong>{nombreFuentePrincipal}</strong> (principal)
               {conf.fuenteSecundariaId && (
                 <>
                   {" ⇄ "}
@@ -294,7 +317,7 @@ function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
             onClick={abrirEdicion}
             style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
           >
-            + Configurar conmutación entre fuentes
+            + Agregar fuente secundaria / auxiliar
           </button>
         )}
       </div>
@@ -304,6 +327,14 @@ function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
   return (
     <div style={{ border: `1px solid ${colores.border}`, borderRadius: 4, padding: 10 }}>
       {titulo}
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente principal:</div>
+      <div style={{ ...inputStyle(), marginBottom: 8, display: "flex", alignItems: "center", color: colores.textMain, background: "transparent" }}>
+        {nombreFuentePrincipal}
+      </div>
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 8, lineHeight: 1.4 }}>
+        Se elige arriba, en "Fuente de energía" — acá solo se agregan la secundaria y la auxiliar.
+      </div>
+
       <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Modo de cambio:</div>
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
         {MODOS_CONMUTACION_UI.map((m) => (
@@ -312,15 +343,6 @@ function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
           </BotonPill>
         ))}
       </div>
-
-      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente principal:</div>
-      <select style={{ ...inputStyle(), marginBottom: 8 }} value={form.fuentePrincipalId} onChange={(e) => setForm({ ...form, fuentePrincipalId: e.target.value })}>
-        {opcionesPrincipal.map((o) => (
-          <option key={o.valor} value={o.valor}>
-            {o.label}
-          </option>
-        ))}
-      </select>
 
       <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente secundaria (autoconsumo, opcional):</div>
       <select style={{ ...inputStyle(), marginBottom: 8 }} value={form.fuenteSecundariaId} onChange={(e) => setForm({ ...form, fuenteSecundariaId: e.target.value })}>
@@ -805,7 +827,12 @@ export default function PanelTableros({
 
           <Campo label="Fases del alimentador">
             <div style={{ display: "flex", gap: 6 }}>
-              {FASES.map((f) => (
+              {/* Residencial básico oculta "Tri" — mismo criterio que
+                  fasesDisponibles en FormularioCircuito.jsx (se había
+                  quedado sin aplicar acá; bug reportado por el usuario
+                  vía captura, 2026-11-19 — confirmado ya corregido en
+                  el circuito, pero no en el alimentador del tablero). */}
+              {(tipoInstalacion === TIPOS_INSTALACION.RESIDENCIAL_BASICO ? FASES.filter((f) => f.valor !== "tri") : FASES).map((f) => (
                 <BotonPill
                   key={f.valor}
                   activo={form.fases === f.valor}
@@ -860,13 +887,13 @@ export default function PanelTableros({
               </div>
             </Campo>
           ) : (
-            <Campo label={`Origen (tablero padre, fuente de energía${tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL ? " o transformador" : ""}, opcional)`}>
+            <Campo label={`Fuente de energía (red local, tablero padre, batería, generador${tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL ? " o transformador" : ""}, opcional)`}>
               <select
                 style={inputStyle()}
                 value={form.tableroPadreId}
                 onChange={(e) => setForm({ ...form, tableroPadreId: e.target.value })}
               >
-                <option value="">— Acometida / poste —</option>
+                <option value="">— Red eléctrica local (acometida / poste) —</option>
                 {opcionesPadre.length > 0 && (
                   <optgroup label="Tableros">
                     {opcionesPadre.map((t) => (
@@ -1060,16 +1087,16 @@ export default function PanelTableros({
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Campo label="Longitud del alimentador (m)">
+            <Campo label="Distancia de la fuente de energía (m)">
               <input
                 style={inputStyle()}
                 type="number"
                 value={form.longitudAlimentador}
                 onChange={(e) => setForm({ ...form, longitudAlimentador: e.target.value })}
-                placeholder="Desde el origen"
+                placeholder="Desde la fuente de energía"
               />
             </Campo>
-            <Campo label="Material del alimentador">
+            <Campo label="Material del conductor">
               <div style={{ display: "flex", gap: 6 }}>
                 {["cobre", "aluminio"].map((m) => (
                   <BotonPill key={m} activo={form.materialAlimentador === m} onClick={() => setForm({ ...form, materialAlimentador: m })}>
@@ -1080,7 +1107,7 @@ export default function PanelTableros({
             </Campo>
           </div>
           <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, margin: "-4px 0 12px" }}>
-            Distancia medida desde el poste, el tablero padre o el transformador de energía hasta este tablero.
+            Distancia medida desde la fuente de energía (red local, batería, generador, tablero padre o transformador) hasta este tablero.
           </div>
 
           <div style={{ display: "flex", gap: 8 }}>
@@ -1215,15 +1242,7 @@ export default function PanelTableros({
                     <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                       <span>
                         Alimenta desde:{" "}
-                        <strong style={{ color: colores.textMain }}>
-                          {padre
-                            ? padre.nombre
-                            : padreFuente
-                              ? `${padreFuente.nombre} (${TIPOS_FUENTE_UI.find((ti) => ti.valor === padreFuente.tipo)?.label} · ${ROLES_FUENTE_UI.find((r) => r.valor === padreFuente.rol)?.label})`
-                              : padreTransformador
-                                ? `${padreTransformador.nombre} (Transformador${padreTransformador.tensionPrimariaV && padreTransformador.tensionSecundariaV ? ` · ${padreTransformador.tensionPrimariaV}V→${padreTransformador.tensionSecundariaV}V` : ""})`
-                                : "Acometida / poste"}
-                        </strong>
+                        <strong style={{ color: colores.textMain }}>{etiquetaFuentePrincipal(padre, padreFuente, padreTransformador)}</strong>
                         {t.longitudAlimentador > 0 && ` · ${t.longitudAlimentador}m de ${t.materialAlimentador}`}
                       </span>
                       <button
@@ -1247,7 +1266,12 @@ export default function PanelTableros({
 
                     <BloqueBalanceFases balance={balancesFases?.[t.id]} />
 
-                    <BloqueConmutacion tablero={t} fuentesEnergia={fuentesEnergia} onEditarTablero={editarTablero} />
+                    <BloqueConmutacion
+                      tablero={t}
+                      fuentesEnergia={fuentesEnergia}
+                      nombreFuentePrincipal={etiquetaFuentePrincipal(padre, padreFuente, padreTransformador)}
+                      onEditarTablero={editarTablero}
+                    />
 
                     {normativaActiva === "IEC_ES" && (
                       <BloqueSimultaneidadREBT tablero={t} alimentador={alimentadores?.[t.id]} onEditarTablero={editarTablero} />

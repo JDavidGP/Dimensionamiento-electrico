@@ -45,7 +45,7 @@ function filaTablero(tablero, alimentadores, origenPorTablero) {
     nombre: tablero.nombre?.trim() || "(sin nombre)",
     tensionAlimentacion: tablero.tensionAlimentacion,
     fases: tablero.fases,
-    origen: origenPorTablero[tablero.id] ?? "Acometida / poste",
+    origen: origenPorTablero[tablero.id] ?? "Red eléctrica local (acometida / poste)",
     ok: alim?.ok ?? false,
     potenciaW: alim?.ok ? alim.potenciaTotalW : null,
     corrienteA: alim?.ok ? alim.corrienteDiseno : null,

@@ -214,7 +214,7 @@ export default function InformeTecnico({
               <thead>
                 <tr>
                   <Th>Tablero</Th>
-                  <Th>Origen</Th>
+                  <Th>Fuente</Th>
                   <Th>Tensión</Th>
                   <Th>Fases</Th>
                   <Th alinearDerecha>Potencia</Th>

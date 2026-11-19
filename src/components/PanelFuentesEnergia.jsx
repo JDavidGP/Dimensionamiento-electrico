@@ -5,7 +5,7 @@ import { TIPOS_FUENTE_UI, ROLES_FUENTE_UI, BotonPill } from "./PanelTableros";
 
 // Lista propia de fuentes de energía (Batería/Generador), con su CRUD
 // completo — antes solo se podían CREAR desde un mini-formulario
-// inline dentro del selector "Origen" de un tablero (que sigue
+// inline dentro del selector "Fuente de energía" de un tablero (que sigue
 // existiendo, es un atajo útil); para EDITARLAS o ELIMINARLAS no había
 // ninguna pantalla (editarFuenteEnergia/eliminarFuenteEnergia ya
 // existían en el hook, pero nunca estuvieron conectadas a la UI).
@@ -173,7 +173,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
 
       {fuentesEnergia.length === 0 && !formAbierto && (
         <div style={{ fontSize: 12, color: colores.textDim }}>
-          Sin fuentes de energía todavía — "+ Nueva fuente" acá, o desde el selector "Origen" al crear/editar un tablero.
+          Sin fuentes de energía todavía — "+ Nueva fuente" acá, o desde el selector "Fuente de energía" al crear/editar un tablero.
         </div>
       )}
 

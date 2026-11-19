@@ -21,7 +21,7 @@ import { ValidacionMediator } from "./ValidacionMediator.js";
 
 /** Etiqueta legible del origen de un tablero (tablero padre / fuente de energía / transformador / acometida / referencia rota). */
 function etiquetaOrigen(tablero, tableros, fuentesEnergia, transformadores) {
-  if (!tablero.tableroPadreId) return "Acometida / poste";
+  if (!tablero.tableroPadreId) return "Red eléctrica local (acometida / poste)";
   const resuelto = OrigenMediator.resolver(tablero.tableroPadreId, tableros, fuentesEnergia, transformadores);
   if (resuelto.tipo === "tablero") return resuelto.tablero.nombre;
   if (resuelto.tipo === "transformador") return `${resuelto.transformador.nombre} (Transformador)`;
