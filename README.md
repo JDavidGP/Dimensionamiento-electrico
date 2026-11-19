@@ -89,7 +89,7 @@ npm run dev
 - [ ] Sistema de etiquetado y planos
 - [ ] Migración progresiva a TypeScript
 - [x] Fuentes de energía (Batería, Generador) con rol (Principal/Secundaria/Auxiliar) como origen seleccionable de un tablero, reutilizando el selector de "Tablero padre" — Transformador queda pendiente aparte (ver más abajo)
-- [ ] Fuentes de energía configurables en paralelo o por turnos (ej. red pública de día / autoconsumo de noche, o al revés) y conmutación automática del generador ante una falla de red
+- [x] Conmutación entre fuentes de energía (red local / batería / generador), por horario o automática ante falla — registrado en la memoria del proyecto, todavía no recalcula según cuál fuente está activa
 - [x] Tipo de instalación (domiciliaria / industrial), elegido junto con la normativa — por ahora informativo, todavía no quita/agrega equipos o tablas
 - [ ] Transformador como origen seleccionable (la entidad ya existe, creada sin conectar — se integra junto con el sistema de media tensión)
 
