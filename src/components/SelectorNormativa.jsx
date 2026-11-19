@@ -4,6 +4,12 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // Catálogo vía NormativaMediator (no import directo de módulos de normativa)
 const LISTA_NORMATIVAS = App.normativa.listar().map((meta) => App.normativa.obtener(meta.id));
 import { colores, fuentes } from "../styles/colores";
+import { TIPOS_INSTALACION } from "../shared/constants/constantes.js";
+
+const OPCIONES_TIPO_INSTALACION = [
+  { valor: TIPOS_INSTALACION.DOMICILIARIA, label: "Domiciliaria" },
+  { valor: TIPOS_INSTALACION.INDUSTRIAL, label: "Industrial" },
+];
 
 // Agrupa por familia manteniendo el orden de LISTA_NORMATIVAS (NEC, CIEN, IEC...)
 function agruparPorFamilia(lista) {
@@ -59,7 +65,7 @@ const estiloOpcionLista = {
   cursor: "pointer",
 };
 
-export default function SelectorNormativa({ normativaActiva, setNormativaActiva, circuitos = [] }) {
+export default function SelectorNormativa({ normativaActiva, setNormativaActiva, circuitos = [], tipoInstalacion, setTipoInstalacion }) {
   const grupos = agruparPorFamilia(LISTA_NORMATIVAS);
   const normativaActivaObj = LISTA_NORMATIVAS.find((n) => n.id === normativaActiva);
 
@@ -214,6 +220,32 @@ export default function SelectorNormativa({ normativaActiva, setNormativaActiva,
           {hayCambioPendiente ? "Validar" : "Aplicada ✓"}
         </button>
       </div>
+
+      {/* Tipo de instalación — se aplica al toque, no necesita "Validar"
+          como la normativa: todavía no dispara ningún recálculo, es
+          puramente informativo (ver nota de investigación NEC/REBT en
+          shared/constants/constantes.js). */}
+      {setTipoInstalacion && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+            Tipo de instalación
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {OPCIONES_TIPO_INSTALACION.map((op) => (
+              <button
+                key={op.valor}
+                onClick={() => setTipoInstalacion(op.valor)}
+                style={estiloBotonPrincipal(tipoInstalacion === op.valor)}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, marginTop: 6 }}>
+            Por ahora es solo informativo — todavía no agrega ni quita equipos o tablas según el tipo elegido.
+          </div>
+        </div>
+      )}
 
       {/* Banner de confirmación cuando ya hay circuitos calculados */}
       {confirmando && (

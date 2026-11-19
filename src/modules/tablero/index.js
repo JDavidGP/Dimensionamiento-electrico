@@ -32,6 +32,14 @@ function normalizar(datos = {}) {
     // asignar, no participa en el balance del padre todavía. Sin UI
     // propia esta sesión — ver modules/motor/balanceFases.js.
     lineasAlimentador: Array.isArray(datos.lineasAlimentador) ? datos.lineasAlimentador : [],
+    // Esquema de conmutación entre fuentes de energía — DOCUMENTAL,
+    // null = sin configurar (comportamiento actual, sin cambios). Este
+    // módulo no valida su forma interna a propósito (ese es trabajo de
+    // normalizarConmutacion en modules/origen/conmutacion.js, que vive
+    // en otro dominio — este módulo no lo importa, solo pasa el campo
+    // de largo) — mismo criterio de aislamiento entre módulos que ya
+    // sigue tableroPadreId con resolverOrigen.
+    conmutacion: datos.conmutacion && typeof datos.conmutacion === "object" ? datos.conmutacion : null,
   };
 }
 
@@ -65,6 +73,19 @@ export function circuitosSinTablero(circuitos = []) {
  */
 export function asignarCircuitoATablero(circuito, tableroId) {
   return { ...circuito, tableroId: tableroId ?? null };
+}
+
+/**
+ * Devuelve el circuito con `lineas` actualizado — mismo criterio que
+ * asignarCircuitoATablero (no muta; la escritura real la hace la capa
+ * de aplicación / hook). Para balance de fases, ver
+ * TableroMediator.balanceFasesDeTablero. NO valida acá que la cantidad
+ * coincida con circuito.fases — esa restricción vive en la UI
+ * (shared/utils/lineasFases.js), que ya constriñe la interacción para
+ * que no pueda quedar mal armada desde ahí.
+ */
+export function asignarLineasACircuito(circuito, lineas) {
+  return { ...circuito, lineas: Array.isArray(lineas) ? lineas : [] };
 }
 
 /**

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
+import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
@@ -8,22 +10,43 @@ const FASES = [
   { valor: "tri", label: "Tri" },
 ];
 
+// tensionManual es puramente de este formulario (no se guarda en el
+// tablero) — decide si, al cambiar las fases del alimentador, la
+// tensión se auto-actualiza al estándar de la normativa activa o se
+// deja como la dejó el instalador. Mismo criterio que voltajeManual en
+// FormularioCircuito.jsx, pero sin persistirlo: al editar un tablero
+// existente alcanza con derivarlo comparando su tensión contra los
+// valores estándar (ver abrirEdicion).
 const FORM_VACIO = {
   nombre: "",
-  tensionAlimentacion: "120",
+  tensionAlimentacion: "",
+  tensionManual: false,
   fases: "mono",
-  tableroPadreId: "", // "" = acometida/poste/transformador (sin padre)
+  tableroPadreId: "", // "" = acometida/poste (sin padre); puede ser otro tablero o una fuente de energía
   longitudAlimentador: "",
   materialAlimentador: "cobre",
 };
 
-function BotonPill({ activo, onClick, children }) {
+const FORM_FUENTE_VACIO = { nombre: "", tipo: "bateria", rol: "auxiliar" };
+
+const TIPOS_FUENTE_UI = [
+  { valor: "bateria", label: "Batería" },
+  { valor: "generador", label: "Generador" },
+];
+
+const ROLES_FUENTE_UI = [
+  { valor: "principal", label: "Principal" },
+  { valor: "secundaria", label: "Secundaria" },
+  { valor: "auxiliar", label: "Auxiliar" },
+];
+
+function BotonPill({ activo, onClick, children, flex = 1 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        flex: 1,
+        flex,
         padding: "7px 0",
         borderRadius: 3,
         border: `1px solid ${activo ? colores.copper : colores.border}`,
@@ -77,6 +100,391 @@ function BloqueAlimentador({ resultado }) {
   );
 }
 
+// Asignación de línea(s) del alimentador de un SUBtablero respecto a
+// las líneas de su tablero PADRE (mismo concepto que circuito.lineas,
+// un nivel más arriba) — para que balance de fases pueda agregar la
+// demanda de este subtablero hacia el padre por la línea correcta.
+// Solo se renderiza si hay padre y el padre tiene más de una línea.
+function SelectorLineasAlimentador({ tablero, padre, onEditarTablero }) {
+  const disponibles = lineasDisponiblesDeTablero(padre.fases);
+  const requeridas = lineasRequeridas(tablero.fases, disponibles);
+  const actuales = tablero.lineasAlimentador ?? [];
+  const completo = actuales.length === requeridas;
+
+  function asignar(nuevas) {
+    onEditarTablero(tablero.id, { lineasAlimentador: nuevas });
+  }
+
+  if (tablero.fases === "tri" && requeridas === disponibles.length) {
+    const yaAsignado = actuales.length === disponibles.length && disponibles.every((l) => actuales.includes(l));
+    return (
+      <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", gap: 8 }}>
+        <span>Alimentador trifásico — usa las {disponibles.length} líneas de "{padre.nombre}" ({disponibles.join(", ")}):</span>
+        {yaAsignado ? (
+          <span style={{ color: colores.ok, fontWeight: 600 }}>✓ asignado</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => asignar(disponibles)}
+            style={{ padding: "2px 8px", borderRadius: 3, border: `1px solid ${colores.copper}`, background: "transparent", color: colores.copper, fontSize: 11, cursor: "pointer" }}
+          >
+            Asignar
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <span>Línea(s) del alimentador en "{padre.nombre}" (requiere {requeridas}):</span>
+      {disponibles.map((linea) => {
+        const seleccionada = actuales.includes(linea);
+        const alcanzoMaximoSinEstaSeleccionada = !seleccionada && actuales.length >= requeridas && requeridas > 1;
+        return (
+          <button
+            key={linea}
+            type="button"
+            disabled={alcanzoMaximoSinEstaSeleccionada}
+            onClick={() => asignar(siguienteSeleccionLineas(actuales, linea, requeridas))}
+            title={alcanzoMaximoSinEstaSeleccionada ? `Ya hay ${requeridas} línea(s) seleccionada(s) — quitá una antes de agregar ${linea}` : undefined}
+            style={{
+              padding: "2px 9px",
+              borderRadius: 3,
+              border: `1px solid ${seleccionada ? colores.copper : colores.border}`,
+              background: seleccionada ? colores.copper : "transparent",
+              color: seleccionada ? "#171512" : alcanzoMaximoSinEstaSeleccionada ? colores.border : colores.textDim,
+              fontWeight: 600,
+              fontSize: 11,
+              cursor: alcanzoMaximoSinEstaSeleccionada ? "not-allowed" : "pointer",
+            }}
+          >
+            {linea}
+          </button>
+        );
+      })}
+      <span style={{ color: completo ? colores.ok : colores.warn }}>
+        {actuales.length}/{requeridas}
+      </span>
+    </div>
+  );
+}
+
+// Severidad visual del % de desbalance: verde hasta el 70% del umbral,
+// ámbar entre ese 70% y el umbral (se acerca al límite sin haberlo
+// cruzado todavía), rojo al superarlo. Es una gradación de UI, no una
+// cifra normativa — el único corte que sí tiene fuente es `excede`
+// (porcentajeDesbalance > limitePct, ver balanceFases.js).
+function colorSeveridadBalance(pct, limite) {
+  if (pct > limite) return colores.error;
+  if (pct > limite * 0.7) return colores.warn;
+  return colores.ok;
+}
+
+// Balance de fases de un tablero (TableroMediator.balanceFasesDeTablero),
+// con detalle visual por color: barra por línea (ancho = corriente,
+// color = severidad) y, si excede el umbral, una sugerencia de qué
+// mover para mejorar el balance — nunca se aplica solo, es información
+// para que el instalador decida.
+const MODOS_CONMUTACION_UI = [
+  { valor: "falla_automatica", label: "Automática ante falla" },
+  { valor: "horario", label: "Por horario" },
+  { valor: "manual", label: "Manual" },
+];
+
+function nombreOrigenConmutacion(id, fuentesEnergia) {
+  if (!id) return "— Ninguna —";
+  if (id === "acometida") return "Red eléctrica local";
+  return fuentesEnergia.find((f) => f.id === id)?.nombre ?? "(fuente eliminada)";
+}
+
+// Esquema de conmutación entre fuentes de energía de un tablero —
+// pedido explícito del usuario, confirmando las 3 opciones: red
+// eléctrica local (acometida), autoconsumo con batería y auxiliar del
+// generador. Puramente DOCUMENTAL (ver modules/origen/conmutacion.js):
+// no recalcula nada, solo registra el esquema esperado en la memoria
+// del proyecto. Mismo patrón de edición inline que
+// SelectorLineasAlimentador: estado local propio, se guarda en el
+// tablero recién al confirmar.
+function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
+  const [editando, setEditando] = useState(false);
+  const [form, setForm] = useState(() => tablero.conmutacion ?? App.origen.CONMUTACION_VACIA);
+
+  const conf = tablero.conmutacion;
+  const opcionesSecundariaAuxiliar = [
+    { valor: "", label: "— Ninguna —" },
+    { valor: "acometida", label: "Red eléctrica local" },
+    ...fuentesEnergia.map((f) => ({ valor: f.id, label: f.nombre })),
+  ];
+  const opcionesPrincipal = [
+    { valor: "acometida", label: "Red eléctrica local" },
+    ...fuentesEnergia.map((f) => ({ valor: f.id, label: f.nombre })),
+  ];
+
+  function abrirEdicion() {
+    setForm(tablero.conmutacion ?? App.origen.CONMUTACION_VACIA);
+    setEditando(true);
+  }
+
+  function guardar() {
+    onEditarTablero(tablero.id, { conmutacion: App.origen.normalizarConmutacion({ ...form, activa: true }) });
+    setEditando(false);
+  }
+
+  function desactivar() {
+    onEditarTablero(tablero.id, { conmutacion: App.origen.normalizarConmutacion({ ...form, activa: false }) });
+    setEditando(false);
+  }
+
+  const titulo = (
+    <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+      Conmutación entre fuentes
+    </div>
+  );
+
+  if (!editando) {
+    return (
+      <div>
+        {titulo}
+        {conf?.activa ? (
+          <div style={{ fontSize: 11.5, color: colores.textMain, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span>
+              {MODOS_CONMUTACION_UI.find((m) => m.valor === conf.modo)?.label} —{" "}
+              <strong>{nombreOrigenConmutacion(conf.fuentePrincipalId, fuentesEnergia)}</strong> (principal)
+              {conf.fuenteSecundariaId && (
+                <>
+                  {" ⇄ "}
+                  <strong>{nombreOrigenConmutacion(conf.fuenteSecundariaId, fuentesEnergia)}</strong> (secundaria)
+                </>
+              )}
+              {conf.fuenteAuxiliarId && (
+                <>
+                  {" + "}
+                  <strong>{nombreOrigenConmutacion(conf.fuenteAuxiliarId, fuentesEnergia)}</strong> (auxiliar)
+                </>
+              )}
+              {conf.modo === "horario" && conf.horarioPrincipalInicio && conf.horarioPrincipalFin && (
+                <span style={{ color: colores.textDim }}>
+                  {" "}
+                  · principal {conf.horarioPrincipalInicio}–{conf.horarioPrincipalFin}
+                </span>
+              )}
+            </span>
+            <button type="button" onClick={abrirEdicion} style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+              ✎ Editar
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={abrirEdicion}
+            style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+          >
+            + Configurar conmutación entre fuentes
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: `1px solid ${colores.border}`, borderRadius: 4, padding: 10 }}>
+      {titulo}
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Modo de cambio:</div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        {MODOS_CONMUTACION_UI.map((m) => (
+          <BotonPill key={m.valor} activo={form.modo === m.valor} onClick={() => setForm({ ...form, modo: m.valor })}>
+            {m.label}
+          </BotonPill>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente principal:</div>
+      <select style={{ ...inputStyle(), marginBottom: 8 }} value={form.fuentePrincipalId} onChange={(e) => setForm({ ...form, fuentePrincipalId: e.target.value })}>
+        {opcionesPrincipal.map((o) => (
+          <option key={o.valor} value={o.valor}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente secundaria (autoconsumo, opcional):</div>
+      <select style={{ ...inputStyle(), marginBottom: 8 }} value={form.fuenteSecundariaId} onChange={(e) => setForm({ ...form, fuenteSecundariaId: e.target.value })}>
+        {opcionesSecundariaAuxiliar.map((o) => (
+          <option key={o.valor} value={o.valor}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Fuente auxiliar (ej. generador ante falla, opcional):</div>
+      <select style={{ ...inputStyle(), marginBottom: 8 }} value={form.fuenteAuxiliarId} onChange={(e) => setForm({ ...form, fuenteAuxiliarId: e.target.value })}>
+        {opcionesSecundariaAuxiliar.map((o) => (
+          <option key={o.valor} value={o.valor}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+
+      {form.modo === "horario" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <div>
+            <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Principal desde:</div>
+            <input
+              type="time"
+              style={inputStyle()}
+              value={form.horarioPrincipalInicio}
+              onChange={(e) => setForm({ ...form, horarioPrincipalInicio: e.target.value })}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Principal hasta:</div>
+            <input
+              type="time"
+              style={inputStyle()}
+              value={form.horarioPrincipalFin}
+              onChange={(e) => setForm({ ...form, horarioPrincipalFin: e.target.value })}
+            />
+          </div>
+        </div>
+      )}
+
+      <input
+        style={{ ...inputStyle(), marginBottom: 8 }}
+        placeholder="Notas (opcional)"
+        value={form.notas}
+        onChange={(e) => setForm({ ...form, notas: e.target.value })}
+      />
+
+      <div style={{ fontSize: 10, color: colores.textDim, lineHeight: 1.4, marginBottom: 8 }}>
+        Solo queda registrado en la memoria del proyecto — todavía no cambia ningún cálculo según la fuente activa.
+      </div>
+
+      <div style={{ display: "flex", gap: 6 }}>
+        <button
+          type="button"
+          onClick={guardar}
+          style={{ flex: 1, padding: "6px 0", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+        >
+          Guardar
+        </button>
+        {conf?.activa && (
+          <button
+            type="button"
+            onClick={desactivar}
+            style={{ padding: "6px 10px", background: "transparent", color: colores.error, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+          >
+            Desactivar
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setEditando(false)}
+          style={{ padding: "6px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BloqueBalanceFases({ balance }) {
+  if (!balance || !balance.aplica) return null;
+
+  if (!balance.ok) {
+    return (
+      <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.4 }}>
+        Balance de fases pendiente: {balance.motivo}
+      </div>
+    );
+  }
+
+  const { porLinea, porcentajeDesbalance, limitePct, excede, advertencias, contribuyentesPorLinea } = balance;
+  const color = colorSeveridadBalance(porcentajeDesbalance, limitePct);
+  const entradas = Object.entries(porLinea);
+  const maxValor = Math.max(...entradas.map(([, v]) => v));
+  const [lineaMax] = entradas.reduce((a, b) => (b[1] > a[1] ? b : a));
+  const [lineaMin] = entradas.reduce((a, b) => (b[1] < a[1] ? b : a));
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+        <span style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          Balance de fases
+        </span>
+        <span style={{ fontFamily: fuentes.mono, fontSize: 12, color, fontWeight: 700 }}>
+          {porcentajeDesbalance.toFixed(1)}%
+        </span>
+        <span style={{ fontSize: 10.5, color: colores.textDim }}>(umbral {limitePct}%)</span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 6 }}>
+        {entradas.map(([linea, valor]) => {
+          const barColor = linea === lineaMax ? color : linea === lineaMin ? colores.textDim : colores.copper;
+          const ancho = maxValor > 0 ? (valor / maxValor) * 100 : 0;
+          return (
+            <div key={linea} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 20, fontFamily: fuentes.mono, fontSize: 10.5, color: colores.textDim }}>{linea}</span>
+              <div style={{ flex: 1, height: 7, background: colores.bg, borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ width: `${ancho}%`, height: "100%", background: barColor }} />
+              </div>
+              <span style={{ width: 54, textAlign: "right", fontFamily: fuentes.mono, fontSize: 10.5, color: colores.textMain }}>
+                {valor.toFixed(1)}A
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {advertencias?.map((a, i) => (
+        <div key={i} style={{ color: colores.warn, fontSize: 11, marginBottom: 4 }}>
+          ⚠ {a}
+        </div>
+      ))}
+
+      {excede && (
+        <div
+          style={{
+            fontSize: 11,
+            color: colores.textDim,
+            background: `${colores.error}14`,
+            border: `1px solid ${colores.error}44`,
+            borderRadius: 4,
+            padding: 8,
+            marginTop: 4,
+            lineHeight: 1.5,
+          }}
+        >
+          <div style={{ color: colores.error, fontWeight: 600, marginBottom: 4 }}>
+            Sugerencia para mejorar el balance (a criterio del instalador):
+          </div>
+          <div>
+            La línea <strong style={{ color: colores.textMain }}>{lineaMax}</strong> lleva {porLinea[lineaMax].toFixed(1)}A, la más
+            cargada; <strong style={{ color: colores.textMain }}>{lineaMin}</strong> lleva solo {porLinea[lineaMin].toFixed(1)}A.
+            Considerá reasignar alguno de estos de {lineaMax} hacia {lineaMin} u otra línea más descargada:
+          </div>
+          <ul style={{ margin: "4px 0 4px 18px", padding: 0 }}>
+            {(contribuyentesPorLinea?.[lineaMax] ?? [])
+              .slice()
+              .sort((a, b) => b.corrienteA - a.corrienteA)
+              .map((item) => (
+                <li key={item.id}>
+                  {item.nombre} ({item.tipo === "subtablero" ? "subtablero" : "circuito"}) — {item.corrienteA.toFixed(1)}A
+                </li>
+              ))}
+          </ul>
+          <div style={{ fontStyle: "italic" }}>
+            La decisión final de qué mover —o si conviene hacerlo— queda a criterio del instalador/electricista responsable del
+            proyecto.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Mismo patrón de acordeón que TablaResultados: lista colapsada, clic
 // despliega el detalle del tablero seleccionado (sus circuitos y su
 // alimentador ya calculado). Fase 3 (dato relacional) + Fase 4
@@ -92,10 +500,14 @@ export default function PanelTableros({
   circuitosDeTablero,
   circuitosSinTablero,
   alimentadores,
+  balancesFases = {},
   crearTablero,
   editarTablero,
   eliminarTablero,
   listaIntegridad = [],
+  normativaActiva,
+  fuentesEnergia = [],
+  crearFuenteEnergia,
 }) {
   const [tableroActivoId, setTableroActivoId] = useState(null);
   const [formAbierto, setFormAbierto] = useState(false);
@@ -106,11 +518,28 @@ export default function PanelTableros({
   // dropdown) — guardamos el objeto completo para mostrar su nombre sin
   // tener que volver a buscarlo por id.
   const [padreForzado, setPadreForzado] = useState(null);
+  // Mini-formulario inline para crear una fuente de energía nueva
+  // (Batería/Generador) sin salir del formulario de tablero — ver
+  // DECISIÓN DE UI en modules/origen/index.js: el selector de "Tablero
+  // padre" es el lugar elegido para esto.
+  const [nuevaFuenteAbierta, setNuevaFuenteAbierta] = useState(false);
+  const [formFuente, setFormFuente] = useState(FORM_FUENTE_VACIO);
+
+  const normativa = App.normativa.obtener(normativaActiva);
+  const voltajesEstandar = normativa.voltajesPorFase?.[form.fases] ?? [];
 
   const sinAsignar = circuitosSinTablero();
 
+  // Tensión por defecto para una fase dada, según la normativa activa
+  // — el primer valor estándar de esa fase, o "" si la normativa no
+  // tiene ninguno definido (no se inventa un número).
+  function tensionPorDefecto(fases) {
+    const estandar = normativa.voltajesPorFase?.[fases] ?? [];
+    return estandar[0] != null ? String(estandar[0]) : "";
+  }
+
   function abrirCreacion() {
-    setForm(FORM_VACIO);
+    setForm({ ...FORM_VACIO, tensionAlimentacion: tensionPorDefecto("mono") });
     setEditandoId(null);
     setPadreForzado(null);
     setFormAbierto(true);
@@ -121,16 +550,24 @@ export default function PanelTableros({
   // mismo formulario de siempre, solo que el campo "Tablero padre" no
   // hace falta buscarlo, ya se sabe de dónde cuelga.
   function abrirCreacionSubtablero(tableroPadre) {
-    setForm({ ...FORM_VACIO, tableroPadreId: tableroPadre.id });
+    setForm({ ...FORM_VACIO, tensionAlimentacion: tensionPorDefecto("mono"), tableroPadreId: tableroPadre.id });
     setEditandoId(null);
     setPadreForzado(tableroPadre);
     setFormAbierto(true);
   }
 
   function abrirEdicion(t) {
+    // tensionManual se deriva, no se guardó: si la tensión actual del
+    // tablero coincide con alguno de los valores estándar de SU fase
+    // bajo la normativa activa, se muestra como esa pill seleccionada;
+    // si no coincide con ninguno (ej. viene de otra normativa, o se
+    // cargó un proyecto hecho bajo otro estándar), se muestra como
+    // "Manual" — nunca se le cambia el valor en silencio.
+    const estandar = normativa.voltajesPorFase?.[t.fases] ?? [];
     setForm({
       nombre: t.nombre,
       tensionAlimentacion: String(t.tensionAlimentacion),
+      tensionManual: !estandar.includes(Number(t.tensionAlimentacion)),
       fases: t.fases,
       tableroPadreId: t.tableroPadreId ?? "",
       longitudAlimentador: t.longitudAlimentador ? String(t.longitudAlimentador) : "",
@@ -146,6 +583,8 @@ export default function PanelTableros({
     setEditandoId(null);
     setPadreForzado(null);
     setFormAbierto(false);
+    setNuevaFuenteAbierta(false);
+    setFormFuente(FORM_FUENTE_VACIO);
   }
 
   function alGuardar(e) {
@@ -201,25 +640,55 @@ export default function PanelTableros({
             />
           </Campo>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Campo label="Tensión alimentación (V)">
+          <Campo label="Fases del alimentador">
+            <div style={{ display: "flex", gap: 6 }}>
+              {FASES.map((f) => (
+                <BotonPill
+                  key={f.valor}
+                  activo={form.fases === f.valor}
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      fases: f.valor,
+                      // Mismo criterio que cambiarFasesCircuito: si la
+                      // tensión no fue puesta a mano, se sigue el
+                      // estándar de la normativa para la fase nueva.
+                      tensionAlimentacion: form.tensionManual ? form.tensionAlimentacion : tensionPorDefecto(f.valor),
+                    })
+                  }
+                >
+                  {f.label}
+                </BotonPill>
+              ))}
+            </div>
+          </Campo>
+
+          <Campo label={`Tensión alimentación (${normativa.id})`}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {voltajesEstandar.map((v) => (
+                <BotonPill
+                  key={v}
+                  flex="0 0 auto"
+                  activo={!form.tensionManual && Number(form.tensionAlimentacion) === v}
+                  onClick={() => setForm({ ...form, tensionAlimentacion: String(v), tensionManual: false })}
+                >
+                  <span style={{ padding: "0 10px" }}>{v}V</span>
+                </BotonPill>
+              ))}
+              <BotonPill flex="0 0 auto" activo={form.tensionManual} onClick={() => setForm({ ...form, tensionManual: true })}>
+                <span style={{ padding: "0 10px" }}>Manual</span>
+              </BotonPill>
+            </div>
+            {form.tensionManual && (
               <input
-                style={inputStyle()}
+                style={{ ...inputStyle(), marginTop: 8 }}
                 type="number"
+                placeholder="Tensión del alimentador (V)"
                 value={form.tensionAlimentacion}
                 onChange={(e) => setForm({ ...form, tensionAlimentacion: e.target.value })}
               />
-            </Campo>
-            <Campo label="Fases del alimentador">
-              <div style={{ display: "flex", gap: 6 }}>
-                {FASES.map((f) => (
-                  <BotonPill key={f.valor} activo={form.fases === f.valor} onClick={() => setForm({ ...form, fases: f.valor })}>
-                    {f.label}
-                  </BotonPill>
-                ))}
-              </div>
-            </Campo>
-          </div>
+            )}
+          </Campo>
 
           {padreForzado ? (
             <Campo label="Tablero padre">
@@ -228,19 +697,105 @@ export default function PanelTableros({
               </div>
             </Campo>
           ) : (
-            <Campo label="Tablero padre (opcional)">
+            <Campo label="Origen (tablero padre o fuente de energía, opcional)">
               <select
                 style={inputStyle()}
                 value={form.tableroPadreId}
                 onChange={(e) => setForm({ ...form, tableroPadreId: e.target.value })}
               >
-                <option value="">— Acometida / poste / transformador —</option>
-                {opcionesPadre.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nombre}
-                  </option>
-                ))}
+                <option value="">— Acometida / poste —</option>
+                {opcionesPadre.length > 0 && (
+                  <optgroup label="Tableros">
+                    {opcionesPadre.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {fuentesEnergia.length > 0 && (
+                  <optgroup label="Fuentes de energía">
+                    {fuentesEnergia.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.nombre} ({TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label} · {ROLES_FUENTE_UI.find((r) => r.valor === f.rol)?.label})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
+
+              {crearFuenteEnergia && (
+                <div style={{ marginTop: 8 }}>
+                  {nuevaFuenteAbierta ? (
+                    <div style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
+                      <input
+                        style={{ ...inputStyle(), marginBottom: 6 }}
+                        value={formFuente.nombre}
+                        onChange={(e) => setFormFuente({ ...formFuente, nombre: e.target.value })}
+                        placeholder="Ej: Banco de baterías solar, Generador diesel 10kW"
+                      />
+                      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                        {TIPOS_FUENTE_UI.map((t) => (
+                          <BotonPill key={t.valor} activo={formFuente.tipo === t.valor} onClick={() => setFormFuente({ ...formFuente, tipo: t.valor })}>
+                            {t.label}
+                          </BotonPill>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Rol de esta fuente:</div>
+                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                        {ROLES_FUENTE_UI.map((r) => (
+                          <BotonPill key={r.valor} activo={formFuente.rol === r.valor} onClick={() => setFormFuente({ ...formFuente, rol: r.valor })}>
+                            {r.label}
+                          </BotonPill>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          disabled={!formFuente.nombre.trim()}
+                          onClick={() => {
+                            const fuente = crearFuenteEnergia(formFuente);
+                            setForm({ ...form, tableroPadreId: fuente.id });
+                            setFormFuente(FORM_FUENTE_VACIO);
+                            setNuevaFuenteAbierta(false);
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: "6px 0",
+                            borderRadius: 3,
+                            border: "none",
+                            background: formFuente.nombre.trim() ? colores.copper : colores.border,
+                            color: formFuente.nombre.trim() ? "#171512" : colores.textDim,
+                            fontWeight: 700,
+                            fontSize: 11.5,
+                            cursor: formFuente.nombre.trim() ? "pointer" : "not-allowed",
+                          }}
+                        >
+                          + Crear y usar como origen
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormFuente(FORM_FUENTE_VACIO);
+                            setNuevaFuenteAbierta(false);
+                          }}
+                          style={{ padding: "6px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setNuevaFuenteAbierta(true)}
+                      style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+                    >
+                      + Nueva fuente de energía (Batería/Generador)
+                    </button>
+                  )}
+                </div>
+              )}
             </Campo>
           )}
 
@@ -305,7 +860,16 @@ export default function PanelTableros({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {tableros.map((t) => {
             const circuitosDelTablero = circuitosDeTablero(t.id);
-            const padre = t.tableroPadreId ? tableros.find((p) => p.id === t.tableroPadreId) : null;
+            // El origen puede ser otro tablero O una fuente de energía
+            // (Batería/Generador) — se resuelven por separado porque
+            // solo un tablero tiene `fases` (relevante para el
+            // selector de líneas del alimentador más abajo).
+            const origenResuelto = t.tableroPadreId ? App.origen.resolver(t.tableroPadreId, tableros, fuentesEnergia) : { tipo: "acometida" };
+            const padre = origenResuelto.tipo === "tablero" ? origenResuelto.tablero : null;
+            const padreFuente =
+              origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.BATERIA || origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.GENERADOR
+                ? origenResuelto.fuente
+                : null;
             const activo = tableroActivoId === t.id;
             // Integridad de ESTE tablero (tableroPadreId inexistente,
             // auto-referencia, sin circuitos asociados) — mismo patrón
@@ -389,7 +953,14 @@ export default function PanelTableros({
 
                     <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                       <span>
-                        Alimenta desde: <strong style={{ color: colores.textMain }}>{padre ? padre.nombre : "Acometida / poste / transformador principal"}</strong>
+                        Alimenta desde:{" "}
+                        <strong style={{ color: colores.textMain }}>
+                          {padre
+                            ? padre.nombre
+                            : padreFuente
+                              ? `${padreFuente.nombre} (${TIPOS_FUENTE_UI.find((ti) => ti.valor === padreFuente.tipo)?.label} · ${ROLES_FUENTE_UI.find((r) => r.valor === padreFuente.rol)?.label})`
+                              : "Acometida / poste"}
+                        </strong>
                         {t.longitudAlimentador > 0 && ` · ${t.longitudAlimentador}m de ${t.materialAlimentador}`}
                       </span>
                       <button
@@ -404,6 +975,14 @@ export default function PanelTableros({
                     </div>
 
                     <BloqueAlimentador resultado={alimentadores?.[t.id]} />
+
+                    {padre && padre.fases !== "mono" && (
+                      <SelectorLineasAlimentador tablero={t} padre={padre} onEditarTablero={editarTablero} />
+                    )}
+
+                    <BloqueBalanceFases balance={balancesFases?.[t.id]} />
+
+                    <BloqueConmutacion tablero={t} fuentesEnergia={fuentesEnergia} onEditarTablero={editarTablero} />
 
                     <div>
                       <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>

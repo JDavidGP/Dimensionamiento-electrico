@@ -1,5 +1,6 @@
 import React from "react";
 import { colores, fuentes } from "../styles/colores";
+import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
 
 function redondearMostrar(valor) {
   return Math.round(valor * 10) / 10;
@@ -21,6 +22,74 @@ function estadoCombinado(r, entradaIntegridad) {
   return rango[integridad] > rango[elEctrico] ? integridad : elEctrico;
 }
 
+// Asignación de línea(s) (L1/L2/L3) del circuito dentro de su tablero
+// — para balance de fases (ver TableroMediator.balanceFasesDeTablero).
+// Solo tiene sentido si el tablero tiene más de una línea (bi/tri); un
+// tablero mono no tiene nada que elegir, así que el llamador ni
+// renderiza esto en ese caso.
+function SelectorLineasCircuito({ circuito, tablero, onAsignarLineas }) {
+  const disponibles = lineasDisponiblesDeTablero(tablero.fases);
+  const requeridas = lineasRequeridas(circuito.fases, disponibles);
+  const actuales = circuito.lineas ?? [];
+  const completo = actuales.length === requeridas;
+
+  if (circuito.fases === "tri" && requeridas === disponibles.length) {
+    // Trifásico: usa las 3 líneas, no hay elección real — un botón para
+    // confirmarlo en vez de 3 clicks que no cambian nada entre sí.
+    const yaAsignado = disponibles.every((l) => actuales.includes(l)) && actuales.length === disponibles.length;
+    return (
+      <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", gap: 8 }}>
+        <span>Trifásico — usa las {disponibles.length} líneas del tablero ({disponibles.join(", ")}):</span>
+        {yaAsignado ? (
+          <span style={{ color: colores.ok, fontWeight: 600 }}>✓ asignado</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onAsignarLineas(circuito.id, disponibles)}
+            style={{ padding: "2px 8px", borderRadius: 3, border: `1px solid ${colores.copper}`, background: "transparent", color: colores.copper, fontSize: 11, cursor: "pointer" }}
+          >
+            Asignar
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <span>Línea(s) ({circuito.fases}, requiere {requeridas}):</span>
+      {disponibles.map((linea) => {
+        const seleccionada = actuales.includes(linea);
+        const alcanzoMaximoSinEstaSeleccionada = !seleccionada && actuales.length >= requeridas && requeridas > 1;
+        return (
+          <button
+            key={linea}
+            type="button"
+            disabled={alcanzoMaximoSinEstaSeleccionada}
+            onClick={() => onAsignarLineas(circuito.id, siguienteSeleccionLineas(actuales, linea, requeridas))}
+            title={alcanzoMaximoSinEstaSeleccionada ? `Ya hay ${requeridas} línea(s) seleccionada(s) — quitá una antes de agregar ${linea}` : undefined}
+            style={{
+              padding: "2px 9px",
+              borderRadius: 3,
+              border: `1px solid ${seleccionada ? colores.copper : colores.border}`,
+              background: seleccionada ? colores.copper : "transparent",
+              color: seleccionada ? "#171512" : alcanzoMaximoSinEstaSeleccionada ? colores.border : colores.textDim,
+              fontWeight: 600,
+              fontSize: 11,
+              cursor: alcanzoMaximoSinEstaSeleccionada ? "not-allowed" : "pointer",
+            }}
+          >
+            {linea}
+          </button>
+        );
+      })}
+      <span style={{ color: completo ? colores.ok : colores.warn }}>
+        {actuales.length}/{requeridas}
+      </span>
+    </div>
+  );
+}
+
 export default function TablaResultados({
   circuitos,
   resultados,
@@ -33,6 +102,7 @@ export default function TablaResultados({
   onEliminarEquipo,
   tableros = [],
   onAsignarTablero,
+  onAsignarLineas,
   listaIntegridad = [],
 }) {
   if (circuitos.length === 0) {
@@ -142,6 +212,16 @@ export default function TablaResultados({
             {/* Detalle: advertencias + equipos, solo si está activo (acordeón) */}
             {activo && (
               <>
+                {onAsignarLineas && (() => {
+                  const tableroDelCircuito = tableros.find((t) => t.id === circuito.tableroId);
+                  if (!tableroDelCircuito || tableroDelCircuito.fases === "mono") return null;
+                  return (
+                    <div style={{ padding: "0 14px 10px 14px" }}>
+                      <SelectorLineasCircuito circuito={circuito} tablero={tableroDelCircuito} onAsignarLineas={onAsignarLineas} />
+                    </div>
+                  );
+                })()}
+
                 {(r?.advertencias?.length > 0 || entradaIntegridad?.problemas?.length > 0) && (
                   <div style={{ padding: "0 14px 10px 14px" }}>
                     {r?.advertencias?.map((a, i) => (

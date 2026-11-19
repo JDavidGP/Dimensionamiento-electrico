@@ -5,6 +5,7 @@
  */
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { TIPO_INSTALACION_POR_DEFECTO } from "../shared/constants/constantes.js";
 
 const { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } = App.data.tablas.plantillas();
 
@@ -14,9 +15,15 @@ export function useCircuitos() {
   const [circuitos, setCircuitos] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [tableros, setTableros] = useState([]);
+  const [fuentesEnergia, setFuentesEnergia] = useState([]);
   const [normativaActiva, setNormativaActivaBase] = useState(
     App.config.normativaPorDefecto
   );
+  // Tipo de instalación (domiciliaria/industrial) — elegido junto con
+  // la normativa (ver SelectorNormativa.jsx). Por ahora es puramente
+  // informativo: no filtra ni agrega equipos/tablas todavía — ver la
+  // nota de investigación NEC/REBT en shared/constants/constantes.js.
+  const [tipoInstalacion, setTipoInstalacion] = useState(TIPO_INSTALACION_POR_DEFECTO);
 
   // Umbral de desbalance de fases — vive como estado de React (no solo
   // en Config) para que cambiarlo desde Ajustes dispare un re-render.
@@ -54,10 +61,11 @@ export function useCircuitos() {
       circuitos,
       equipos,
       tableros,
+      fuentesEnergia,
       normativaActiva,
       resultados,
     });
-  }, [proyecto, circuitos, equipos, tableros, normativaActiva, resultados]);
+  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, normativaActiva, resultados]);
 
   const totales = useMemo(() => {
     const potenciaTotal = resultados.reduce(
@@ -152,13 +160,13 @@ export function useCircuitos() {
 
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
-    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros),
-    [proyecto, circuitos, equipos, tableros]
+    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia]
   );
 
   const resumenInt = useMemo(
-    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros),
-    [proyecto, circuitos, equipos, tableros]
+    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia]
   );
 
   const detalleElectrico = useCallback(
@@ -302,6 +310,26 @@ export function useCircuitos() {
     setTableros(tableros.filter((t) => t.id !== id));
   }
 
+  // --- FUENTE DE ENERGÍA (Batería/Generador, origen alternativo de un tablero) ---
+  function crearFuenteEnergia(datos) {
+    const fuente = App.origen.crearFuente(datos);
+    setFuentesEnergia([...fuentesEnergia, fuente]);
+    return fuente;
+  }
+
+  function editarFuenteEnergia(id, cambios) {
+    const fuente = fuentesEnergia.find((f) => f.id === id);
+    if (!fuente) return;
+    const actualizada = App.origen.editarFuente(fuente, cambios);
+    setFuentesEnergia(fuentesEnergia.map((f) => (f.id === id ? actualizada : f)));
+  }
+
+  function eliminarFuenteEnergia(id) {
+    // Libera (no rompe) los tableros que la tenían como origen.
+    setTableros(App.origen.liberarTableros(id, tableros));
+    setFuentesEnergia(fuentesEnergia.filter((f) => f.id !== id));
+  }
+
   function asignarCircuitoATablero(circuitoId, tableroId) {
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return;
@@ -313,6 +341,33 @@ export function useCircuitos() {
     return App.tablero.circuitosDe(tableroId, circuitos);
   }
 
+  function asignarLineasCircuito(circuitoId, lineas) {
+    const circuito = circuitos.find((c) => c.id === circuitoId);
+    if (!circuito) return;
+    const actualizado = App.tablero.asignarLineas(circuito, lineas);
+    setCircuitos(circuitos.map((c) => (c.id === circuitoId ? actualizado : c)));
+  }
+
+  // Balance de fases de cada tablero, vía TableroMediator — mismo
+  // patrón que `alimentadores` arriba (mapa por tableroId, recalculado
+  // cuando cambia cualquier dato que lo afecte). `umbralDesbalanceFasesPct`
+  // va explícito como dependencia porque cambiarlo desde Ajustes no
+  // cambia tableros/circuitos/resultados — sin esto, useMemo no se
+  // volvería a ejecutar y el umbral nuevo no se vería reflejado acá.
+  const balancesFases = useMemo(() => {
+    const mapa = {};
+    tableros.forEach((t) => {
+      mapa[t.id] = App.tablero.balanceFasesDeTablero(t.id, {
+        tableros,
+        circuitos,
+        resultados,
+        normativaId: normativaActiva,
+        umbralPct: umbralDesbalanceFasesPct,
+      });
+    });
+    return mapa;
+  }, [tableros, circuitos, resultados, normativaActiva, umbralDesbalanceFasesPct]);
+
   function circuitosSinTablero() {
     return App.tablero.sinAsignar(circuitos);
   }
@@ -322,9 +377,11 @@ export function useCircuitos() {
     const nombre = App.guardarProyecto({
       proyecto,
       normativaActiva,
+      tipoInstalacion,
       circuitos,
       equipos,
       tableros,
+      fuentesEnergia,
     });
     setAvisoArchivo(`Guardado como ${nombre}`);
     setTimeout(() => setAvisoArchivo(""), 4000);
@@ -335,9 +392,11 @@ export function useCircuitos() {
       .then((cargado) => {
         setProyecto(cargado.proyecto);
         setNormativaActivaBase(cargado.normativaActiva);
+        setTipoInstalacion(cargado.tipoInstalacion ?? TIPO_INSTALACION_POR_DEFECTO);
         setCircuitos(cargado.circuitos);
         setEquipos(cargado.equipos);
         setTableros(cargado.tableros ?? []);
+        setFuentesEnergia(cargado.fuentesEnergia ?? []);
         setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
         setAvisoArchivo(`Proyecto "${cargado.proyecto.nombre}" cargado.`);
         setTimeout(() => setAvisoArchivo(""), 5000);
@@ -353,6 +412,7 @@ export function useCircuitos() {
     setCircuitos([]);
     setEquipos([]);
     setTableros([]);
+    setFuentesEnergia([]);
     setCircuitoActivoId(null);
     setFormCircuito(CIRCUITO_VACIO);
     setFormEquipo(EQUIPO_VACIO);
@@ -378,6 +438,8 @@ export function useCircuitos() {
     totales,
     normativaActiva,
     setNormativaActiva,
+    tipoInstalacion,
+    setTipoInstalacion,
     umbralDesbalanceFasesPct,
     setUmbralDesbalanceFasesPct,
     formCircuito,
@@ -406,9 +468,15 @@ export function useCircuitos() {
     editarTablero,
     eliminarTablero,
     asignarCircuitoATablero,
+    asignarLineasCircuito,
     circuitosDeTablero,
     circuitosSinTablero,
     alimentadores,
+    balancesFases,
+    fuentesEnergia,
+    crearFuenteEnergia,
+    editarFuenteEnergia,
+    eliminarFuenteEnergia,
     listaIntegridad,
     resumenIntegridad: resumenInt,
     detalleElectrico,
