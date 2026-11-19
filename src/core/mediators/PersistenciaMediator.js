@@ -15,10 +15,11 @@ export const PersistenciaMediator = {
   proyectoVacio,
   nombreArchivo,
 
-  serializar({ proyecto, normativaActiva, circuitos, equipos, tableros }) {
+  serializar({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros }) {
     const data = serializarProyecto({
       proyecto,
       normativaActiva,
+      tipoInstalacion,
       circuitos,
       equipos,
       tableros,
@@ -37,10 +38,11 @@ export const PersistenciaMediator = {
   },
 
   /** Descarga el proyecto como archivo .json en el navegador. */
-  descargarJson({ proyecto, normativaActiva, circuitos, equipos, tableros }) {
+  descargarJson({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros }) {
     const datos = this.serializar({
       proyecto,
       normativaActiva,
+      tipoInstalacion,
       circuitos,
       equipos,
       tableros,

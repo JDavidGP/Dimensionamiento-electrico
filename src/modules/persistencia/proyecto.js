@@ -1,4 +1,5 @@
 import { generarId } from "../../shared/utils/id.js";
+import { TIPO_INSTALACION_POR_DEFECTO } from "../../shared/constants/constantes.js";
 
 export function proyectoVacio() {
   return {
@@ -12,11 +13,12 @@ export function proyectoVacio() {
 // Empaqueta el estado completo de la app en un solo objeto serializable.
 // Este es el "documento" que se guarda/abre — versión de formato incluida
 // por si en el futuro cambia la estructura y hay que migrar archivos viejos.
-export function serializarProyecto({ proyecto, normativaActiva, circuitos, equipos, tableros }) {
+export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros }) {
   return {
     formatoVersion: 1,
     proyecto: { ...proyecto, fechaModificacion: new Date().toISOString() },
     normativaActiva,
+    tipoInstalacion: tipoInstalacion ?? TIPO_INSTALACION_POR_DEFECTO,
     circuitos,
     equipos,
     tableros: tableros ?? [],
@@ -36,6 +38,9 @@ export function deserializarProyecto(data) {
   return {
     proyecto: data.proyecto ?? proyectoVacio(),
     normativaActiva: data.normativaActiva ?? "NEC",
+    // Compatibilidad: archivos guardados antes de esta sesión no traen
+    // tipoInstalacion — caen al valor por defecto, no se inventa otra cosa.
+    tipoInstalacion: data.tipoInstalacion ?? TIPO_INSTALACION_POR_DEFECTO,
     circuitos: data.circuitos,
     equipos: data.equipos,
     // Compatibilidad: archivos guardados antes de Fase 3 no traen tableros.

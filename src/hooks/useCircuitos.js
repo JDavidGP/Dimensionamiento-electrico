@@ -5,6 +5,7 @@
  */
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { TIPO_INSTALACION_POR_DEFECTO } from "../shared/constants/constantes.js";
 
 const { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } = App.data.tablas.plantillas();
 
@@ -17,6 +18,11 @@ export function useCircuitos() {
   const [normativaActiva, setNormativaActivaBase] = useState(
     App.config.normativaPorDefecto
   );
+  // Tipo de instalación (domiciliaria/industrial) — elegido junto con
+  // la normativa (ver SelectorNormativa.jsx). Por ahora es puramente
+  // informativo: no filtra ni agrega equipos/tablas todavía — ver la
+  // nota de investigación NEC/REBT en shared/constants/constantes.js.
+  const [tipoInstalacion, setTipoInstalacion] = useState(TIPO_INSTALACION_POR_DEFECTO);
 
   // Umbral de desbalance de fases — vive como estado de React (no solo
   // en Config) para que cambiarlo desde Ajustes dispare un re-render.
@@ -349,6 +355,7 @@ export function useCircuitos() {
     const nombre = App.guardarProyecto({
       proyecto,
       normativaActiva,
+      tipoInstalacion,
       circuitos,
       equipos,
       tableros,
@@ -362,6 +369,7 @@ export function useCircuitos() {
       .then((cargado) => {
         setProyecto(cargado.proyecto);
         setNormativaActivaBase(cargado.normativaActiva);
+        setTipoInstalacion(cargado.tipoInstalacion ?? TIPO_INSTALACION_POR_DEFECTO);
         setCircuitos(cargado.circuitos);
         setEquipos(cargado.equipos);
         setTableros(cargado.tableros ?? []);
@@ -405,6 +413,8 @@ export function useCircuitos() {
     totales,
     normativaActiva,
     setNormativaActiva,
+    tipoInstalacion,
+    setTipoInstalacion,
     umbralDesbalanceFasesPct,
     setUmbralDesbalanceFasesPct,
     formCircuito,

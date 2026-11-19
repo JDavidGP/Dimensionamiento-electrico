@@ -26,6 +26,8 @@ export default function App() {
     totales,
     normativaActiva,
     setNormativaActiva,
+    tipoInstalacion,
+    setTipoInstalacion,
     umbralDesbalanceFasesPct,
     setUmbralDesbalanceFasesPct,
     formCircuito,
@@ -80,7 +82,13 @@ export default function App() {
 
       <div style={{ padding: "20px 24px", display: "grid", gap: 20, gridTemplateColumns: "minmax(280px, 340px) 1fr", alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <SelectorNormativa normativaActiva={normativaActiva} setNormativaActiva={setNormativaActiva} circuitos={circuitos} />
+          <SelectorNormativa
+            normativaActiva={normativaActiva}
+            setNormativaActiva={setNormativaActiva}
+            circuitos={circuitos}
+            tipoInstalacion={tipoInstalacion}
+            setTipoInstalacion={setTipoInstalacion}
+          />
 
           <PanelTableros
             tableros={tableros}

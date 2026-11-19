@@ -62,3 +62,107 @@ export const MAX_COSPHI = 1.0;
 
 export const MIN_TEMP_C = -10;
 export const MAX_TEMP_C = 60;
+
+// Tipo de instalación — DOMICILIARIA o INDUSTRIAL, elegido junto con
+// la normativa (ver SelectorNormativa.jsx y la nota larga en
+// modules/origen/index.js). Por ahora es puramente informativo: no
+// filtra ni agrega equipos/tablas todavía — eso es el siguiente paso,
+// pendiente de la investigación NEC/REBT sobre qué distingue
+// realmente a una instalación industrial (ver INVESTIGACION_
+// INSTALACION_INDUSTRIAL más abajo). Declarado como constante por el
+// mismo motivo que TIPOS_ORIGEN/TIPOS_EQUIPO_ESPECIAL: comparar contra
+// estos valores, no contra literales sueltos.
+export const TIPOS_INSTALACION = {
+  DOMICILIARIA: "domiciliaria",
+  INDUSTRIAL: "industrial",
+};
+export const TIPO_INSTALACION_POR_DEFECTO = TIPOS_INSTALACION.DOMICILIARIA;
+
+// INVESTIGACIÓN — qué distingue a una instalación industrial en NEC y
+// REBT (pedida por el usuario, 2026-11-19, para decidir CON QUÉ
+// CRITERIO el tipo de instalación debería filtrar/agregar equipos y
+// tablas más adelante — todavía no implementado). Reunido vía
+// WebSearch, dos rondas (una inicial de memoria, luego corregida con
+// búsqueda real al notar que no se había verificado todavía — NO
+// reemplaza el texto oficial de cada norma, que sigue sin consultarse
+// directamente en esta sesión).
+//
+// NEC (NFPA 70) — no define "instalación industrial" como una
+// categoría única y cerrada; el criterio real está repartido en
+// varios artículos que SÍ distinguen explícitamente por tipo de
+// ocupación/supervisión:
+//   - Art. 240.2 define el término "supervised industrial
+//     installation/location" — confirmado que existe como término
+//     definido (no solo de uso coloquial), usado en la Parte de
+//     Art. 240 dedicada a "Supervised Industrial Installations"
+//     (protección contra sobrecorriente, ≤1000V AC / 1500V DC): una
+//     instalación industrial con mantenimiento y supervisión que
+//     garantiza que solo personal calificado la monitorea/da servicio
+//     habilita criterios de protección distintos a los de una
+//     instalación sin esa supervisión. Mismo concepto de "ubicación
+//     supervisada" se repite en Art. 450 (transformadores). ESTE es el
+//     punto donde el NEC traza una línea explícita industrial/no
+//     industrial — condicionada a la SUPERVISIÓN CALIFICADA, no solo
+//     al tipo de edificio. (No se confirmó el texto exacto de 240.92
+//     contra el código — pendiente de acceso directo a NFPA 70.)
+//   - Art. 110.26: el espacio de trabajo libre frente a equipos
+//     eléctricos tiene condiciones distintas (Condición 1/2/3) según
+//     el voltaje y la disposición de partes energizadas — típico de
+//     cuartos eléctricos industriales, aunque el artículo no usa la
+//     palabra "industrial" como condición en sí.
+//   - Art. 409 (tableros de control industrial) y Art. 430 (motores):
+//     reglas de protección/arranque que en la práctica casi solo
+//     aparecen en instalaciones industriales por la escala de los
+//     motores involucrados.
+//   - Art. 695 (bombas contra incendio) y Arts. 500-516 (ubicaciones
+//     peligrosas: polvo, vapores inflamables): mucho más comunes en
+//     plantas industriales, aunque no exclusivos de ellas.
+//   - Art. 220 (cálculo de demanda): no tiene una tabla "industrial"
+//     separada de la residencial — el criterio ahí es el tipo de
+//     ocupación/uso real de la carga, no una etiqueta "industrial".
+//
+// REBT (España, RD 842/2002 + ITC-BT) — a diferencia del NEC, sí tiene
+// un criterio administrativo explícito y más nítido, aunque no es
+// exactamente "domiciliaria vs industrial" sino "qué documentación
+// exige la instalación":
+//   - ITC-BT-04, Grupo a) "Industrias en general": PROYECTO (firmado
+//     por técnico competente) obligatorio si la potencia instalada
+//     P > 20 kW. Por debajo de eso (y hasta 100 kW) alcanza con una
+//     MEMORIA TÉCNICA DE DISEÑO (formato oficial, varía por comunidad
+//     autónoma). CORRECCIÓN sobre mi primera pasada (sin verificar):
+//     había asumido 100 kW como umbral de Proyecto por recuerdo
+//     propio — está mal. El 100 kW real corresponde a un umbral
+//     DISTINTO: INSPECCIÓN INICIAL obligatoria por Organismo de
+//     Control, no al umbral de Proyecto (que es 20 kW). Dos fuentes
+//     independientes (Iberley y PLC Madrid) coinciden en el 20 kW
+//     para Proyecto; un tercer documento (TFG académico) usaba mal el
+//     100 kW para esto, lo cual expuso el error.
+//   - ITC-BT-47 (motores): reglas específicas de protección y
+//     arranque para motores, con umbrales de potencia distintos para
+//     vivienda vs. otros usos.
+//   - ITC-BT-48 (transformadores) e ITC-BT-18 (puesta a tierra):
+//     exigencias que en la práctica solo se activan a la escala de una
+//     instalación industrial o de gran consumo.
+//   - La distinción vivienda/local comercial/industrial también
+//     aparece en el cálculo de previsión de cargas (ITC-BT-10, grados
+//     de electrificación, con sus propios factores de simultaneidad)
+//     — ya anotado como pendiente aparte en la hoja de ruta
+//     ("Factores de simultaneidad del REBT a nivel de
+//     tablero/acometida").
+//
+// CONCLUSIÓN PRELIMINAR (para la próxima sesión que retome esto): el
+// eje común entre ambas normativas NO es "residencial vs. fábrica"
+// como categoría binaria simple, sino: (a) la ESCALA de potencia (el
+// REBT sí tiene un número concreto: 20 kW), (b) si hay personal
+// calificado supervisando la instalación (el eje real del NEC), y
+// (c) el tipo de carga real conectada (motores, ubicaciones
+// peligrosas). El selector domiciliaria/industrial de la UI
+// probablemente deba traducirse a estos criterios concretos al
+// filtrar equipos/tablas, no tratarse como una etiqueta decorativa.
+// Esto sigue sin ser una cita verificada palabra por palabra contra el
+// texto oficial (pendiente real: acceso directo a NFPA 70 y al BOE del
+// REBT) — es la mejor síntesis posible vía búsqueda web, ya con una
+// corrección propia de por medio, para orientar el diseño. Fuentes
+// consultadas (2026-11-19): Mike Holt Forums e NFPA public-input docs
+// para 240.2; Iberley, PLC Madrid y un TFG de la Universidad de
+// Zaragoza para ITC-BT-04.
