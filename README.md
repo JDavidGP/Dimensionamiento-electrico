@@ -92,6 +92,7 @@ npm run dev
 - [x] Conmutación entre fuentes de energía (red local / batería / generador), por horario o automática ante falla — registrado en la memoria del proyecto, todavía no recalcula según cuál fuente está activa
 - [x] Tipo de instalación (domiciliaria / industrial), elegido junto con la normativa — por ahora informativo, todavía no quita/agrega equipos o tablas
 - [ ] Transformador como origen seleccionable (la entidad ya existe, creada sin conectar — se integra junto con el sistema de media tensión)
+- [x] Layout por pestañas tipo ViewPager2 (4 pestañas — Normativa, Tableros, Circuitos y resultados, Diagrama unifilar — en el orden en que se cargan los datos), navegación por click y por swipe táctil (solo touch, no mouse, para no chocar con el arrastre de nodos del diagrama); todos los paneles quedan montados siempre, así no se pierde el estado al cambiar de pestaña; falta la 5ta pestaña de resumen/informe técnico, pendiente de que exista esa función
 
 ## Aviso
 

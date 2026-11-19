@@ -9,32 +9,24 @@ import PanelBreakers from "./components/PanelBreakers";
 import PanelTableros from "./components/PanelTableros";
 import SelectorNormativa from "./components/SelectorNormativa";
 import DiagramaUnifilar from "./components/DiagramaUnifilar";
+import TabsViewPager from "./components/TabsViewPager";
 import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
 
-// NOTA PARA MÁS ADELANTE (usuario, 2026-11-20, refinada el mismo día —
-// explícitamente DESPUÉS de terminar el diagrama unifilar, no antes;
-// no implementar sin que lo pida de nuevo): la columna izquierda
-// (Normativa → Tableros → Circuito → Equipo) ya acumuló bastante —
-// tipo de instalación, fuentes de energía, conmutación — y se está
-// volviendo larga de recorrer con scroll.
-//
-// Diseño ya precisado por el usuario (antes solo era "tab layout /
-// ViewPager2" sin más detalle):
-//   - Un menú arriba, horizontal, que se desliza de izquierda a
-//     derecha (tabs tipo ViewPager2 — swipe, no solo click).
-//   - Escalonado por el ORDEN en que se van ingresando los datos: los
-//     primeros datos que se cargan (normativa, tipo de instalación,
-//     tablero...) van a la IZQUIERDA del todo; a la DERECHA del todo
-//     va el resumen y la generación de fichas / informe técnico (ver
-//     el pendiente ya existente "Memoria técnica / informe en PDF" en
-//     la hoja de ruta — esa pestaña final sería su lugar natural en
-//     este layout).
-//   - Todavía sin decidir: cuántas pestañas exactas y qué entra en
-//     cada una (ej. ¿tableros y fuentes de energía van juntos o
-//     separados? ¿el diagrama unifilar es su propia pestaña?) — eso
-//     se define cuando se retome esto.
+// Tab layout + ViewPager2 (pedido del usuario, retomado 2026-11-19):
+// 4 pestañas, escalonadas por el ORDEN en que se van ingresando los
+// datos — Normativa (lo primero que se configura) → Tableros (incluye
+// fuentes de energía) → Circuitos y resultados (el grueso de la carga
+// de datos + su feedback inmediato, por eso van juntos, no separados:
+// la tabla de resultados reacciona en vivo mientras se cargan
+// circuitos/equipos) → Diagrama unifilar. Una 5ta pestaña de "Resumen /
+// informe técnico" queda pendiente para cuando exista esa función (ver
+// "Memoria técnica / informe en PDF" en la hoja de ruta) — hoy no hay
+// nada real que poner ahí, así que no se crea una pestaña vacía
+// todavía; los totales/PanelBreakers que harían de "resumen" por ahora
+// siguen en la pestaña de Circuitos y resultados. Ver TabsViewPager.jsx
+// para el mecanismo de swipe.
 export default function App() {
   const {
     proyecto,
@@ -113,102 +105,131 @@ export default function App() {
         <BarraProyecto proyecto={proyecto} setProyecto={setProyecto} avisoArchivo={avisoArchivo} onGuardar={guardarProyecto} onAbrir={abrirProyecto} onNuevo={nuevoProyecto} />
       </div>
 
-      <div style={{ padding: "20px 24px", display: "grid", gap: 20, gridTemplateColumns: "minmax(280px, 340px) 1fr", alignItems: "start" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <SelectorNormativa
-            normativaActiva={normativaActiva}
-            setNormativaActiva={setNormativaActiva}
-            circuitos={circuitos}
-            tipoInstalacion={tipoInstalacion}
-            setTipoInstalacion={setTipoInstalacion}
-          />
+      <TabsViewPager
+        paneles={[
+          {
+            id: "normativa",
+            label: "Normativa",
+            contenido: (
+              <div style={{ padding: "20px 24px", maxWidth: 560 }}>
+                <SelectorNormativa
+                  normativaActiva={normativaActiva}
+                  setNormativaActiva={setNormativaActiva}
+                  circuitos={circuitos}
+                  tipoInstalacion={tipoInstalacion}
+                  setTipoInstalacion={setTipoInstalacion}
+                />
+              </div>
+            ),
+          },
+          {
+            id: "tableros",
+            label: "Tableros",
+            contenido: (
+              <div style={{ padding: "20px 24px", maxWidth: 640 }}>
+                <PanelTableros
+                  tableros={tableros}
+                  circuitosDeTablero={circuitosDeTablero}
+                  circuitosSinTablero={circuitosSinTablero}
+                  alimentadores={alimentadores}
+                  balancesFases={balancesFases}
+                  listaIntegridad={listaIntegridad}
+                  crearTablero={crearTablero}
+                  editarTablero={editarTablero}
+                  eliminarTablero={eliminarTablero}
+                  normativaActiva={normativaActiva}
+                  fuentesEnergia={fuentesEnergia}
+                  crearFuenteEnergia={crearFuenteEnergia}
+                />
+              </div>
+            ),
+          },
+          {
+            id: "circuitos",
+            label: "Circuitos y resultados",
+            contenido: (
+              <div style={{ padding: "20px 24px", display: "grid", gap: 20, gridTemplateColumns: "minmax(280px, 340px) 1fr", alignItems: "start" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <FormularioCircuito
+                    form={formCircuito}
+                    setForm={setFormCircuito}
+                    onGuardar={guardarCircuito}
+                    onCancelar={cancelarEdicionCircuito}
+                    error={errorCircuito}
+                    editando={!!editandoCircuitoId}
+                    normativaActiva={normativaActiva}
+                    onCambiarFases={cambiarFasesCircuito}
+                    cantidadEquiposCircuito={
+                      editandoCircuitoId
+                        ? equiposDe(editandoCircuitoId).length
+                        : circuitoActivo
+                          ? equiposDe(circuitoActivo.id).length
+                          : 0
+                    }
+                  />
 
-          <PanelTableros
-            tableros={tableros}
-            circuitosDeTablero={circuitosDeTablero}
-            circuitosSinTablero={circuitosSinTablero}
-            alimentadores={alimentadores}
-            balancesFases={balancesFases}
-            listaIntegridad={listaIntegridad}
-            crearTablero={crearTablero}
-            editarTablero={editarTablero}
-            eliminarTablero={eliminarTablero}
-            normativaActiva={normativaActiva}
-            fuentesEnergia={fuentesEnergia}
-            crearFuenteEnergia={crearFuenteEnergia}
-          />
+                  <FormularioEquipo
+                    form={formEquipo}
+                    setForm={setFormEquipo}
+                    onGuardar={guardarEquipo}
+                    onCancelar={cancelarEdicionEquipo}
+                    error={errorEquipo}
+                    editando={!!editandoEquipoId}
+                    circuitoActivo={circuitoActivo}
+                  />
+                </div>
 
-          <FormularioCircuito
-            form={formCircuito}
-            setForm={setFormCircuito}
-            onGuardar={guardarCircuito}
-            onCancelar={cancelarEdicionCircuito}
-            error={errorCircuito}
-            editando={!!editandoCircuitoId}
-            normativaActiva={normativaActiva}
-            onCambiarFases={cambiarFasesCircuito}
-            cantidadEquiposCircuito={
-              editandoCircuitoId
-                ? equiposDe(editandoCircuitoId).length
-                : circuitoActivo
-                  ? equiposDe(circuitoActivo.id).length
-                  : 0
-            }
-          />
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                    <Metrica label="Circuitos" valor={circuitos.length} />
+                    <Metrica label="Demanda NEC" valor={`${totales.potenciaTotal.toFixed(0)} W`} />
+                    <Metrica label="Corriente diseño" valor={`${totales.corrienteTotal.toFixed(2)} A`} />
+                  </div>
 
-          <FormularioEquipo
-            form={formEquipo}
-            setForm={setFormEquipo}
-            onGuardar={guardarEquipo}
-            onCancelar={cancelarEdicionEquipo}
-            error={errorEquipo}
-            editando={!!editandoEquipoId}
-            circuitoActivo={circuitoActivo}
-          />
-        </div>
+                  <TablaResultados
+                    circuitos={circuitos}
+                    resultados={resultadosParaTabla}
+                    equiposDe={equiposDe}
+                    circuitoActivoId={circuitoActivoId}
+                    onSeleccionarCircuito={setCircuitoActivoId}
+                    onEditarCircuito={iniciarEdicionCircuito}
+                    onEliminarCircuito={eliminarCircuito}
+                    onEditarEquipo={iniciarEdicionEquipo}
+                    onEliminarEquipo={eliminarEquipo}
+                    tableros={tableros}
+                    onAsignarTablero={asignarCircuitoATablero}
+                    onAsignarLineas={asignarLineasCircuito}
+                    listaIntegridad={listaIntegridad}
+                  />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <Metrica label="Circuitos" valor={circuitos.length} />
-            <Metrica label="Demanda NEC" valor={`${totales.potenciaTotal.toFixed(0)} W`} />
-            <Metrica label="Corriente diseño" valor={`${totales.corrienteTotal.toFixed(2)} A`} />
-          </div>
-
-          <TablaResultados
-            circuitos={circuitos}
-            resultados={resultadosParaTabla}
-            equiposDe={equiposDe}
-            circuitoActivoId={circuitoActivoId}
-            onSeleccionarCircuito={setCircuitoActivoId}
-            onEditarCircuito={iniciarEdicionCircuito}
-            onEliminarCircuito={eliminarCircuito}
-            onEditarEquipo={iniciarEdicionEquipo}
-            onEliminarEquipo={eliminarEquipo}
-            tableros={tableros}
-            onAsignarTablero={asignarCircuitoATablero}
-            onAsignarLineas={asignarLineasCircuito}
-            listaIntegridad={listaIntegridad}
-          />
-
-          <PanelBreakers resultados={resultados} />
-        </div>
-      </div>
-
-      <div style={{ padding: "0 24px 20px 24px" }}>
-        <DiagramaUnifilar
-          nodosDiagrama={nodosDiagrama}
-          crearNodoDiagrama={crearNodoDiagrama}
-          editarNodoDiagrama={editarNodoDiagrama}
-          eliminarNodoDiagrama={eliminarNodoDiagrama}
-          conexionesDiagrama={conexionesDiagrama}
-          crearConexionDiagrama={crearConexionDiagrama}
-          eliminarConexionDiagrama={eliminarConexionDiagrama}
-          tableros={tableros}
-          equipos={equipos}
-          circuitos={circuitos}
-          fuentesEnergia={fuentesEnergia}
-        />
-      </div>
+                  <PanelBreakers resultados={resultados} />
+                </div>
+              </div>
+            ),
+          },
+          {
+            id: "diagrama",
+            label: "Diagrama unifilar",
+            contenido: (
+              <div style={{ padding: "20px 24px" }}>
+                <DiagramaUnifilar
+                  nodosDiagrama={nodosDiagrama}
+                  crearNodoDiagrama={crearNodoDiagrama}
+                  editarNodoDiagrama={editarNodoDiagrama}
+                  eliminarNodoDiagrama={eliminarNodoDiagrama}
+                  conexionesDiagrama={conexionesDiagrama}
+                  crearConexionDiagrama={crearConexionDiagrama}
+                  eliminarConexionDiagrama={eliminarConexionDiagrama}
+                  tableros={tableros}
+                  equipos={equipos}
+                  circuitos={circuitos}
+                  fuentesEnergia={fuentesEnergia}
+                />
+              </div>
+            ),
+          },
+        ]}
+      />
 
       <PiePagina />
     </div>
