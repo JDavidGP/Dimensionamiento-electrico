@@ -1,11 +1,12 @@
 /**
  * DiagramaMediator
  * Responsabilidad: dominio Diagrama — modelo de nodos/conexiones del
- * diagrama unifilar (Fase 1 de la spec del usuario, 2026-11-20: "Motor
- * de datos" + validación de cardinalidad básica del "Motor de reglas
- * eléctricas"). Motor de dibujo, autoorganización y editor visual
- * quedan para una próxima ronda — ver modules/diagrama/index.js para
- * el detalle completo de alcance.
+ * diagrama unifilar. Fase 1 ("Motor de datos" + cardinalidad) y Fase 2
+ * (motor de reglas eléctricas semántico, ver modules/diagrama/reglas.js)
+ * de la spec del usuario (2026-11-20) ya están construidas. Motor de
+ * dibujo, autoorganización y editor visual quedan para una próxima
+ * ronda — ver modules/diagrama/index.js para el detalle completo de
+ * alcance.
  *
  * Mismo criterio que TableroMediator/OrigenMediator: NO muta el
  * proyecto. Devuelve datos ya calculados/transformados; la escritura
@@ -21,6 +22,7 @@ import {
   editarConexion,
   eliminarConexionesDeNodo,
   validarConexion,
+  validarReglaElectrica,
 } from "../../modules/diagrama/index.js";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
 import { DataProvider } from "../services/DataProvider.js";
@@ -65,5 +67,10 @@ export const DiagramaMediator = {
 
   validarConexion(conexionPropuesta, nodos, conexionesExistentes) {
     return validarConexion(conexionPropuesta, nodos ?? DataProvider.getNodosDiagrama(), conexionesExistentes ?? DataProvider.getConexionesDiagrama());
+  },
+
+  /** Solo la compatibilidad semántica tipo→tipo (sin cardinalidad ni existencia de nodos) — útil para la UI, ej. resaltar destinos válidos antes de arrastrar una conexión. */
+  validarReglaElectrica(tipoOrigen, tipoDestino) {
+    return validarReglaElectrica(tipoOrigen, tipoDestino);
   },
 };

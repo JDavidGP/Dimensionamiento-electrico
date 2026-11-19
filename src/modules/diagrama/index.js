@@ -1,14 +1,10 @@
 // src/modules/diagrama/index.js
 //
 // Módulo Diagrama — modelo de datos del diagrama unifilar (Nodo +
-// Conexión). FASE 1 de la spec larga del usuario ("Diagrama unifilar",
-// 2026-11-20): "lo necesario" primero — esto es el "Motor de datos"
-// que describió, más una validación básica de cardinalidad (parte
-// mínima del "Motor de reglas eléctricas"). TODAVÍA NO incluye:
-//   - Motor de reglas eléctricas completo (matriz de compatibilidad
-//     semántica entre tipos — "un tomacorriente no puede alimentar un
-//     tablero", etc.) — solo se valida cardinalidad (puntosConexion)
-//     acá, ver validarConexion().
+// Conexión). FASE 1 ("Motor de datos" + cardinalidad) y FASE 2 (motor
+// de reglas eléctricas semántico, ver reglas.js) de la spec larga del
+// usuario ("Diagrama unifilar", 2026-11-20) ya están construidas.
+// TODAVÍA NO incluye:
 //   - Motor de dibujo (SVG, símbolos) — eso es UI, no este módulo.
 //   - Motor de autoorganización (layout automático) — idem.
 //   - Editor visual (drag & drop) — idem.
@@ -32,6 +28,7 @@
 
 import { generarId } from "../../shared/utils/id.js";
 import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.js";
+import { validarReglaElectrica } from "./reglas.js";
 
 export const NODO_VACIO = {
   tipo: "", // id del catálogo (shared/data/bibliotecaComponentes.js)
@@ -118,12 +115,12 @@ export function eliminarConexionesDeNodo(nodoId, conexiones = []) {
 
 /**
  * Valida una conexión propuesta ANTES de crearla — "Evita errores de
- * diseño antes de que ocurran" (spec del usuario), acotado por ahora a
- * cardinalidad (cuántas entradas/salidas admite cada tipo según el
- * catálogo) y a lo estructuralmente imposible (nodo inexistente,
- * auto-conexión, conexión duplicada). NO valida todavía compatibilidad
- * semántica entre tipos (ej. "un tomacorriente no puede alimentar un
- * tablero") — eso es el motor de reglas completo, Fase 2.
+ * diseño antes de que ocurran" (spec del usuario). Combina lo
+ * estructuralmente imposible (nodo inexistente, auto-conexión,
+ * conexión duplicada), compatibilidad SEMÁNTICA entre tipos (Fase 2,
+ * ver reglas.js — ej. "un motor no puede conectarse directo a un
+ * medidor") y cardinalidad (Fase 1, cuántas entradas/salidas admite
+ * cada tipo según el catálogo).
  *
  * @param {{nodoOrigenId: string, nodoDestinoId: string}} conexionPropuesta
  * @param {object[]} nodos
@@ -144,6 +141,11 @@ export function validarConexion(conexionPropuesta, nodos = [], conexionesExisten
   const destino = nodos.find((n) => n.id === nodoDestinoId);
   if (!origen) return { valido: false, motivo: `El nodo de origen (${nodoOrigenId}) no existe.` };
   if (!destino) return { valido: false, motivo: `El nodo de destino (${nodoDestinoId}) no existe.` };
+
+  const reglaElectrica = validarReglaElectrica(origen.tipo, destino.tipo);
+  if (!reglaElectrica.valido) {
+    return reglaElectrica;
+  }
 
   const yaExiste = conexionesExistentes.some((c) => c.nodoOrigenId === nodoOrigenId && c.nodoDestinoId === nodoDestinoId);
   if (yaExiste) {
@@ -175,3 +177,5 @@ export function validarConexion(conexionPropuesta, nodos = [], conexionesExisten
 
   return { valido: true };
 }
+
+export { validarReglaElectrica } from "./reglas.js";
