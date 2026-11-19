@@ -21,12 +21,14 @@ import {
   crearConexion,
   editarConexion,
   eliminarConexionesDeNodo,
+  liberarNodosDeEntidad,
   validarConexion,
   validarReglaElectrica,
 } from "../../modules/diagrama/index.js";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
+import { OrigenMediator } from "./OrigenMediator.js";
 
 export const DiagramaMediator = {
   // Catálogo expuesto para la UI — mismo patrón que OrigenMediator con sus enums.
@@ -72,5 +74,55 @@ export const DiagramaMediator = {
   /** Solo la compatibilidad semántica tipo→tipo (sin cardinalidad ni existencia de nodos) — útil para la UI, ej. resaltar destinos válidos antes de arrastrar una conexión. */
   validarReglaElectrica(tipoOrigen, tipoDestino) {
     return validarReglaElectrica(tipoOrigen, tipoDestino);
+  },
+
+  // --- Sincronización con el modelo canónico (ARCHITECTURE.md §9) ---
+  // El diagrama es una VISTA sobre circuitos/equipos/tableros/
+  // fuentesEnergia, no una copia paralela. Estos métodos son el único
+  // lugar donde el dominio Diagrama cruza hacia otros dominios (tablero/
+  // equipo/fuenteEnergia) — permitido a nivel mediador (ver ARCHITECTURE.md
+  // §11), nunca a nivel módulo puro.
+
+  /**
+   * Entidades candidatas para vincular a un nodo de tipo `tipoNodo` —
+   * solo las del tipo correcto (según `entidadVinculada` del catálogo,
+   * y además filtradas por TIPOS_FUENTE_ENERGIA cuando el tipo de nodo
+   * es "generador" o "banco_baterias") y que ningún OTRO nodo ya tenga
+   * vinculadas (relación 1 a 1 nodo↔entidad — evita dibujar el mismo
+   * tablero/equipo/fuente dos veces). `nodoId` excluye al propio nodo
+   * de esa exclusión cuando se está reeditando su vínculo.
+   */
+  candidatosEntidad(tipoNodo, { tableros = [], equipos = [], fuentesEnergia = [], nodos = [], nodoId = null } = {}) {
+    const comp = obtenerComponente(tipoNodo);
+    if (!comp?.entidadVinculada) return [];
+    const vinculados = new Set(nodos.filter((n) => n.id !== nodoId && n.entidadId).map((n) => n.entidadId));
+
+    if (comp.entidadVinculada === "tablero") {
+      return tableros.filter((t) => !vinculados.has(t.id));
+    }
+    if (comp.entidadVinculada === "equipo") {
+      return equipos.filter((e) => !vinculados.has(e.id));
+    }
+    if (comp.entidadVinculada === "fuenteEnergia") {
+      const { GENERADOR, BATERIA } = OrigenMediator.TIPOS_FUENTE_ENERGIA;
+      const tipoFuente = tipoNodo === "generador" ? GENERADOR : tipoNodo === "banco_baterias" ? BATERIA : null;
+      return fuentesEnergia.filter((f) => (!tipoFuente || f.tipo === tipoFuente) && !vinculados.has(f.id));
+    }
+    return [];
+  },
+
+  /** La entidad real (tablero/equipo/fuenteEnergia) que representa este nodo, o null si no tiene vínculo o la entidad ya no existe. */
+  resolverEntidad(nodo, { tableros = [], equipos = [], fuentesEnergia = [] } = {}) {
+    if (!nodo?.entidadId) return null;
+    const comp = obtenerComponente(nodo.tipo);
+    if (comp?.entidadVinculada === "tablero") return tableros.find((t) => t.id === nodo.entidadId) ?? null;
+    if (comp?.entidadVinculada === "equipo") return equipos.find((e) => e.id === nodo.entidadId) ?? null;
+    if (comp?.entidadVinculada === "fuenteEnergia") return fuentesEnergia.find((f) => f.id === nodo.entidadId) ?? null;
+    return null;
+  },
+
+  /** Nodos tras liberar (desvincular, no borrar) los que apuntaban a una entidad eliminada. */
+  liberarNodosDeEntidad(entidadId, nodos) {
+    return liberarNodosDeEntidad(entidadId, nodos ?? []);
   },
 };

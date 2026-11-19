@@ -114,6 +114,18 @@ export function eliminarConexionesDeNodo(nodoId, conexiones = []) {
 }
 
 /**
+ * Al eliminar una entidad real (tablero/equipo/fuenteEnergia), los
+ * nodos del diagrama que la tenían como `entidadId` quedan SIN vincular
+ * (null) — no apuntando a un id muerto. El nodo sigue existiendo (es
+ * dato de diagrama, no se borra solo porque su vínculo desapareció),
+ * mismo criterio que liberarTablerosDeFuente / liberarCircuitosDeTablero
+ * en los otros módulos de dominio.
+ */
+export function liberarNodosDeEntidad(entidadId, nodos = []) {
+  return nodos.map((n) => (n.entidadId === entidadId ? { ...n, entidadId: null } : n));
+}
+
+/**
  * Valida una conexión propuesta ANTES de crearla — "Evita errores de
  * diseño antes de que ocurran" (spec del usuario). Combina lo
  * estructuralmente imposible (nodo inexistente, auto-conexión,

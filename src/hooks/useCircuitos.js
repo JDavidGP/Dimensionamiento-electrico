@@ -241,6 +241,15 @@ export function useCircuitos() {
   }
 
   function eliminarCircuito(id) {
+    // Los equipos de este circuito se eliminan en cascada — y con ellos,
+    // los nodos del diagrama que los representaban quedan desvinculados
+    // (mismo criterio que eliminarEquipo, no queda ningún entidadId muerto).
+    const equiposDelCircuito = equipos.filter((e) => e.circuitoId === id);
+    let nodosLiberados = nodosDiagrama;
+    for (const equipo of equiposDelCircuito) {
+      nodosLiberados = App.diagrama.liberarNodosDeEntidad(equipo.id, nodosLiberados);
+    }
+    setNodosDiagrama(nodosLiberados);
     setCircuitos(circuitos.filter((c) => c.id !== id));
     setEquipos(equipos.filter((e) => e.circuitoId !== id));
     if (circuitoActivoId === id) setCircuitoActivoId(null);
@@ -285,6 +294,8 @@ export function useCircuitos() {
   }
 
   function eliminarEquipo(id) {
+    // Desvincula (no borra) los nodos del diagrama que representaban este equipo.
+    setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
     setEquipos(equipos.filter((e) => e.id !== id));
     if (editandoEquipoId === id) cancelarEdicionEquipo();
   }
@@ -309,8 +320,11 @@ export function useCircuitos() {
 
   function eliminarTablero(id) {
     // Libera los circuitos que le pertenecían (no los borra, no quedan
-    // apuntando a un ID muerto) y recién después quita el tablero.
+    // apuntando a un ID muerto) y los nodos del diagrama que lo
+    // representaban (idem, desvinculados, no borrados) y recién
+    // después quita el tablero.
     setCircuitos(App.tablero.liberarCircuitos(id, circuitos));
+    setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
     setTableros(tableros.filter((t) => t.id !== id));
   }
 
@@ -329,8 +343,10 @@ export function useCircuitos() {
   }
 
   function eliminarFuenteEnergia(id) {
-    // Libera (no rompe) los tableros que la tenían como origen.
+    // Libera (no rompe) los tableros que la tenían como origen y los
+    // nodos del diagrama que la representaban.
     setTableros(App.origen.liberarTableros(id, tableros));
+    setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
     setFuentesEnergia(fuentesEnergia.filter((f) => f.id !== id));
   }
 

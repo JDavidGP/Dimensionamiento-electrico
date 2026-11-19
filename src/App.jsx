@@ -44,6 +44,7 @@ export default function App() {
     abrirProyecto,
     nuevoProyecto,
     circuitos,
+    equipos,
     resultados,
     resultadosParaTabla,
     totales,
@@ -202,6 +203,10 @@ export default function App() {
           conexionesDiagrama={conexionesDiagrama}
           crearConexionDiagrama={crearConexionDiagrama}
           eliminarConexionDiagrama={eliminarConexionDiagrama}
+          tableros={tableros}
+          equipos={equipos}
+          circuitos={circuitos}
+          fuentesEnergia={fuentesEnergia}
         />
       </div>
 
