@@ -8,6 +8,7 @@ import TablaResultados from "./components/TablaResultados";
 import PanelBreakers from "./components/PanelBreakers";
 import PanelTableros from "./components/PanelTableros";
 import SelectorNormativa from "./components/SelectorNormativa";
+import DiagramaUnifilar from "./components/DiagramaUnifilar";
 import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
@@ -72,6 +73,13 @@ export default function App() {
     balancesFases,
     fuentesEnergia,
     crearFuenteEnergia,
+    nodosDiagrama,
+    crearNodoDiagrama,
+    editarNodoDiagrama,
+    eliminarNodoDiagrama,
+    conexionesDiagrama,
+    crearConexionDiagrama,
+    eliminarConexionDiagrama,
     listaIntegridad,
   } = useCircuitos();
 
@@ -171,6 +179,18 @@ export default function App() {
 
           <PanelBreakers resultados={resultados} />
         </div>
+      </div>
+
+      <div style={{ padding: "0 24px 20px 24px" }}>
+        <DiagramaUnifilar
+          nodosDiagrama={nodosDiagrama}
+          crearNodoDiagrama={crearNodoDiagrama}
+          editarNodoDiagrama={editarNodoDiagrama}
+          eliminarNodoDiagrama={eliminarNodoDiagrama}
+          conexionesDiagrama={conexionesDiagrama}
+          crearConexionDiagrama={crearConexionDiagrama}
+          eliminarConexionDiagrama={eliminarConexionDiagrama}
+        />
       </div>
 
       <PiePagina />
