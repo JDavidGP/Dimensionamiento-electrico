@@ -20,6 +20,7 @@ import {
   DocumentoMediator,
   DiagramaMediator,
   TableroMediator,
+  OrigenMediator,
 } from "./mediators/index.js";
 
 export const ApplicationMediator = {
@@ -36,6 +37,7 @@ export const ApplicationMediator = {
   documento: DocumentoMediator,
   diagrama: DiagramaMediator,
   tablero: TableroMediator,
+  origen: OrigenMediator,
 
   /**
    * Sincroniza el snapshot del DataProvider con el estado de la UI/hook.
@@ -46,6 +48,7 @@ export const ApplicationMediator = {
     circuitos,
     equipos,
     tableros,
+    fuentesEnergia,
     normativaActiva,
     resultados,
   } = {}) {
@@ -54,6 +57,7 @@ export const ApplicationMediator = {
     if (circuitos !== undefined) partial.circuitos = circuitos;
     if (equipos !== undefined) partial.equipos = equipos;
     if (tableros !== undefined) partial.tableros = tableros;
+    if (fuentesEnergia !== undefined) partial.fuentesEnergia = fuentesEnergia;
     if (normativaActiva !== undefined) partial.normativaActiva = normativaActiva;
     if (resultados !== undefined) partial.resultados = resultados;
     DataProvider.setSnapshot(partial);

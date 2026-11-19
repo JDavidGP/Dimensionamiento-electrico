@@ -22,10 +22,23 @@ const FORM_VACIO = {
   tensionAlimentacion: "",
   tensionManual: false,
   fases: "mono",
-  tableroPadreId: "", // "" = acometida/poste/transformador (sin padre)
+  tableroPadreId: "", // "" = acometida/poste (sin padre); puede ser otro tablero o una fuente de energía
   longitudAlimentador: "",
   materialAlimentador: "cobre",
 };
+
+const FORM_FUENTE_VACIO = { nombre: "", tipo: "bateria", rol: "auxiliar" };
+
+const TIPOS_FUENTE_UI = [
+  { valor: "bateria", label: "Batería" },
+  { valor: "generador", label: "Generador" },
+];
+
+const ROLES_FUENTE_UI = [
+  { valor: "principal", label: "Principal" },
+  { valor: "secundaria", label: "Secundaria" },
+  { valor: "auxiliar", label: "Auxiliar" },
+];
 
 function BotonPill({ activo, onClick, children, flex = 1 }) {
   return (
@@ -290,6 +303,8 @@ export default function PanelTableros({
   eliminarTablero,
   listaIntegridad = [],
   normativaActiva,
+  fuentesEnergia = [],
+  crearFuenteEnergia,
 }) {
   const [tableroActivoId, setTableroActivoId] = useState(null);
   const [formAbierto, setFormAbierto] = useState(false);
@@ -300,6 +315,12 @@ export default function PanelTableros({
   // dropdown) — guardamos el objeto completo para mostrar su nombre sin
   // tener que volver a buscarlo por id.
   const [padreForzado, setPadreForzado] = useState(null);
+  // Mini-formulario inline para crear una fuente de energía nueva
+  // (Batería/Generador) sin salir del formulario de tablero — ver
+  // DECISIÓN DE UI en modules/origen/index.js: el selector de "Tablero
+  // padre" es el lugar elegido para esto.
+  const [nuevaFuenteAbierta, setNuevaFuenteAbierta] = useState(false);
+  const [formFuente, setFormFuente] = useState(FORM_FUENTE_VACIO);
 
   const normativa = App.normativa.obtener(normativaActiva);
   const voltajesEstandar = normativa.voltajesPorFase?.[form.fases] ?? [];
@@ -359,6 +380,8 @@ export default function PanelTableros({
     setEditandoId(null);
     setPadreForzado(null);
     setFormAbierto(false);
+    setNuevaFuenteAbierta(false);
+    setFormFuente(FORM_FUENTE_VACIO);
   }
 
   function alGuardar(e) {
@@ -471,19 +494,105 @@ export default function PanelTableros({
               </div>
             </Campo>
           ) : (
-            <Campo label="Tablero padre (opcional)">
+            <Campo label="Origen (tablero padre o fuente de energía, opcional)">
               <select
                 style={inputStyle()}
                 value={form.tableroPadreId}
                 onChange={(e) => setForm({ ...form, tableroPadreId: e.target.value })}
               >
-                <option value="">— Acometida / poste / transformador —</option>
-                {opcionesPadre.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nombre}
-                  </option>
-                ))}
+                <option value="">— Acometida / poste —</option>
+                {opcionesPadre.length > 0 && (
+                  <optgroup label="Tableros">
+                    {opcionesPadre.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {fuentesEnergia.length > 0 && (
+                  <optgroup label="Fuentes de energía">
+                    {fuentesEnergia.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.nombre} ({TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label} · {ROLES_FUENTE_UI.find((r) => r.valor === f.rol)?.label})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
+
+              {crearFuenteEnergia && (
+                <div style={{ marginTop: 8 }}>
+                  {nuevaFuenteAbierta ? (
+                    <div style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
+                      <input
+                        style={{ ...inputStyle(), marginBottom: 6 }}
+                        value={formFuente.nombre}
+                        onChange={(e) => setFormFuente({ ...formFuente, nombre: e.target.value })}
+                        placeholder="Ej: Banco de baterías solar, Generador diesel 10kW"
+                      />
+                      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                        {TIPOS_FUENTE_UI.map((t) => (
+                          <BotonPill key={t.valor} activo={formFuente.tipo === t.valor} onClick={() => setFormFuente({ ...formFuente, tipo: t.valor })}>
+                            {t.label}
+                          </BotonPill>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Rol de esta fuente:</div>
+                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                        {ROLES_FUENTE_UI.map((r) => (
+                          <BotonPill key={r.valor} activo={formFuente.rol === r.valor} onClick={() => setFormFuente({ ...formFuente, rol: r.valor })}>
+                            {r.label}
+                          </BotonPill>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          disabled={!formFuente.nombre.trim()}
+                          onClick={() => {
+                            const fuente = crearFuenteEnergia(formFuente);
+                            setForm({ ...form, tableroPadreId: fuente.id });
+                            setFormFuente(FORM_FUENTE_VACIO);
+                            setNuevaFuenteAbierta(false);
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: "6px 0",
+                            borderRadius: 3,
+                            border: "none",
+                            background: formFuente.nombre.trim() ? colores.copper : colores.border,
+                            color: formFuente.nombre.trim() ? "#171512" : colores.textDim,
+                            fontWeight: 700,
+                            fontSize: 11.5,
+                            cursor: formFuente.nombre.trim() ? "pointer" : "not-allowed",
+                          }}
+                        >
+                          + Crear y usar como origen
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormFuente(FORM_FUENTE_VACIO);
+                            setNuevaFuenteAbierta(false);
+                          }}
+                          style={{ padding: "6px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setNuevaFuenteAbierta(true)}
+                      style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+                    >
+                      + Nueva fuente de energía (Batería/Generador)
+                    </button>
+                  )}
+                </div>
+              )}
             </Campo>
           )}
 
@@ -548,7 +657,16 @@ export default function PanelTableros({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {tableros.map((t) => {
             const circuitosDelTablero = circuitosDeTablero(t.id);
-            const padre = t.tableroPadreId ? tableros.find((p) => p.id === t.tableroPadreId) : null;
+            // El origen puede ser otro tablero O una fuente de energía
+            // (Batería/Generador) — se resuelven por separado porque
+            // solo un tablero tiene `fases` (relevante para el
+            // selector de líneas del alimentador más abajo).
+            const origenResuelto = t.tableroPadreId ? App.origen.resolver(t.tableroPadreId, tableros, fuentesEnergia) : { tipo: "acometida" };
+            const padre = origenResuelto.tipo === "tablero" ? origenResuelto.tablero : null;
+            const padreFuente =
+              origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.BATERIA || origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.GENERADOR
+                ? origenResuelto.fuente
+                : null;
             const activo = tableroActivoId === t.id;
             // Integridad de ESTE tablero (tableroPadreId inexistente,
             // auto-referencia, sin circuitos asociados) — mismo patrón
@@ -632,7 +750,14 @@ export default function PanelTableros({
 
                     <div style={{ fontSize: 11.5, color: colores.textDim, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                       <span>
-                        Alimenta desde: <strong style={{ color: colores.textMain }}>{padre ? padre.nombre : "Acometida / poste / transformador principal"}</strong>
+                        Alimenta desde:{" "}
+                        <strong style={{ color: colores.textMain }}>
+                          {padre
+                            ? padre.nombre
+                            : padreFuente
+                              ? `${padreFuente.nombre} (${TIPOS_FUENTE_UI.find((ti) => ti.valor === padreFuente.tipo)?.label} · ${ROLES_FUENTE_UI.find((r) => r.valor === padreFuente.rol)?.label})`
+                              : "Acometida / poste"}
+                        </strong>
                         {t.longitudAlimentador > 0 && ` · ${t.longitudAlimentador}m de ${t.materialAlimentador}`}
                       </span>
                       <button

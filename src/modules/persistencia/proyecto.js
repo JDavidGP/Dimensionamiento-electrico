@@ -13,7 +13,7 @@ export function proyectoVacio() {
 // Empaqueta el estado completo de la app en un solo objeto serializable.
 // Este es el "documento" que se guarda/abre — versión de formato incluida
 // por si en el futuro cambia la estructura y hay que migrar archivos viejos.
-export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros }) {
+export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia }) {
   return {
     formatoVersion: 1,
     proyecto: { ...proyecto, fechaModificacion: new Date().toISOString() },
@@ -22,6 +22,7 @@ export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion,
     circuitos,
     equipos,
     tableros: tableros ?? [],
+    fuentesEnergia: fuentesEnergia ?? [],
   };
 }
 
@@ -45,6 +46,9 @@ export function deserializarProyecto(data) {
     equipos: data.equipos,
     // Compatibilidad: archivos guardados antes de Fase 3 no traen tableros.
     tableros: Array.isArray(data.tableros) ? data.tableros : [],
+    // Compatibilidad: archivos guardados antes de esta sesión no traen
+    // fuentesEnergia.
+    fuentesEnergia: Array.isArray(data.fuentesEnergia) ? data.fuentesEnergia : [],
   };
 }
 

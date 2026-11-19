@@ -60,6 +60,8 @@ export default function App() {
     circuitosSinTablero,
     alimentadores,
     balancesFases,
+    fuentesEnergia,
+    crearFuenteEnergia,
     listaIntegridad,
   } = useCircuitos();
 
@@ -101,6 +103,8 @@ export default function App() {
             editarTablero={editarTablero}
             eliminarTablero={eliminarTablero}
             normativaActiva={normativaActiva}
+            fuentesEnergia={fuentesEnergia}
+            crearFuenteEnergia={crearFuenteEnergia}
           />
 
           <FormularioCircuito

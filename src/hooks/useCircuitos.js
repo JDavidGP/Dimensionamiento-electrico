@@ -15,6 +15,7 @@ export function useCircuitos() {
   const [circuitos, setCircuitos] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [tableros, setTableros] = useState([]);
+  const [fuentesEnergia, setFuentesEnergia] = useState([]);
   const [normativaActiva, setNormativaActivaBase] = useState(
     App.config.normativaPorDefecto
   );
@@ -60,10 +61,11 @@ export function useCircuitos() {
       circuitos,
       equipos,
       tableros,
+      fuentesEnergia,
       normativaActiva,
       resultados,
     });
-  }, [proyecto, circuitos, equipos, tableros, normativaActiva, resultados]);
+  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, normativaActiva, resultados]);
 
   const totales = useMemo(() => {
     const potenciaTotal = resultados.reduce(
@@ -158,13 +160,13 @@ export function useCircuitos() {
 
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
-    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros),
-    [proyecto, circuitos, equipos, tableros]
+    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia]
   );
 
   const resumenInt = useMemo(
-    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros),
-    [proyecto, circuitos, equipos, tableros]
+    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia]
   );
 
   const detalleElectrico = useCallback(
@@ -308,6 +310,26 @@ export function useCircuitos() {
     setTableros(tableros.filter((t) => t.id !== id));
   }
 
+  // --- FUENTE DE ENERGÍA (Batería/Generador, origen alternativo de un tablero) ---
+  function crearFuenteEnergia(datos) {
+    const fuente = App.origen.crearFuente(datos);
+    setFuentesEnergia([...fuentesEnergia, fuente]);
+    return fuente;
+  }
+
+  function editarFuenteEnergia(id, cambios) {
+    const fuente = fuentesEnergia.find((f) => f.id === id);
+    if (!fuente) return;
+    const actualizada = App.origen.editarFuente(fuente, cambios);
+    setFuentesEnergia(fuentesEnergia.map((f) => (f.id === id ? actualizada : f)));
+  }
+
+  function eliminarFuenteEnergia(id) {
+    // Libera (no rompe) los tableros que la tenían como origen.
+    setTableros(App.origen.liberarTableros(id, tableros));
+    setFuentesEnergia(fuentesEnergia.filter((f) => f.id !== id));
+  }
+
   function asignarCircuitoATablero(circuitoId, tableroId) {
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return;
@@ -359,6 +381,7 @@ export function useCircuitos() {
       circuitos,
       equipos,
       tableros,
+      fuentesEnergia,
     });
     setAvisoArchivo(`Guardado como ${nombre}`);
     setTimeout(() => setAvisoArchivo(""), 4000);
@@ -373,6 +396,7 @@ export function useCircuitos() {
         setCircuitos(cargado.circuitos);
         setEquipos(cargado.equipos);
         setTableros(cargado.tableros ?? []);
+        setFuentesEnergia(cargado.fuentesEnergia ?? []);
         setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
         setAvisoArchivo(`Proyecto "${cargado.proyecto.nombre}" cargado.`);
         setTimeout(() => setAvisoArchivo(""), 5000);
@@ -388,6 +412,7 @@ export function useCircuitos() {
     setCircuitos([]);
     setEquipos([]);
     setTableros([]);
+    setFuentesEnergia([]);
     setCircuitoActivoId(null);
     setFormCircuito(CIRCUITO_VACIO);
     setFormEquipo(EQUIPO_VACIO);
@@ -448,6 +473,10 @@ export function useCircuitos() {
     circuitosSinTablero,
     alimentadores,
     balancesFases,
+    fuentesEnergia,
+    crearFuenteEnergia,
+    editarFuenteEnergia,
+    eliminarFuenteEnergia,
     listaIntegridad,
     resumenIntegridad: resumenInt,
     detalleElectrico,
