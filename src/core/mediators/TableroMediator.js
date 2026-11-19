@@ -40,13 +40,29 @@ import {
   hijosDeTablero,
   obtenerArbolDescendentePostOrden,
 } from "../../modules/tablero/index.js";
-import { calcularAlimentador, evaluarCaidaAcumulada, balanceFases } from "../../modules/motor/index.js";
+import {
+  calcularAlimentador,
+  evaluarCaidaAcumulada,
+  balanceFases,
+  calcularCargaSimultaneaViviendas,
+  potenciaMinimaGrado,
+  GRADOS_ELECTRIFICACION,
+  normalizarSimultaneidadREBT,
+} from "../../modules/motor/index.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { Logger } from "../services/Logger.js";
 import { Config } from "../services/Config.js";
 
 export const TableroMediator = {
+  /** Grados de electrificación REBT ITC-BT-10 (§2.1), expuestos para la UI — mismo patrón que OrigenMediator.MODOS_CONMUTACION. */
+  GRADOS_ELECTRIFICACION,
+
+  /** Normaliza tablero.simultaneidadREBT antes de guardarlo. */
+  normalizarSimultaneidadREBT(datos) {
+    return normalizarSimultaneidadREBT(datos);
+  },
+
   /** Fábrica de un tablero nuevo (no lo guarda — eso lo hace el hook). */
   crear(datos) {
     return crearTablero(datos);
@@ -274,7 +290,11 @@ export const TableroMediator = {
    *                                                    subárbol ya no cumple, o tableroId no existe
    *   { ok: true, potenciaTotalW, cosPhiCombinado,
    *     seccion, breaker, caidaPct, ... }           — igual forma que
-   *                                                    calcularAlimentador
+   *                                                    calcularAlimentador,
+   *                                                    + `simultaneidadREBT`
+   *                                                    (detalle n/coeficiente/
+   *                                                    mediaW/cargaW) cuando
+   *                                                    t.simultaneidadREBT.activa
    *
    * FUERA DE ALCANCE a propósito (ver módulo origen y
    * caidaTensionAcumulada.js): transformadores, cambio de nivel de
@@ -308,7 +328,26 @@ export const TableroMediator = {
 
     for (const t of orden) {
       const hijos = hijosDeTablero(t.id, listaTableros);
-      const hijoIncompleto = hijos.find((h) => !agregados[h.id]?.ok);
+      // Edificio de viviendas REBT ITC-BT-10 (usuario, 2026-11-19): este
+      // tablero es la "gestión de la conexión del edificio" — sus hijos
+      // DIRECTOS son las "viviendas" (cada una gestiona sus propios
+      // circuitos igual que siempre, nada cambia ahí). Ver
+      // modules/motor/simultaneidadREBT.js.
+      const simultaneidadActiva = t.simultaneidadREBT?.activa === true;
+
+      // Un hijo "sin circuitos todavía" bloquea normalmente — salvo que
+      // el padre tenga activo el modo de viviendas, en cuyo caso
+      // ITC-BT-10 §2.2 YA da un respaldo normativo para ese caso exacto
+      // (demanda desconocida → grado de electrificación mínimo). Fuera
+      // de ese caso puntual (alimentador sin longitud, un nieto
+      // pendiente, un tramo que no cumple) sigue bloqueando igual que
+      // antes — el respaldo de ITC-BT-10 no cubre datos rotos.
+      const hijoIncompleto = hijos.find((h) => {
+        const r = agregados[h.id];
+        if (r?.ok) return false;
+        if (simultaneidadActiva && r?.sinCircuitos) return false;
+        return true;
+      });
 
       if (hijoIncompleto) {
         // Nunca se suma 0 y se sigue como si el hijo no existiera: este
@@ -330,21 +369,46 @@ export const TableroMediator = {
         .map((c) => listaResultados.find((r) => r.id === c.id))
         .filter(Boolean);
 
-      // Demanda de cada hijo, YA agregada de su propio subárbol,
-      // disfrazada de "resultado de circuito" para reusar
-      // combinarResultadosCircuitos sin tocarlo.
-      const pseudoResultadosHijos = hijos.map((h) => ({
-        ok: true,
-        cargaDemandaNormativaW: agregados[h.id].potenciaTotalW,
-        cosPhiEfectivo: agregados[h.id].cosPhiCombinado,
-      }));
+      let pseudoResultadosHijos;
+      let cargaViviendas = null;
 
-      agregados[t.id] = calcularAlimentador(
-        t,
-        [...resultadosPropios, ...pseudoResultadosHijos],
-        t.fases,
-        normativa
-      );
+      if (simultaneidadActiva && hijos.length > 0) {
+        // ITC-BT-10 §3.1: potencia prevista de cada vivienda = su
+        // demanda YA calculada si ya tiene circuitos propios, o el
+        // mínimo de su grado de electrificación (el suyo propio si lo
+        // eligió, si no el gradoPorDefecto del padre) cuando todavía no
+        // tiene ninguno — mismo criterio del ejemplo oficial de la
+        // Guía-BT-10 ("ya que no se conoce la previsión exacta de
+        // demanda eléctrica").
+        const potenciasViviendas = hijos.map((h) => {
+          const r = agregados[h.id];
+          if (r?.ok) return r.potenciaTotalW;
+          return potenciaMinimaGrado(h.gradoElectrificacion ?? t.simultaneidadREBT.gradoPorDefecto);
+        });
+        cargaViviendas = calcularCargaSimultaneaViviendas(potenciasViviendas);
+        // cosPhiEfectivo=1: ITC-BT-10 da potencias PREVISTAS a prever,
+        // no cargas reales con un factor de potencia propio — mismo
+        // criterio que demanda100() en IEC_ES (modules/normativa/iec/es.js).
+        pseudoResultadosHijos = cargaViviendas.ok
+          ? [{ ok: true, cargaDemandaNormativaW: cargaViviendas.cargaW, cosPhiEfectivo: 1 }]
+          : []; // n inválido no debería pasar nunca (hijos.length ya es >0) — si pasa, no se inventa una carga.
+      } else {
+        // Demanda de cada hijo, YA agregada de su propio subárbol,
+        // disfrazada de "resultado de circuito" para reusar
+        // combinarResultadosCircuitos sin tocarlo.
+        pseudoResultadosHijos = hijos.map((h) => ({
+          ok: true,
+          cargaDemandaNormativaW: agregados[h.id].potenciaTotalW,
+          cosPhiEfectivo: agregados[h.id].cosPhiCombinado,
+        }));
+      }
+
+      const resultado = calcularAlimentador(t, [...resultadosPropios, ...pseudoResultadosHijos], t.fases, normativa);
+      // Detalle del cálculo REBT adjunto para que la UI lo muestre sin
+      // recalcularlo (mismo criterio que contribuyentesPorLinea en
+      // balanceFasesDeTablero) — campo opcional, no cambia el contrato
+      // existente para quien no usa este modo.
+      agregados[t.id] = cargaViviendas ? { ...resultado, simultaneidadREBT: cargaViviendas } : resultado;
     }
 
     return agregados[tableroId];

@@ -20,6 +20,9 @@ import {
   balanceFases,
   normalizarTransformador,
   calcularCorrientesNominales,
+  coeficienteSimultaneidad,
+  GRADOS_ELECTRIFICACION,
+  calcularCargaSimultaneaViviendas,
 } from "../../modules/motor/index.js";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { DataProvider } from "../services/DataProvider.js";
@@ -75,4 +78,11 @@ export const MotorCalculoMediator = {
   // llama esto todavía; ver modules/motor/transformador.js).
   normalizarTransformador,
   corrientesNominalesTransformador: calcularCorrientesNominales,
+  // Simultaneidad REBT ITC-BT-10 — expuesto para la UI (selector de
+  // grado de electrificación, previsualización del coeficiente) y para
+  // tests; el cálculo real al armar el alimentador agregado vive en
+  // TableroMediator.calcularAlimentadorAgregado.
+  coeficienteSimultaneidad,
+  GRADOS_ELECTRIFICACION,
+  calcularCargaSimultaneaViviendas,
 };

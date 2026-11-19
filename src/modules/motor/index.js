@@ -29,3 +29,12 @@ export {
   editarTransformador,
   liberarTablerosDeTransformador,
 } from "./transformador.js";
+export {
+  TABLA_COEFICIENTE_SIMULTANEIDAD,
+  coeficienteSimultaneidad,
+  GRADOS_ELECTRIFICACION,
+  potenciaMinimaGrado,
+  calcularCargaSimultaneaViviendas,
+  SIMULTANEIDAD_REBT_VACIA,
+  normalizarSimultaneidadREBT,
+} from "./simultaneidadREBT.js";

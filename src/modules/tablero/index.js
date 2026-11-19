@@ -40,6 +40,21 @@ function normalizar(datos = {}) {
     // de largo) — mismo criterio de aislamiento entre módulos que ya
     // sigue tableroPadreId con resolverOrigen.
     conmutacion: datos.conmutacion && typeof datos.conmutacion === "object" ? datos.conmutacion : null,
+    // Coeficiente de simultaneidad REBT ITC-BT-10 (España) — DOCUMENTAL
+    // a nivel de forma, igual criterio que conmutacion: este módulo no
+    // valida su contenido (eso es normalizarSimultaneidadREBT en
+    // modules/motor/simultaneidadREBT.js, otro dominio — no se importa
+    // acá, solo se pasa de largo). null = sin activar (comportamiento
+    // actual sin cambios: el alimentador suma sus tableros hijos al
+    // 100%, que es lo correcto para locales/garajes/servicios generales
+    // y para cualquier tablero que NO sea un edificio de viviendas).
+    simultaneidadREBT: datos.simultaneidadREBT && typeof datos.simultaneidadREBT === "object" ? datos.simultaneidadREBT : null,
+    // Grado de electrificación de ESTE tablero cuando actúa como
+    // "vivienda" bajo el simultaneidadREBT.activa de su padre y
+    // todavía no tiene circuitos propios cargados (ITC-BT-10 §2.2: sin
+    // conocer la demanda real, se usa el mínimo del grado). "" / valor
+    // inválido = sin elegir, cae al gradoPorDefecto del padre.
+    gradoElectrificacion: ["basica", "elevada"].includes(datos.gradoElectrificacion) ? datos.gradoElectrificacion : null,
   };
 }
 

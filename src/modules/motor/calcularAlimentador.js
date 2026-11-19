@@ -26,7 +26,14 @@ export function calcularAlimentador(tablero, resultadosCircuitos, fases, normati
   const { potenciaTotalW, cosPhiCombinado, cantidadCircuitos } = combinarResultadosCircuitos(resultadosCircuitos);
 
   if (cantidadCircuitos === 0) {
-    return { ok: false, pendiente: true, motivo: "Sin circuitos calculados asignados a este tablero todavía." };
+    // sinCircuitos (además de pendiente): distingue ESTE caso puntual —
+    // "no tiene circuitos propios todavía" — de cualquier otro motivo
+    // de pendiente (ej. falta la longitud del alimentador más abajo, o
+    // un hijo propio incompleto). TableroMediator.calcularAlimentadorAgregado
+    // lo usa para decidir si puede aplicar el grado de electrificación
+    // mínimo de ITC-BT-10 como respaldo (solo tiene sentido cuando lo
+    // que falta es la demanda real, no cualquier otro dato roto).
+    return { ok: false, pendiente: true, sinCircuitos: true, motivo: "Sin circuitos calculados asignados a este tablero todavía." };
   }
 
   const distanciaM = Number(tablero.longitudAlimentador);

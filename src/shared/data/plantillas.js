@@ -74,4 +74,17 @@ export const TABLERO_VACIO = {
   // alimenta ningún cálculo (ver modules/origen/conmutacion.js). null
   // = sin configurar.
   conmutacion: null,
+  // Coeficiente de simultaneidad REBT ITC-BT-10 (España), SÍ alimenta
+  // el cálculo real del alimentador de este tablero cuando activa=true
+  // (ver modules/motor/simultaneidadREBT.js, TableroMediator.
+  // calcularAlimentadorAgregado) — sus tableros HIJOS directos se
+  // tratan como viviendas de un mismo edificio, agregadas con la Tabla
+  // 1 (coeficiente según N° de viviendas) en vez de sumarse al 100%.
+  // null = sin activar (comportamiento normal, sin cambios).
+  simultaneidadREBT: null,
+  // Grado de electrificación ("basica" | "elevada" | null) de ESTE
+  // tablero cuando actúa como vivienda bajo el simultaneidadREBT de su
+  // padre y todavía no tiene circuitos propios — ver nota en
+  // modules/tablero/index.js.
+  gradoElectrificacion: null,
 };

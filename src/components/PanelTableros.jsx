@@ -403,6 +403,145 @@ function BloqueConmutacion({ tablero, fuentesEnergia, onEditarTablero }) {
   );
 }
 
+const GRADOS_ELECTRIFICACION_UI = [
+  { valor: "basica", label: "Básica (5750W)" },
+  { valor: "elevada", label: "Elevada (9200W)" },
+];
+
+/**
+ * Edificio de viviendas REBT ITC-BT-10 (usuario, 2026-11-19): este
+ * tablero es "la gestión de la conexión del edificio" — sus hijos
+ * directos se tratan como viviendas (cada una sigue "gestionándose" a
+ * sí misma con sus propios circuitos, sin cambios). Mismo patrón de
+ * bloque que BloqueConmutacion. El cálculo real vive en
+ * TableroMediator.calcularAlimentadorAgregado — ver
+ * modules/motor/simultaneidadREBT.js para la Tabla 1 verificada contra
+ * el texto oficial.
+ */
+function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }) {
+  const [editando, setEditando] = useState(false);
+  const conf = tablero.simultaneidadREBT;
+  const [form, setForm] = useState(() => conf ?? { activa: false, gradoPorDefecto: "basica" });
+
+  function abrirEdicion() {
+    setForm(conf ?? { activa: false, gradoPorDefecto: "basica" });
+    setEditando(true);
+  }
+
+  function guardar() {
+    onEditarTablero(tablero.id, { simultaneidadREBT: { ...form, activa: true } });
+    setEditando(false);
+  }
+
+  function desactivar() {
+    onEditarTablero(tablero.id, { simultaneidadREBT: { ...form, activa: false } });
+    setEditando(false);
+  }
+
+  const titulo = (
+    <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+      Simultaneidad REBT (ITC-BT-10)
+    </div>
+  );
+
+  const detalle = alimentador?.ok ? alimentador.simultaneidadREBT : null;
+
+  if (!editando) {
+    return (
+      <div>
+        {titulo}
+        {conf?.activa ? (
+          <div style={{ fontSize: 11.5, color: colores.textMain, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span>
+              Edificio de viviendas — grado por defecto <strong>{GRADOS_ELECTRIFICACION_UI.find((g) => g.valor === conf.gradoPorDefecto)?.label}</strong>
+              {detalle && (
+                <span style={{ color: colores.textDim }}>
+                  {" "}
+                  · {detalle.n} vivienda{detalle.n !== 1 ? "s" : ""} · coeficiente {detalle.coeficiente} · carga {(detalle.cargaW / 1000).toFixed(2)}kW
+                </span>
+              )}
+            </span>
+            <button type="button" onClick={abrirEdicion} style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+              ✎ Editar
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={abrirEdicion}
+            style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+          >
+            + Activar simultaneidad de viviendas (edificio REBT)
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: `1px solid ${colores.border}`, borderRadius: 4, padding: 10 }}>
+      {titulo}
+      <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, marginBottom: 8 }}>
+        Trata los tableros HIJOS directos de este tablero como viviendas de un mismo edificio (ITC-BT-10 §3.1): la
+        demanda se calcula con la media de la potencia prevista de cada vivienda × el coeficiente de simultaneidad
+        según su número, en vez de sumarlas al 100%.
+      </div>
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>
+        Grado de electrificación por defecto (para una vivienda que todavía no tiene circuitos propios):
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        {GRADOS_ELECTRIFICACION_UI.map((g) => (
+          <BotonPill key={g.valor} activo={form.gradoPorDefecto === g.valor} onClick={() => setForm({ ...form, gradoPorDefecto: g.valor })}>
+            {g.label}
+          </BotonPill>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        <button
+          type="button"
+          onClick={guardar}
+          style={{ flex: 1, padding: "6px 0", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+        >
+          Guardar
+        </button>
+        {conf?.activa && (
+          <button
+            type="button"
+            onClick={desactivar}
+            style={{ padding: "6px 10px", background: "transparent", color: colores.error, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+          >
+            Desactivar
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setEditando(false)}
+          style={{ padding: "6px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Grado de electrificación de ESTE tablero cuando actúa como vivienda bajo el modo REBT de su padre — solo visible en ese caso. */
+function SelectorGradoVivienda({ tablero, onEditarTablero }) {
+  return (
+    <div style={{ fontSize: 11, color: colores.textDim, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+      <span>Grado de electrificación de esta vivienda (si todavía no tiene circuitos propios):</span>
+      {GRADOS_ELECTRIFICACION_UI.map((g) => (
+        <BotonPill key={g.valor} flex="0 0 auto" activo={tablero.gradoElectrificacion === g.valor} onClick={() => onEditarTablero(tablero.id, { gradoElectrificacion: g.valor })}>
+          <span style={{ padding: "0 8px" }}>{g.label}</span>
+        </BotonPill>
+      ))}
+      <BotonPill flex="0 0 auto" activo={!tablero.gradoElectrificacion} onClick={() => onEditarTablero(tablero.id, { gradoElectrificacion: null })}>
+        <span style={{ padding: "0 8px" }}>Según el edificio</span>
+      </BotonPill>
+    </div>
+  );
+}
+
 function BloqueBalanceFases({ balance }) {
   if (!balance || !balance.aplica) return null;
 
@@ -1098,6 +1237,8 @@ export default function PanelTableros({
                       </button>
                     </div>
 
+                    {padre?.simultaneidadREBT?.activa && <SelectorGradoVivienda tablero={t} onEditarTablero={editarTablero} />}
+
                     <BloqueAlimentador resultado={alimentadores?.[t.id]} />
 
                     {padre && padre.fases !== "mono" && (
@@ -1107,6 +1248,10 @@ export default function PanelTableros({
                     <BloqueBalanceFases balance={balancesFases?.[t.id]} />
 
                     <BloqueConmutacion tablero={t} fuentesEnergia={fuentesEnergia} onEditarTablero={editarTablero} />
+
+                    {normativaActiva === "IEC_ES" && (
+                      <BloqueSimultaneidadREBT tablero={t} alimentador={alimentadores?.[t.id]} onEditarTablero={editarTablero} />
+                    )}
 
                     <div>
                       <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>

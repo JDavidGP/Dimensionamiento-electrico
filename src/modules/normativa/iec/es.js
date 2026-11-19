@@ -5,14 +5,20 @@
 // límite de caída de tensión y (a futuro) diversidad de carga vía
 // REBT/ITC-BT-10.
 //
-// ⚠ Diversidad IEC pendiente: la propia IEC 60364-5-52 NO define factores
-// de diversidad — esa lógica vive en anexos nacionales (en España, REBT
-// ITC-BT-10). Además, ITC-BT-10 calcula simultaneidad a nivel de
-// acometida/alimentador compartido entre varias viviendas, no por
-// circuito individual — no se puede implementar de forma normativamente
-// correcta hasta que exista el nivel Tablero en el modelo de datos.
-// Por ahora factorDiversidad queda como placeholder documentado, y
-// reglasDemanda queda vacío (todo tipo de equipo cae en demandaPorDefecto).
+// ⚠ Diversidad IEC pendiente A NIVEL DE CIRCUITO: la propia IEC
+// 60364-5-52 NO define factores de diversidad por circuito — esa lógica
+// vive en anexos nacionales (en España, REBT ITC-BT-10), y factorDiversidad
+// queda null a propósito acá (reglasDemanda vacío, todo cae en
+// demandaPorDefecto) porque ITC-BT-10 no opera a ese nivel.
+//
+// CONECTADO (usuario, 2026-11-19) a nivel TABLERO, que es donde
+// ITC-BT-10 realmente calcula simultaneidad (acometida compartida por
+// varias viviendas) — ver modules/motor/simultaneidadREBT.js (Tabla 1,
+// verificada contra el texto oficial) y
+// TableroMediator.calcularAlimentadorAgregado (tablero.simultaneidadREBT).
+// No vive acá porque un circuito individual no tiene "número de
+// viviendas" que simultanear — ese dato es de la relación padre↔hijos
+// entre tableros, no de la normativa de un circuito suelto.
 
 import { IEC_BASE } from "./_base.js";
 
