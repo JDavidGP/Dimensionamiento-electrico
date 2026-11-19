@@ -95,10 +95,27 @@ export default function App() {
   const circuitoActivo = circuitos.find((c) => c.id === circuitoActivoId) ?? null;
 
   return (
-    <div style={{ background: colores.bg, minHeight: "100vh", color: colores.textMain, fontFamily: fuentes.display }}>
+    <div style={{ background: colores.bg, minHeight: "100vh", color: colores.textMain, fontFamily: fuentes.display, overflowX: "hidden" }}>
       <style>{`
         input, select { font-family: inherit; }
         input:focus, select:focus, button:focus { outline: 2px solid ${colores.copper}; outline-offset: 1px; }
+
+        /* Bug visual reportado por el usuario (celular, captura adjunta,
+           2026-11-19): en pantallas angostas, la grilla de 2 columnas de
+           "Circuitos y resultados" (minmax(280px,...) + 1fr) no entra en
+           el ancho disponible — la columna de resultados se desborda
+           visualmente más allá del borde del panel, y se alcanza a ver
+           contenido de la pestaña Diagrama "sangrando" al lado (el
+           overflow:hidden de TabsViewPager no alcanza a contenerlo del
+           todo en algunos navegadores/celulares). Abajo de 680px, apila
+           en una sola columna — dos valores fijos de 280/340px simplemente
+           no caben en un celular angosto (~360-400px de ancho real).
+           overflowX:hidden en la raíz de arriba es una red de seguridad
+           adicional: ningún contenido debería poder "escaparse"
+           horizontalmente de la app, pase lo que pase adentro. */
+        @media (max-width: 680px) {
+          .circuitos-grid { grid-template-columns: 1fr !important; }
+        }
 
         /* Informe técnico (InformeTecnico.jsx): al imprimir/"Guardar como PDF",
            mostrar SOLO el informe, sin importar qué pestaña está activa en
@@ -184,7 +201,7 @@ export default function App() {
             id: "circuitos",
             label: "Circuitos y resultados",
             contenido: (
-              <div style={{ padding: "20px 24px", display: "grid", gap: 20, gridTemplateColumns: "minmax(280px, 340px) 1fr", alignItems: "start" }}>
+              <div className="circuitos-grid" style={{ padding: "20px 24px", display: "grid", gap: 20, gridTemplateColumns: "minmax(280px, 340px) 1fr", alignItems: "start" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <FormularioCircuito
                     form={formCircuito}

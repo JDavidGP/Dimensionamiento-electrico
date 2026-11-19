@@ -148,8 +148,14 @@ export default function TabsViewPager({ paneles }) {
             transition: arrastrando ? "none" : "transform 0.25s ease",
           }}
         >
+          {/* overflow:hidden en cada panel (no solo en contenedorRef más
+              arriba) — defensa extra: si el contenido de UN panel se
+              desborda de su propia caja (ej. una grilla con columnas de
+              ancho mínimo fijo que no entra en un celular angosto), que
+              no se "filtre" visualmente hacia el panel vecino — ver el
+              bug visual reportado por el usuario, 2026-11-19. */}
           {paneles.map((p) => (
-            <div key={p.id} style={{ flex: "0 0 100%", minWidth: 0 }}>
+            <div key={p.id} style={{ flex: "0 0 100%", minWidth: 0, overflow: "hidden" }}>
               {p.contenido}
             </div>
           ))}
