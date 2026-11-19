@@ -133,7 +133,14 @@ export default function TabsViewPager({ paneles }) {
         onTouchEnd={alTocarFin}
         onTouchCancel={alTocarFin}
       >
+        {/* className (no solo inline style) a propósito: App.jsx la usa para
+            anular el transform al imprimir — un transform en un ancestro
+            vuelve a ESE ancestro el "contenedor de posicionamiento" para
+            cualquier descendiente con position:absolute (ver el CSS
+            @media print de App.jsx, InformeTecnico.jsx) — sin esto, el
+            informe terminaba posicionado fuera de pantalla al imprimir. */}
         <div
+          className="tabs-viewpager-strip"
           style={{
             display: "flex",
             alignItems: "flex-start",

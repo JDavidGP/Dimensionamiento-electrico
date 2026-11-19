@@ -1,6 +1,6 @@
 /**
- * Módulo Documento — stub.
- * Reportes PDF / memoria técnica aún no implementados.
+ * Módulo Documento — API interna.
+ * La UI no importa esto directamente; usa DocumentoMediator.
  */
 export function generarResumenCalculos(resultados = []) {
   return {
@@ -12,9 +12,4 @@ export function generarResumenCalculos(resultados = []) {
   };
 }
 
-export function generarMemoriaTecnica() {
-  return {
-    ok: false,
-    error: "Memoria técnica PDF aún no implementada (DocumentoMediator stub).",
-  };
-}
+export { generarMemoriaTecnica } from "./memoriaTecnica.js";

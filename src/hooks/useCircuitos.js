@@ -69,9 +69,10 @@ export function useCircuitos() {
       nodosDiagrama,
       conexionesDiagrama,
       normativaActiva,
+      tipoInstalacion,
       resultados,
     });
-  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, normativaActiva, resultados]);
+  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, normativaActiva, tipoInstalacion, resultados]);
 
   const totales = useMemo(() => {
     const potenciaTotal = resultados.reduce(

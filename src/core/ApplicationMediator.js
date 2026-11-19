@@ -53,6 +53,7 @@ export const ApplicationMediator = {
     nodosDiagrama,
     conexionesDiagrama,
     normativaActiva,
+    tipoInstalacion,
     resultados,
   } = {}) {
     const partial = {};
@@ -65,6 +66,7 @@ export const ApplicationMediator = {
     if (nodosDiagrama !== undefined) partial.nodosDiagrama = nodosDiagrama;
     if (conexionesDiagrama !== undefined) partial.conexionesDiagrama = conexionesDiagrama;
     if (normativaActiva !== undefined) partial.normativaActiva = normativaActiva;
+    if (tipoInstalacion !== undefined) partial.tipoInstalacion = tipoInstalacion;
     if (resultados !== undefined) partial.resultados = resultados;
     DataProvider.setSnapshot(partial);
   },

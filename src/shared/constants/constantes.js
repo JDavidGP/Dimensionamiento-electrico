@@ -101,6 +101,15 @@ export const TIPOS_INSTALACION = {
 };
 export const TIPO_INSTALACION_POR_DEFECTO = TIPOS_INSTALACION.RESIDENCIAL_BASICO;
 
+// Etiquetas para la UI — fuente única (antes vivía duplicado dentro de
+// SelectorNormativa.jsx; movido acá para que DocumentoMediator/el informe
+// técnico use la MISMA etiqueta, nunca un segundo mapeo que se desincronice).
+export const OPCIONES_TIPO_INSTALACION = [
+  { valor: TIPOS_INSTALACION.RESIDENCIAL_BASICO, label: "Residencial básico" },
+  { valor: TIPOS_INSTALACION.RESIDENCIAL_AVANZADO, label: "Residencial avanzado" },
+  { valor: TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL, label: "Comercial / Industrial" },
+];
+
 // INVESTIGACIÓN — qué distingue a una instalación industrial en NEC y
 // REBT (pedida por el usuario, 2026-11-19, para decidir CON QUÉ
 // CRITERIO el tipo de instalación debería filtrar/agregar equipos y

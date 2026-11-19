@@ -4,18 +4,7 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // Catálogo vía NormativaMediator (no import directo de módulos de normativa)
 const LISTA_NORMATIVAS = App.normativa.listar().map((meta) => App.normativa.obtener(meta.id));
 import { colores, fuentes } from "../styles/colores";
-import { TIPOS_INSTALACION } from "../shared/constants/constantes.js";
-
-// 3 niveles (ver la nota larga en shared/constants/constantes.js, TIPOS_INSTALACION):
-// Residencial básico/avanzado es una distinción de UX (oculta trifásico al
-// uso típico, sin cita normativa propia); avanzado→comercial/industrial sí
-// tiene respaldo NEC/REBT (umbral de 20 kW del REBT, "supervised industrial
-// installation" del NEC).
-const OPCIONES_TIPO_INSTALACION = [
-  { valor: TIPOS_INSTALACION.RESIDENCIAL_BASICO, label: "Residencial básico" },
-  { valor: TIPOS_INSTALACION.RESIDENCIAL_AVANZADO, label: "Residencial avanzado" },
-  { valor: TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL, label: "Comercial / Industrial" },
-];
+import { TIPOS_INSTALACION, OPCIONES_TIPO_INSTALACION } from "../shared/constants/constantes.js";
 
 // Agrupa por familia manteniendo el orden de LISTA_NORMATIVAS (NEC, CIEN, IEC...)
 function agruparPorFamilia(lista) {

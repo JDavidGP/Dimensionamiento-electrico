@@ -10,24 +10,23 @@ import PanelTableros from "./components/PanelTableros";
 import PanelFuentesEnergia from "./components/PanelFuentesEnergia";
 import SelectorNormativa from "./components/SelectorNormativa";
 import DiagramaUnifilar from "./components/DiagramaUnifilar";
+import InformeTecnico from "./components/InformeTecnico";
 import TabsViewPager from "./components/TabsViewPager";
 import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
+import { OPCIONES_TIPO_INSTALACION } from "./shared/constants/constantes.js";
 
 // Tab layout + ViewPager2 (pedido del usuario, retomado 2026-11-19):
-// 4 pestañas, escalonadas por el ORDEN en que se van ingresando los
+// 5 pestañas, escalonadas por el ORDEN en que se van ingresando los
 // datos — Normativa (lo primero que se configura) → Tableros (incluye
 // fuentes de energía) → Circuitos y resultados (el grueso de la carga
 // de datos + su feedback inmediato, por eso van juntos, no separados:
 // la tabla de resultados reacciona en vivo mientras se cargan
-// circuitos/equipos) → Diagrama unifilar. Una 5ta pestaña de "Resumen /
-// informe técnico" queda pendiente para cuando exista esa función (ver
-// "Memoria técnica / informe en PDF" en la hoja de ruta) — hoy no hay
-// nada real que poner ahí, así que no se crea una pestaña vacía
-// todavía; los totales/PanelBreakers que harían de "resumen" por ahora
-// siguen en la pestaña de Circuitos y resultados. Ver TabsViewPager.jsx
-// para el mecanismo de swipe.
+// circuitos/equipos) → Diagrama unifilar → Informe técnico (la
+// pestaña que había quedado pendiente "para cuando exista esa
+// función" — ya existe, ver DocumentoMediator.memoriaTecnica /
+// InformeTecnico.jsx). Ver TabsViewPager.jsx para el mecanismo de swipe.
 export default function App() {
   const {
     proyecto,
@@ -100,6 +99,25 @@ export default function App() {
       <style>{`
         input, select { font-family: inherit; }
         input:focus, select:focus, button:focus { outline: 2px solid ${colores.copper}; outline-offset: 1px; }
+
+        /* Informe técnico (InformeTecnico.jsx): al imprimir/"Guardar como PDF",
+           mostrar SOLO el informe, sin importar qué pestaña está activa en
+           pantalla (TabsViewPager monta todas las pestañas siempre, solo
+           las desplaza fuera de vista con transform — display:none ahí no
+           alcanza; visibility sí atraviesa eso). */
+        @media print {
+          body * { visibility: hidden; }
+          #informe-memoria-tecnica, #informe-memoria-tecnica * { visibility: visible; }
+          #informe-memoria-tecnica { position: absolute; top: 0; left: 0; width: 100%; }
+          #informe-memoria-tecnica-boton-imprimir { display: none; }
+          /* El transform de TabsViewPager vuelve a .tabs-viewpager-strip el
+             "contenedor de posicionamiento" de cualquier descendiente con
+             position:absolute (CSS: un ancestro con transform SIEMPRE lo
+             es) — sin anularlo acá, #informe-memoria-tecnica (arriba)
+             queda posicionado relativo a esa tira desplazada en vez de a
+             la página, y termina fuera de pantalla al imprimir. */
+          .tabs-viewpager-strip { transform: none !important; }
+        }
       `}</style>
 
       <Header
@@ -244,6 +262,29 @@ export default function App() {
                   circuitos={circuitos}
                   fuentesEnergia={fuentesEnergia}
                   transformadores={transformadores}
+                />
+              </div>
+            ),
+          },
+          {
+            id: "informe",
+            label: "Informe técnico",
+            contenido: (
+              <div style={{ padding: "20px 24px" }}>
+                <InformeTecnico
+                  proyecto={proyecto}
+                  normativaActiva={normativaActiva}
+                  tipoInstalacion={OPCIONES_TIPO_INSTALACION.find((o) => o.valor === tipoInstalacion)
+                    ? { id: tipoInstalacion, label: OPCIONES_TIPO_INSTALACION.find((o) => o.valor === tipoInstalacion).label }
+                    : null}
+                  circuitos={circuitos}
+                  equipos={equipos}
+                  resultados={resultados}
+                  tableros={tableros}
+                  alimentadores={alimentadores}
+                  fuentesEnergia={fuentesEnergia}
+                  transformadores={transformadores}
+                  listaIntegridad={listaIntegridad}
                 />
               </div>
             ),

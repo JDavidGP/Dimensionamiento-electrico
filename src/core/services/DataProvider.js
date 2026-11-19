@@ -21,6 +21,7 @@ let snapshot = {
   nodosDiagrama: [],
   conexionesDiagrama: [],
   normativaActiva: "NEC",
+  tipoInstalacion: null,
   resultados: [],
 };
 
@@ -92,6 +93,10 @@ export const DataProvider = {
 
   getNormativaActivaId() {
     return snapshot.normativaActiva;
+  },
+
+  getTipoInstalacion() {
+    return snapshot.tipoInstalacion;
   },
 
   getResultados() {
