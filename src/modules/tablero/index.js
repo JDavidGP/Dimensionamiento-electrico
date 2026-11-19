@@ -24,6 +24,13 @@ function normalizar(datos = {}) {
     nombre: datos.nombre?.trim() || "Tablero sin nombre",
     tensionAlimentacion: Number(datos.tensionAlimentacion) || 0,
     fases: datos.fases || "mono",
+    // Capacidad contratada (kW) — documental, informativa, pedido
+    // explícito del usuario (al lado de la tensión): NO reemplaza ni
+    // se cruza con el grado de electrificación REBT (básica 5750W /
+    // elevada 9200W — ver SelectorGradoVivienda/simultaneidadREBT.js),
+    // que es un concepto normativo distinto, ya conectado a un cálculo
+    // real, y sigue viviendo donde estaba.
+    capacidadKW: datos.capacidadKW === "" || datos.capacidadKW == null ? "" : Number(datos.capacidadKW) || 0,
     tableroPadreId: datos.tableroPadreId || null,
     longitudAlimentador: Number(datos.longitudAlimentador) || 0,
     materialAlimentador: datos.materialAlimentador?.toLowerCase() || "cobre",
@@ -55,6 +62,9 @@ function normalizar(datos = {}) {
     // conocer la demanda real, se usa el mínimo del grado). "" / valor
     // inválido = sin elegir, cae al gradoPorDefecto del padre.
     gradoElectrificacion: ["basica", "elevada"].includes(datos.gradoElectrificacion) ? datos.gradoElectrificacion : null,
+    // Memo libre — documental, pedido explícito del usuario, justo
+    // después de la distancia de la fuente de energía en la UI.
+    notas: datos.notas || "",
   };
 }
 
