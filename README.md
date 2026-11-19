@@ -84,7 +84,7 @@ npm run dev
 - [x] Tableros jerárquicos, caída de tensión acumulada y balance de fases
 - [x] Validación referencial y eléctrica
 - [ ] Factores de simultaneidad del REBT (ITC-BT-10) a nivel de tablero/acometida
-- [ ] Diagrama unifilar sincronizado con la tabla — Fase 1 (modelo de datos), Fase 2 (motor de reglas eléctricas) y Fase 3 (editor mínimo: agregar/mover/conectar/eliminar nodos, símbolos básicos) listas, sin cálculos todavía; faltan símbolos normalizados (IEC/NEC), autoorganización y sincronizar con la tabla de circuitos
+- [ ] Diagrama unifilar sincronizado con la tabla — Fase 1 (modelo de datos), Fase 2 (motor de reglas eléctricas) y Fase 3 (editor mínimo: agregar/mover/conectar/eliminar nodos, los 25 símbolos del catálogo dibujados a mano) listas, sin cálculos todavía; faltan símbolos normalizados IEC 60617 (los actuales son equivalentes simplificados propios), autoorganización, zoom/pan y sincronizar con la tabla de circuitos
 - [ ] Memoria técnica / informe en PDF
 - [ ] Sistema de etiquetado y planos
 - [ ] Migración progresiva a TypeScript
