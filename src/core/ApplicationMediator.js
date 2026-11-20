@@ -23,6 +23,7 @@ import {
   OrigenMediator,
   EtiquetadoMediator,
   PlanoMediator,
+  ImportacionMediator,
 } from "./mediators/index.js";
 
 export const ApplicationMediator = {
@@ -42,6 +43,7 @@ export const ApplicationMediator = {
   origen: OrigenMediator,
   etiquetado: EtiquetadoMediator,
   plano: PlanoMediator,
+  importacion: ImportacionMediator,
 
   /**
    * Sincroniza el snapshot del DataProvider con el estado de la UI/hook.

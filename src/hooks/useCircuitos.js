@@ -404,6 +404,27 @@ export function useCircuitos() {
     );
   }
 
+  // --- IMPORTACIÓN DE EQUIPOS POR TEXTO (2026-11-20) ---
+  // Pedido explícito del usuario, alcance acotado (discutido y
+  // aceptado): SOLO crea equipos, nunca tableros/circuitos — deben
+  // existir de antes, referenciados por su etiqueta ya construida
+  // (ver ImportacionMediator para el porqué completo). No es un
+  // camino de cálculo nuevo: reusa la misma validación/fábrica que el
+  // formulario manual, línea por línea.
+  function previsualizarImportacionEquipos(texto) {
+    return App.importacion.previsualizar(texto, circuitos);
+  }
+
+  // Confirma una previsualización YA vista por el usuario — inserta
+  // los equipos (ya armados por previsualizarImportacionEquipos, no
+  // se vuelven a interpretar/validar acá) tal cual, de una sola vez.
+  function confirmarImportacionEquipos(filasPrevisualizadas) {
+    const nuevos = filasPrevisualizadas.filter((f) => f.ok).map((f) => f.equipo);
+    if (nuevos.length === 0) return 0;
+    setEquipos([...equipos, ...nuevos]);
+    return nuevos.length;
+  }
+
   function equiposDe(circuitoId) {
     return equipos.filter((e) => e.circuitoId === circuitoId);
   }
@@ -936,6 +957,8 @@ export function useCircuitos() {
     cancelarEdicionEquipo,
     eliminarEquipo,
     editarEtiquetaFuncionEquipo,
+    previsualizarImportacionEquipos,
+    confirmarImportacionEquipos,
     equiposDe,
     tableros,
     crearTablero,

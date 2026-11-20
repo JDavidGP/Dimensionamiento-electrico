@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import BarraProyecto from "./components/BarraProyecto";
 import FormularioCircuito from "./components/FormularioCircuito";
 import FormularioEquipo from "./components/FormularioEquipo";
+import ImportarEquiposTexto from "./components/ImportarEquiposTexto";
 import Metrica from "./components/Metrica";
 import TablaResultados from "./components/TablaResultados";
 import PanelBreakers from "./components/PanelBreakers";
@@ -70,6 +71,8 @@ export default function App() {
     cancelarEdicionEquipo,
     eliminarEquipo,
     editarEtiquetaFuncionEquipo,
+    previsualizarImportacionEquipos,
+    confirmarImportacionEquipos,
     equiposDe,
     tableros,
     crearTablero,
@@ -262,6 +265,11 @@ export default function App() {
                     error={errorEquipo}
                     editando={!!editandoEquipoId}
                     circuitoActivo={circuitoActivo}
+                  />
+
+                  <ImportarEquiposTexto
+                    onPrevisualizar={previsualizarImportacionEquipos}
+                    onConfirmar={confirmarImportacionEquipos}
                   />
                 </div>
 

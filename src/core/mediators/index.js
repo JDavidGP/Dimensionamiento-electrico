@@ -8,3 +8,4 @@ export { TableroMediator } from "./TableroMediator.js";
 export { OrigenMediator } from "./OrigenMediator.js";
 export { EtiquetadoMediator } from "./EtiquetadoMediator.js";
 export { PlanoMediator } from "./PlanoMediator.js";
+export { ImportacionMediator } from "./ImportacionMediator.js";
