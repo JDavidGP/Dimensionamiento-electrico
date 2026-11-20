@@ -6,6 +6,13 @@
 // (esCargaContinua), según NEC 210.19 / 215.2.
 export const CIRCUITO_VACIO = {
   nombre: "",
+  // Código corto/visible (ej. "TD1-C3") + descripción funcional —
+  // sistema de etiquetado, pedido explícito del usuario (2026-11-20).
+  // Ver modules/etiquetado/index.js: la etiqueta se autosugiere al
+  // abrir el formulario de un circuito NUEVO (ver useCircuitos.js),
+  // pero es editable, nunca forzada.
+  etiqueta: "",
+  funcion: "",
   tipo: "mixto", // "dedicado" | "mixto"
   fases: "mono", // "mono" | "bi" | "tri"
   voltaje: "120",
@@ -37,6 +44,9 @@ export const CIRCUITO_VACIO = {
 // tipoEquipoNEC activa la regla de demanda del Art. 220/430/etc.
 export const EQUIPO_VACIO = {
   nombre: "",
+  // Mismo sistema de etiquetado que CIRCUITO_VACIO — ver esa nota.
+  etiqueta: "",
+  funcion: "",
   cantidad: "1",
   modoEntrada: "potencia", // "potencia" | "corriente"
   valor: "",

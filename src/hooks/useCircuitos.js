@@ -42,12 +42,18 @@ export function useCircuitos() {
     App.config.set({ limites: { desbalanceFasesPct: num } });
   }
 
-  const [formCircuito, setFormCircuito] = useState(CIRCUITO_VACIO);
+  // Lazy initializer (función, no valor) — mismo criterio que
+  // `proyecto` arriba: solo se evalúa en el primer render, no en cada
+  // re-render. Acá circuitos/equipos todavía están vacíos ([]), así
+  // que la primera sugerencia siempre es "C1"/"E1" — correcto, pero
+  // calculado vía el mediador (no hardcodeado) para no duplicar la
+  // lógica de modules/etiquetado/index.js.
+  const [formCircuito, setFormCircuito] = useState(() => ({ ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, []) }));
   const [errorCircuito, setErrorCircuito] = useState("");
   const [editandoCircuitoId, setEditandoCircuitoId] = useState(null);
   const [circuitoActivoId, setCircuitoActivoId] = useState(null);
 
-  const [formEquipo, setFormEquipo] = useState(EQUIPO_VACIO);
+  const [formEquipo, setFormEquipo] = useState(() => ({ ...EQUIPO_VACIO, etiqueta: App.etiquetado.sugerirEquipo(null, []) }));
   const [errorEquipo, setErrorEquipo] = useState("");
   const [editandoEquipoId, setEditandoEquipoId] = useState(null);
 
@@ -210,6 +216,18 @@ export function useCircuitos() {
   }
 
   // --- CIRCUITO ---
+  // Sistema de etiquetado (ver modules/etiquetado/index.js) — sugiere
+  // "C{n}" al abrir el formulario para un circuito NUEVO. Un circuito
+  // todavía no tiene tablero asignado en este punto del flujo (eso
+  // pasa después, desde TablaResultados — ver asignarCircuitoATablero
+  // más abajo), así que la sugerencia es project-wide, sin prefijo de
+  // tablero; el usuario la puede reescribir a mano (ej. "TD1-C3") una
+  // vez que sepa a qué tablero va. Nunca pisa un valor que el usuario
+  // ya haya tocado — solo se calcula al resetear a un formulario vacío.
+  function formCircuitoVacioConSugerencia() {
+    return { ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, circuitos) };
+  }
+
   function guardarCircuito() {
     const error = App.validacion.validarFormularioCircuito(formCircuito);
     if (error) return setErrorCircuito(error);
@@ -219,14 +237,26 @@ export function useCircuitos() {
       editandoCircuitoId
     );
 
+    let circuitosActualizados;
     if (editandoCircuitoId) {
-      setCircuitos(circuitos.map((c) => (c.id === editandoCircuitoId ? circuito : c)));
+      circuitosActualizados = circuitos.map((c) => (c.id === editandoCircuitoId ? circuito : c));
+      setCircuitos(circuitosActualizados);
     } else {
-      setCircuitos([...circuitos, circuito]);
+      circuitosActualizados = [...circuitos, circuito];
+      setCircuitos(circuitosActualizados);
       setCircuitoActivoId(circuito.id);
+      // El circuito recién creado queda activo de una — la etiqueta
+      // sugerida del formulario de equipo debe reflejar ESE circuito,
+      // no el que estaba activo antes (o ninguno). Solo toca `etiqueta`
+      // (no todo el formulario): si el usuario ya había empezado a
+      // escribir un equipo antes de crear este circuito, no se pierde.
+      if (!editandoEquipoId) {
+        const sugerido = formEquipoVacioConSugerencia(equipos, circuito.id, circuitosActualizados);
+        setFormEquipo((prev) => ({ ...prev, etiqueta: sugerido.etiqueta }));
+      }
     }
     setEditandoCircuitoId(null);
-    setFormCircuito(CIRCUITO_VACIO);
+    setFormCircuito({ ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, circuitosActualizados) });
   }
 
   function iniciarEdicionCircuito(id) {
@@ -238,7 +268,7 @@ export function useCircuitos() {
   }
 
   function cancelarEdicionCircuito() {
-    setFormCircuito(CIRCUITO_VACIO);
+    setFormCircuito(formCircuitoVacioConSugerencia());
     setEditandoCircuitoId(null);
     setErrorCircuito("");
   }
@@ -259,6 +289,24 @@ export function useCircuitos() {
   }
 
   // --- EQUIPO ---
+  // Mismo criterio que formCircuitoVacioConSugerencia, pero un equipo
+  // SÍ tiene un circuito conocido en este punto (circuitoActivoId) —
+  // la sugerencia usa la etiqueta de ESE circuito como prefijo (ej.
+  // "TD1-C3-E1"), o cae a "E{n}" a secas si el circuito todavía no
+  // tiene etiqueta propia.
+  // `circuitosActuales`/`circuitoIdActual` son opcionales — por defecto
+  // usan el estado del hook (`circuitos`/`circuitoActivoId`), pero
+  // guardarCircuito() los pasa explícitos cuando ACABA de crear y
+  // activar un circuito nuevo: `setCircuitoActivoId` todavía no se
+  // refleja en este mismo closure (React no actualiza el estado hasta
+  // el próximo render), así que sin este parámetro la sugerencia del
+  // equipo se calcularía contra el circuito activo VIEJO.
+  function formEquipoVacioConSugerencia(equiposActuales, circuitoIdActual = circuitoActivoId, circuitosActuales = circuitos) {
+    const circuito = circuitosActuales.find((c) => c.id === circuitoIdActual);
+    const equiposDelCircuito = equiposActuales.filter((e) => e.circuitoId === circuitoIdActual);
+    return { ...EQUIPO_VACIO, etiqueta: App.etiquetado.sugerirEquipo(circuito?.etiqueta, equiposDelCircuito) };
+  }
+
   function guardarEquipo() {
     if (!circuitoActivoId) {
       return setErrorEquipo("Primero crea o selecciona un circuito.");
@@ -272,13 +320,16 @@ export function useCircuitos() {
       editandoEquipoId
     );
 
+    let equiposActualizados;
     if (editandoEquipoId) {
-      setEquipos(equipos.map((e) => (e.id === editandoEquipoId ? equipo : e)));
+      equiposActualizados = equipos.map((e) => (e.id === editandoEquipoId ? equipo : e));
+      setEquipos(equiposActualizados);
     } else {
-      setEquipos([...equipos, equipo]);
+      equiposActualizados = [...equipos, equipo];
+      setEquipos(equiposActualizados);
     }
     setEditandoEquipoId(null);
-    setFormEquipo(EQUIPO_VACIO);
+    setFormEquipo(formEquipoVacioConSugerencia(equiposActualizados));
   }
 
   function iniciarEdicionEquipo(id) {
@@ -291,7 +342,7 @@ export function useCircuitos() {
   }
 
   function cancelarEdicionEquipo() {
-    setFormEquipo(EQUIPO_VACIO);
+    setFormEquipo(formEquipoVacioConSugerencia(equipos));
     setEditandoEquipoId(null);
     setErrorEquipo("");
   }
@@ -501,8 +552,8 @@ export function useCircuitos() {
     setNodosDiagrama([]);
     setConexionesDiagrama([]);
     setCircuitoActivoId(null);
-    setFormCircuito(CIRCUITO_VACIO);
-    setFormEquipo(EQUIPO_VACIO);
+    setFormCircuito({ ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, []) });
+    setFormEquipo({ ...EQUIPO_VACIO, etiqueta: App.etiquetado.sugerirEquipo(null, []) });
     setEditandoCircuitoId(null);
     setEditandoEquipoId(null);
     setErrorCircuito("");

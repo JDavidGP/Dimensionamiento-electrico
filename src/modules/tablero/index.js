@@ -22,6 +22,11 @@ import { generarId } from "../../shared/utils/id.js";
 function normalizar(datos = {}) {
   return {
     nombre: datos.nombre?.trim() || "Tablero sin nombre",
+    // Sistema de etiquetado (ver modules/etiquetado/index.js) — código
+    // corto (ej. "TD1") y función, puramente descriptivos, distintos
+    // de `notas` (memo libre de la fuente de energía) y del id interno.
+    etiqueta: datos.etiqueta?.trim() || "",
+    funcion: datos.funcion || "",
     tensionAlimentacion: Number(datos.tensionAlimentacion) || 0,
     fases: datos.fases || "mono",
     // Capacidad contratada (kW) — documental, informativa, pedido

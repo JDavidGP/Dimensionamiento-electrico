@@ -68,6 +68,15 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
         <input style={inputStyle()} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Iluminación cocina" />
       </Campo>
 
+      <div style={{ display: "grid", gridTemplateColumns: "0.6fr 1.4fr", gap: 10 }}>
+        <Campo label="Etiqueta">
+          <input style={inputStyle()} value={form.etiqueta} onChange={(e) => setForm({ ...form, etiqueta: e.target.value })} placeholder="Ej: TD1-C3" />
+        </Campo>
+        <Campo label="Función (opcional)">
+          <input style={inputStyle()} value={form.funcion} onChange={(e) => setForm({ ...form, funcion: e.target.value })} placeholder="Ej: Ilumina pasillo principal" />
+        </Campo>
+      </div>
+
       <Campo label="Tipo de circuito">
         <div style={{ display: "flex", gap: 8 }}>
           <BotonPill activo={form.tipo === "dedicado"} onClick={() => setForm({ ...form, tipo: "dedicado" })}>

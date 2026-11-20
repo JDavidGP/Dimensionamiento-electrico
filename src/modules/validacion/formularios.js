@@ -34,6 +34,10 @@ export function formularioACircuito(form, idExistente = null) {
   return {
     id: idExistente ?? generarId(),
     nombre: form.nombre,
+    // Sistema de etiquetado (ver modules/etiquetado/index.js) — código
+    // corto y función, puramente descriptivos, no son el id interno.
+    etiqueta: form.etiqueta || "",
+    funcion: form.funcion || "",
     tipo: form.tipo,
     fases: form.fases,
     voltaje: parseFloat(form.voltaje),
@@ -55,6 +59,8 @@ export function formularioACircuito(form, idExistente = null) {
 export function circuitoAFormulario(circuito) {
   return {
     nombre: circuito.nombre,
+    etiqueta: circuito.etiqueta || "",
+    funcion: circuito.funcion || "",
     tipo: circuito.tipo,
     fases: circuito.fases,
     voltaje: String(circuito.voltaje),
@@ -104,6 +110,8 @@ export function formularioAEquipo(form, circuitoId, idExistente = null) {
     id: idExistente ?? generarId(),
     circuitoId,
     nombre: form.nombre,
+    etiqueta: form.etiqueta || "",
+    funcion: form.funcion || "",
     cantidad: parseInt(form.cantidad, 10),
     modoEntrada: form.modoEntrada,
     valor: parseFloat(form.valor),
@@ -118,6 +126,8 @@ export function formularioAEquipo(form, circuitoId, idExistente = null) {
 export function equipoAFormulario(equipo) {
   return {
     nombre: equipo.nombre,
+    etiqueta: equipo.etiqueta || "",
+    funcion: equipo.funcion || "",
     cantidad: String(equipo.cantidad),
     modoEntrada: equipo.modoEntrada,
     valor: String(equipo.valor),

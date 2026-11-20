@@ -6,3 +6,4 @@ export { DocumentoMediator } from "./DocumentoMediator.js";
 export { DiagramaMediator } from "./DiagramaMediator.js";
 export { TableroMediator } from "./TableroMediator.js";
 export { OrigenMediator } from "./OrigenMediator.js";
+export { EtiquetadoMediator } from "./EtiquetadoMediator.js";

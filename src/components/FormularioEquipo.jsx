@@ -56,6 +56,15 @@ export default function FormularioEquipo({ form, setForm, onGuardar, onCancelar,
         <input style={inputStyle()} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Refrigerador" />
       </Campo>
 
+      <div style={{ display: "grid", gridTemplateColumns: "0.6fr 1.4fr", gap: 10 }}>
+        <Campo label="Etiqueta">
+          <input style={inputStyle()} value={form.etiqueta} onChange={(e) => setForm({ ...form, etiqueta: e.target.value })} placeholder="Ej: TD1-C3-E1" />
+        </Campo>
+        <Campo label="Función (opcional)">
+          <input style={inputStyle()} value={form.funcion} onChange={(e) => setForm({ ...form, funcion: e.target.value })} placeholder="Ej: Conserva alimentos de la cocina" />
+        </Campo>
+      </div>
+
       <Campo label="Dato disponible en ficha técnica">
         <div style={{ display: "flex", gap: 8 }}>
           {[

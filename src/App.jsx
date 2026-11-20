@@ -11,6 +11,7 @@ import PanelFuentesEnergia from "./components/PanelFuentesEnergia";
 import SelectorNormativa from "./components/SelectorNormativa";
 import DiagramaUnifilar from "./components/DiagramaUnifilar";
 import InformeTecnico from "./components/InformeTecnico";
+import PanelDirectorio from "./components/PanelDirectorio";
 import TabsViewPager from "./components/TabsViewPager";
 import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
@@ -18,15 +19,15 @@ import { colores, fuentes } from "./styles/colores";
 import { OPCIONES_TIPO_INSTALACION } from "./shared/constants/constantes.js";
 
 // Tab layout + ViewPager2 (pedido del usuario, retomado 2026-11-19):
-// 5 pestañas, escalonadas por el ORDEN en que se van ingresando los
+// 6 pestañas, escalonadas por el ORDEN en que se van ingresando los
 // datos — Normativa (lo primero que se configura) → Tableros (incluye
 // fuentes de energía) → Circuitos y resultados (el grueso de la carga
 // de datos + su feedback inmediato, por eso van juntos, no separados:
 // la tabla de resultados reacciona en vivo mientras se cargan
-// circuitos/equipos) → Diagrama unifilar → Informe técnico (la
-// pestaña que había quedado pendiente "para cuando exista esa
-// función" — ya existe, ver DocumentoMediator.memoriaTecnica /
-// InformeTecnico.jsx). Ver TabsViewPager.jsx para el mecanismo de swipe.
+// circuitos/equipos) → Diagrama unifilar → Informe técnico → Directorio
+// (sistema de etiquetado, pedido 2026-11-20 — ver
+// modules/etiquetado/index.js y PanelDirectorio.jsx). Ver
+// TabsViewPager.jsx para el mecanismo de swipe.
 export default function App() {
   const {
     proyecto,
@@ -303,6 +304,15 @@ export default function App() {
                   transformadores={transformadores}
                   listaIntegridad={listaIntegridad}
                 />
+              </div>
+            ),
+          },
+          {
+            id: "directorio",
+            label: "Directorio",
+            contenido: (
+              <div style={{ padding: "20px 24px" }}>
+                <PanelDirectorio tableros={tableros} circuitos={circuitos} equipos={equipos} />
               </div>
             ),
           },

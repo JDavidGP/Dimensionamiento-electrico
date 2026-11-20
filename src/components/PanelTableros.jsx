@@ -20,6 +20,12 @@ const FASES = [
 // valores estándar (ver abrirEdicion).
 const FORM_VACIO = {
   nombre: "",
+  // Sistema de etiquetado (ver modules/etiquetado/index.js) — código
+  // corto (ej. "TD1", autosugerido al abrir "+ Nuevo tablero", ver
+  // abrirCreacion más abajo) y función, descriptivos, distintos de
+  // `notas` (memo libre de la fuente de energía).
+  etiqueta: "",
+  funcion: "",
   tensionAlimentacion: "",
   tensionManual: false,
   fases: "mono",
@@ -601,7 +607,7 @@ export default function PanelTableros({
   }
 
   function abrirCreacion() {
-    setForm({ ...FORM_VACIO, tensionAlimentacion: tensionPorDefecto("mono") });
+    setForm({ ...FORM_VACIO, tensionAlimentacion: tensionPorDefecto("mono"), etiqueta: App.etiquetado.sugerirTablero(tableros) });
     setEditandoId(null);
     setPadreForzado(null);
     setFormAbierto(true);
@@ -612,7 +618,12 @@ export default function PanelTableros({
   // mismo formulario de siempre, solo que el campo "Tablero padre" no
   // hace falta buscarlo, ya se sabe de dónde cuelga.
   function abrirCreacionSubtablero(tableroPadre) {
-    setForm({ ...FORM_VACIO, tensionAlimentacion: tensionPorDefecto("mono"), tableroPadreId: tableroPadre.id });
+    setForm({
+      ...FORM_VACIO,
+      tensionAlimentacion: tensionPorDefecto("mono"),
+      tableroPadreId: tableroPadre.id,
+      etiqueta: App.etiquetado.sugerirTablero(tableros),
+    });
     setEditandoId(null);
     setPadreForzado(tableroPadre);
     setFormAbierto(true);
@@ -629,6 +640,8 @@ export default function PanelTableros({
     const conf = t.conmutacion;
     setForm({
       nombre: t.nombre,
+      etiqueta: t.etiqueta || "",
+      funcion: t.funcion || "",
       tensionAlimentacion: String(t.tensionAlimentacion),
       tensionManual: !estandar.includes(Number(t.tensionAlimentacion)),
       fases: t.fases,
@@ -770,6 +783,15 @@ export default function PanelTableros({
               placeholder="Ej: Tablero principal, Subpanel cocina"
             />
           </Campo>
+
+          <div style={{ display: "grid", gridTemplateColumns: "0.6fr 1.4fr", gap: 10 }}>
+            <Campo label="Etiqueta">
+              <input style={inputStyle()} value={form.etiqueta} onChange={(e) => setForm({ ...form, etiqueta: e.target.value })} placeholder="Ej: TD1" />
+            </Campo>
+            <Campo label="Función (opcional)">
+              <input style={inputStyle()} value={form.funcion} onChange={(e) => setForm({ ...form, funcion: e.target.value })} placeholder="Ej: Alimenta el área de producción" />
+            </Campo>
+          </div>
 
           <Campo label="Fases del alimentador">
             <div style={{ display: "flex", gap: 6 }}>
