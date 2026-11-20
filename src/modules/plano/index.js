@@ -27,7 +27,7 @@
 import { generarId } from "../../shared/utils/id.js";
 import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo } from "../geometria/index.js";
 
-export { calcularEscala, imagenAModelo, modeloAImagen } from "./calibracion.js";
+export { calcularEscala, calcularEscalaPorPerimetro, imagenAModelo, modeloAImagen } from "./calibracion.js";
 // transformVistaInicial/aPantalla/aModelo/aplicarZoom/aplicarPan/
 // ajustarAVentana/ZOOM_MIN/ZOOM_MAX se mudaron a modules/geometria/
 // vistaZoomPan.js (usuario, 2026-11-20, al pedir lo mismo para el
@@ -65,7 +65,16 @@ export function nodoCercano(puntoModelo, nodos = [], radio = RADIO_SNAP_METROS) 
 }
 
 export function crearSegmento(nodoAId, nodoBId, tipo = "pared") {
-  return { id: generarId(), nodoAId, nodoBId, tipo };
+  // espesorM: "" = no medido todavía — solo tiene sentido para tipo
+  // "pared" (un conductor no tiene "espesor"). Se mide APARTE, después
+  // de trazar la pared (usuario, 2026-11-20: "medir el ancho visible
+  // de una pared en la foto, 2 clicks" — ver editarSegmento).
+  return { id: generarId(), nodoAId, nodoBId, tipo, espesorM: "" };
+}
+
+/** Devuelve el segmento con los cambios aplicados — no muta el original (mismo criterio que editarTablero). */
+export function editarSegmento(segmento, cambios) {
+  return { ...segmento, ...cambios };
 }
 
 /**

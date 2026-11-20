@@ -658,6 +658,14 @@ export function useCircuitos() {
     return resultado;
   }
 
+  /** Calibración alternativa por perímetro total (usuario, 2026-11-20) — mismo patrón que calibrarPlano, otra fuente del escalar. */
+  function calibrarPlanoPorPerimetro(puntosImagenContorno, perimetroRealM) {
+    const resultado = App.plano.calcularEscalaPorPerimetro(puntosImagenContorno, perimetroRealM);
+    if (!resultado.ok) return resultado;
+    setPlanoCalibracion(resultado.calibracion);
+    return resultado;
+  }
+
   // Convierte un punto YA en espacio imagen (píxeles) a metros reales y
   // lo registra como nodo nuevo — o reutiliza uno existente si cae
   // dentro del radio de "pegado" (ver RADIO_SNAP_METROS), para que
@@ -693,6 +701,12 @@ export function useCircuitos() {
 
   function eliminarSegmentoPlano(segmentoId) {
     setSegmentosPlano(App.plano.eliminarSegmento(segmentoId, segmentosPlano));
+  }
+
+  function editarSegmentoPlano(segmentoId, cambios) {
+    const segmento = segmentosPlano.find((s) => s.id === segmentoId);
+    if (!segmento) return;
+    setSegmentosPlano(segmentosPlano.map((s) => (s.id === segmentoId ? App.plano.editarSegmento(segmento, cambios) : s)));
   }
 
   // Registra una habitación a partir de una cadena de nodos YA cerrada
@@ -1025,12 +1039,14 @@ export function useCircuitos() {
     quitarImagenPlano,
     planoCalibracion,
     calibrarPlano,
+    calibrarPlanoPorPerimetro,
     nodosPlano,
     segmentosPlano,
     agregarNodoPlano,
     agregarSegmentoPlano,
     eliminarNodoPlano,
     eliminarSegmentoPlano,
+    editarSegmentoPlano,
     habitacionesPlano,
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,

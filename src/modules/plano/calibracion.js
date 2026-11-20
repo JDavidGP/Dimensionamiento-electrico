@@ -31,10 +31,55 @@ export function calcularEscala(puntoImagenA, puntoImagenB, distanciaRealM) {
   return {
     ok: true,
     calibracion: {
+      metodo: "dos_puntos",
       puntoA: puntoImagenA,
       puntoB: puntoImagenB,
       distanciaRealM,
       escalaMetrosPorPixel: distanciaRealM / distanciaPixeles,
+    },
+  };
+}
+
+/**
+ * Calibración ALTERNATIVA (usuario, 2026-11-20): en vez de 2 puntos +
+ * una distancia conocida entre ellos, el instalador traza el contorno
+ * exterior completo (como ya hace con una pared) y declara el
+ * PERÍMETRO REAL total de ese contorno — útil cuando conoce la
+ * medida total del edificio/ambiente pero no una distancia puntual
+ * entre 2 esquinas específicas. La escala sale de dividir el
+ * perímetro real por el perímetro del mismo contorno medido en
+ * píxeles de imagen (cierra el último punto con el primero, igual
+ * criterio que perimetroPoligono en modules/geometria/).
+ *
+ * @param {{x:number,y:number}[]} puntosImagen - contorno trazado, en orden (no hace falta repetir el primero al final)
+ * @param {number} perimetroRealM
+ * @returns {{ok:true, calibracion:object} | {ok:false, motivo:string}}
+ */
+export function calcularEscalaPorPerimetro(puntosImagen, perimetroRealM) {
+  if (!Array.isArray(puntosImagen) || puntosImagen.length < 3) {
+    return { ok: false, motivo: "Hacen falta al menos 3 puntos para trazar un contorno cerrado." };
+  }
+  if (!(perimetroRealM > 0)) {
+    return { ok: false, motivo: "El perímetro real debe ser mayor a 0." };
+  }
+
+  let perimetroPixeles = 0;
+  for (let i = 0; i < puntosImagen.length; i++) {
+    const a = puntosImagen[i];
+    const b = puntosImagen[(i + 1) % puntosImagen.length];
+    perimetroPixeles += Math.hypot(b.x - a.x, b.y - a.y);
+  }
+  if (perimetroPixeles === 0) {
+    return { ok: false, motivo: "El contorno trazado no tiene longitud (los puntos coinciden)." };
+  }
+
+  return {
+    ok: true,
+    calibracion: {
+      metodo: "perimetro",
+      puntosContorno: puntosImagen,
+      perimetroRealM,
+      escalaMetrosPorPixel: perimetroRealM / perimetroPixeles,
     },
   };
 }

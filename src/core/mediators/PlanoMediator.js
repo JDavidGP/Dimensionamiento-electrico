@@ -20,6 +20,7 @@ import {
   crearNodo,
   nodoCercano,
   crearSegmento,
+  editarSegmento,
   eliminarNodo,
   eliminarSegmento,
   crearHabitacion,
@@ -32,6 +33,7 @@ import {
   eliminarMarcadorEquipo,
   liberarMarcadoresDeEntidad,
   calcularEscala,
+  calcularEscalaPorPerimetro,
   imagenAModelo,
   modeloAImagen,
   RADIO_SNAP_METROS,
@@ -72,6 +74,7 @@ export const PlanoMediator = {
   crearNodo,
   nodoCercano,
   crearSegmento,
+  editarSegmento,
   eliminarNodo,
   eliminarSegmento,
   crearHabitacion,
@@ -81,6 +84,7 @@ export const PlanoMediator = {
   eliminarRutaConductor,
 
   calcularEscala,
+  calcularEscalaPorPerimetro,
   imagenAModelo,
   modeloAImagen,
 

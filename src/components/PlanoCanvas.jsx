@@ -160,7 +160,7 @@ export default function PlanoCanvas({
     if (!imagen || !onClickImagen || arrastreRef.current?.seMovio || arrastreAmbienteRef.current?.seMovio) return;
     if (modo === "mover-ambiente") return; // ese modo es solo para arrastrar, un click sin arrastre no hace nada
     let puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
-    if (asistenciaBordes && (modo === "pared" || modo === "conductor")) puntoImagen = ajustarABorde(puntoImagen);
+    if (asistenciaBordes && (modo === "pared" || modo === "conductor" || modo === "calibrar-perimetro" || modo === "espesor")) puntoImagen = ajustarABorde(puntoImagen);
     onClickImagen(puntoImagen);
   }
 
@@ -270,17 +270,32 @@ export default function PlanoCanvas({
                 const enTrazo = nodoIdsTrazoActual.includes(seg.nodoAId) && nodoIdsTrazoActual.includes(seg.nodoBId);
                 const esConductor = seg.tipo === "conductor";
                 return (
-                  <line
-                    key={seg.id}
-                    x1={a.x}
-                    y1={a.y}
-                    x2={b.x}
-                    y2={b.y}
-                    stroke={enTrazo ? colores.warn : esConductor ? colores.copper : colores.ok}
-                    strokeWidth={esConductor ? grosorLinea * 0.7 : grosorLinea}
-                    strokeDasharray={esConductor ? `${grosorLinea} ${grosorLinea}` : undefined}
-                    strokeLinecap="round"
-                  />
+                  <React.Fragment key={seg.id}>
+                    <line
+                      x1={a.x}
+                      y1={a.y}
+                      x2={b.x}
+                      y2={b.y}
+                      stroke={enTrazo ? colores.warn : esConductor ? colores.copper : colores.ok}
+                      strokeWidth={esConductor ? grosorLinea * 0.7 : grosorLinea}
+                      strokeDasharray={esConductor ? `${grosorLinea} ${grosorLinea}` : undefined}
+                      strokeLinecap="round"
+                    />
+                    {/* Espesor medido (usuario, 2026-11-20: "medir el ancho visible de
+                        una pared, 2 clicks") — solo registro visual, no alimenta ningún
+                        cálculo todavía. */}
+                    {seg.tipo === "pared" && seg.espesorM > 0 && (
+                      <text
+                        x={(a.x + b.x) / 2}
+                        y={(a.y + b.y) / 2 - 4 / transformVista.zoom}
+                        textAnchor="middle"
+                        fontSize={11 / transformVista.zoom}
+                        fill={colores.textDim}
+                      >
+                        {(seg.espesorM * 100).toFixed(1)}cm
+                      </text>
+                    )}
+                  </React.Fragment>
                 );
               })}
 

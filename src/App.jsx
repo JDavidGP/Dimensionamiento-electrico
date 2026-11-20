@@ -107,12 +107,14 @@ export default function App() {
     quitarImagenPlano,
     planoCalibracion,
     calibrarPlano,
+    calibrarPlanoPorPerimetro,
     nodosPlano,
     segmentosPlano,
     agregarNodoPlano,
     agregarSegmentoPlano,
     eliminarNodoPlano,
     eliminarSegmentoPlano,
+    editarSegmentoPlano,
     habitacionesPlano,
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
@@ -368,12 +370,14 @@ export default function App() {
                           quitarImagenPlano={quitarImagenPlano}
                           planoCalibracion={planoCalibracion}
                           calibrarPlano={calibrarPlano}
+                          calibrarPlanoPorPerimetro={calibrarPlanoPorPerimetro}
                           nodosPlano={nodosPlano}
                           segmentosPlano={segmentosPlano}
                           agregarNodoPlano={agregarNodoPlano}
                           agregarSegmentoPlano={agregarSegmentoPlano}
                           eliminarNodoPlano={eliminarNodoPlano}
                           eliminarSegmentoPlano={eliminarSegmentoPlano}
+                          editarSegmentoPlano={editarSegmentoPlano}
                           habitacionesPlano={habitacionesPlano}
                           cerrarHabitacionPlano={cerrarHabitacionPlano}
                           eliminarHabitacionPlano={eliminarHabitacionPlano}

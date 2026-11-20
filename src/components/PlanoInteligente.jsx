@@ -19,7 +19,9 @@ const MODOS = [
   { valor: "mover", label: "Mover vista", ayuda: "Arrastrá para mover, rueda del mouse (o los botones +/−) para zoom." },
   { valor: "perspectiva", label: "Corregir perspectiva", ayuda: "Para fotos: hacé click en las 4 esquinas de un rectángulo real (ej. una habitación), en orden, dando toda la vuelta." },
   { valor: "calibrar", label: "Calibrar", ayuda: "Hacé click en dos puntos cuya distancia real conozcas." },
+  { valor: "calibrar-perimetro", label: "Calibrar por perímetro", ayuda: "Trazá el contorno exterior completo (3+ puntos) y declará su perímetro real total." },
   { valor: "pared", label: "Trazar pared", ayuda: "Click para ir agregando puntos. Volvé al punto de inicio para cerrar un ambiente." },
+  { valor: "espesor", label: "Medir espesor", ayuda: "Marcá 2 puntos a los dos lados de una pared ya trazada — se mide el espesor real y se guarda en la pared más cercana." },
   { valor: "conductor", label: "Trazar conductor", ayuda: "Click para ir agregando el recorrido de un conductor. No hace falta cerrarlo — terminalo con el botón." },
   { valor: "ambiente", label: "Generar ambiente", ayuda: "Completá el nombre y la medida abajo, y hacé click en el plano donde va el CENTRO del ambiente." },
   { valor: "mover-ambiente", label: "Mover ambiente", ayuda: "Arrastrá un ambiente ya trazado (manual o generado) para reposicionarlo, manteniendo su forma y medida exactas." },
@@ -37,12 +39,14 @@ export default function PlanoInteligente({
   quitarImagenPlano,
   planoCalibracion,
   calibrarPlano,
+  calibrarPlanoPorPerimetro,
   nodosPlano,
   segmentosPlano,
   agregarNodoPlano,
   agregarSegmentoPlano,
   eliminarNodoPlano,
   eliminarSegmentoPlano,
+  editarSegmentoPlano,
   habitacionesPlano,
   cerrarHabitacionPlano,
   eliminarHabitacionPlano,
@@ -79,6 +83,21 @@ export default function PlanoInteligente({
   // formulario de distancia real antes de confirmar).
   const [puntosCalibracion, setPuntosCalibracion] = useState([]);
   const [distanciaRealInput, setDistanciaRealInput] = useState("");
+
+  // Calibración alternativa por perímetro (usuario, 2026-11-20): el
+  // instalador traza un contorno de N puntos (no un grafo persistido,
+  // efímero — igual criterio que puntosCalibracion) y, con 3 o más,
+  // puede declarar el perímetro real total en vez de una distancia
+  // puntual entre 2 esquinas.
+  const [puntosContornoCalibracion, setPuntosContornoCalibracion] = useState([]);
+  const [perimetroRealInput, setPerimetroRealInput] = useState("");
+
+  // Medir espesor de pared (usuario, 2026-11-20): 2 clicks a los dos
+  // lados del ancho visible de una pared YA trazada — la distancia
+  // entre esos 2 puntos, convertida a metros con la escala actual, se
+  // guarda como espesorM de la pared más cercana al punto medio de
+  // esos 2 clicks (nunca se adivina CUÁL pared si no hay ninguna cerca).
+  const [puntosEspesor, setPuntosEspesor] = useState([]);
 
   // Corrección de perspectiva — 4 puntos (esquinas del rectángulo real
   // en la foto), en orden; al completar los 4 se pide ancho/alto real.
@@ -130,6 +149,9 @@ export default function PlanoInteligente({
     setModo(nuevoModo);
     setPuntosCalibracion([]);
     setDistanciaRealInput("");
+    setPuntosContornoCalibracion([]);
+    setPerimetroRealInput("");
+    setPuntosEspesor([]);
     setPuntosPerspectiva([]);
     setAnchoRealInput("");
     setAltoRealInput("");
@@ -164,6 +186,40 @@ export default function PlanoInteligente({
       if (puntosCalibracion.length < 2) {
         setPuntosCalibracion([...puntosCalibracion, puntoImagen]);
       }
+      return;
+    }
+
+    if (modo === "calibrar-perimetro") {
+      setPuntosContornoCalibracion([...puntosContornoCalibracion, puntoImagen]);
+      return;
+    }
+
+    if (modo === "espesor") {
+      if (puntosEspesor.length < 1) {
+        setPuntosEspesor([puntoImagen]);
+        return;
+      }
+      const escala = planoCalibracion?.escalaMetrosPorPixel;
+      const puntoA = puntosEspesor[0];
+      setPuntosEspesor([]);
+      if (!escala) {
+        mostrarAviso("Calibrá el plano primero.");
+        return;
+      }
+      const espesorM = Math.hypot(puntoImagen.x - puntoA.x, puntoImagen.y - puntoA.y) * escala;
+      const puntoMedioImagen = { x: (puntoImagen.x + puntoA.x) / 2, y: (puntoImagen.y + puntoA.y) / 2 };
+      const puntoMedioModelo = App.plano.imagenAModelo(puntoMedioImagen, escala);
+      const segmento = segmentoMasCercano(puntoMedioModelo, nodosPlano, segmentosPlano);
+      if (!segmento) {
+        mostrarAviso("No hay ninguna pared cerca de esos 2 puntos — no se guardó nada.");
+        return;
+      }
+      if (segmento.tipo !== "pared") {
+        mostrarAviso(`El segmento más cercano es un "${segmento.tipo}", no una pared — no se guardó nada.`);
+        return;
+      }
+      editarSegmentoPlano(segmento.id, { espesorM });
+      mostrarAviso(`Espesor guardado: ${(espesorM * 100).toFixed(1)} cm.`);
       return;
     }
 
@@ -273,6 +329,18 @@ export default function PlanoInteligente({
     }
   }
 
+  function confirmarCalibracionPerimetro(e) {
+    e.preventDefault();
+    const perimetro = parseFloat(perimetroRealInput);
+    const resultado = calibrarPlanoPorPerimetro(puntosContornoCalibracion, perimetro);
+    if (!resultado.ok) {
+      mostrarAviso(resultado.motivo);
+      return;
+    }
+    mostrarAviso(`Calibrado por perímetro: ${resultado.calibracion.escalaMetrosPorPixel.toFixed(5)} m por píxel de imagen.`);
+    cambiarModo("pared");
+  }
+
   function confirmarCalibracion(e) {
     e.preventDefault();
     const distancia = parseFloat(distanciaRealInput);
@@ -369,7 +437,7 @@ export default function PlanoInteligente({
                   </button>
                 </>
               )}
-              {(modo === "pared" || modo === "conductor") && planoCalibracion && (
+              {(modo === "calibrar-perimetro" || ((modo === "pared" || modo === "conductor" || modo === "espesor") && planoCalibracion)) && (
                 <>
                   {" "}·{" "}
                   <label style={{ cursor: "pointer" }}>
@@ -462,7 +530,15 @@ export default function PlanoInteligente({
           marcadoresEquipo={marcadoresEquipoPlano}
           habitaciones={habitacionesPlano}
           escalaMetrosPorPixel={planoCalibracion?.escalaMetrosPorPixel ?? null}
-          puntosGuiaPendientes={modo === "perspectiva" ? puntosPerspectiva : puntosCalibracion}
+          puntosGuiaPendientes={
+            modo === "perspectiva"
+              ? puntosPerspectiva
+              : modo === "calibrar-perimetro"
+                ? puntosContornoCalibracion
+                : modo === "espesor"
+                  ? puntosEspesor
+                  : puntosCalibracion
+          }
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
           onArrastrarHabitacion={moverHabitacionPlano}
@@ -538,10 +614,64 @@ export default function PlanoInteligente({
           </form>
         )}
 
+        {modo === "calibrar-perimetro" && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 10.5, color: colores.textDim, marginBottom: 8 }}>
+              {puntosContornoCalibracion.length} punto{puntosContornoCalibracion.length !== 1 ? "s" : ""} trazado{puntosContornoCalibracion.length !== 1 ? "s" : ""}
+              {puntosContornoCalibracion.length < 3 && " — agregá al menos 3 para declarar el perímetro."}
+            </div>
+            {puntosContornoCalibracion.length >= 3 && (
+              <form onSubmit={confirmarCalibracionPerimetro} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Perímetro real de ese contorno (metros):</div>
+                  <input
+                    style={inputStyle()}
+                    type="number"
+                    step="0.01"
+                    autoFocus
+                    value={perimetroRealInput}
+                    onChange={(e) => setPerimetroRealInput(e.target.value)}
+                    placeholder="Ej: 60"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!perimetroRealInput}
+                  style={{ padding: "8px 16px", borderRadius: 3, border: "none", background: perimetroRealInput ? colores.copper : colores.border, color: "#171512", fontWeight: 700, fontSize: 12.5, cursor: perimetroRealInput ? "pointer" : "not-allowed" }}
+                >
+                  Calibrar
+                </button>
+              </form>
+            )}
+            <button
+              type="button"
+              onClick={() => setPuntosContornoCalibracion([])}
+              style={{ marginTop: 8, padding: "6px 12px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
+            >
+              Reiniciar trazo
+            </button>
+          </div>
+        )}
+
+        {modo === "espesor" && (
+          <div style={{ fontSize: 10.5, color: colores.textDim, marginTop: 10 }}>
+            {puntosEspesor.length === 0 ? "Click en un lado de la pared." : "Click en el otro lado de la pared."}
+          </div>
+        )}
+
         {planoCalibracion && (
           <div style={{ fontSize: 10.5, color: colores.textDim, marginTop: 10 }}>
-            Calibrado: {planoCalibracion.distanciaRealM}m = {Math.round(planoCalibracion.distanciaRealM / planoCalibracion.escalaMetrosPorPixel)}px de imagen
-            ({planoCalibracion.escalaMetrosPorPixel.toFixed(5)} m/px). <button type="button" onClick={() => cambiarModo("calibrar")} style={{ background: "none", border: "none", color: colores.copper, fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 10.5 }}>Recalibrar</button>
+            {planoCalibracion.metodo === "perimetro" ? (
+              <>
+                Calibrado por perímetro: {planoCalibracion.perimetroRealM}m real
+              </>
+            ) : (
+              <>
+                Calibrado: {planoCalibracion.distanciaRealM}m = {Math.round(planoCalibracion.distanciaRealM / planoCalibracion.escalaMetrosPorPixel)}px de imagen
+              </>
+            )}
+            {" "}({planoCalibracion.escalaMetrosPorPixel.toFixed(5)} m/px).{" "}
+            <button type="button" onClick={() => cambiarModo("calibrar")} style={{ background: "none", border: "none", color: colores.copper, fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 10.5 }}>Recalibrar</button>
           </div>
         )}
       </div>
