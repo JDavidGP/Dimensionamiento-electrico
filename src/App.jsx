@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Header from "./components/Header";
 import BarraProyecto from "./components/BarraProyecto";
 import FormularioCircuito from "./components/FormularioCircuito";
@@ -15,6 +15,7 @@ import InformeTecnico from "./components/InformeTecnico";
 import PanelDirectorio from "./components/PanelDirectorio";
 import PlanoInteligente from "./components/PlanoInteligente";
 import TabsViewPager from "./components/TabsViewPager";
+import SubTabs from "./components/SubTabs";
 import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
@@ -128,6 +129,12 @@ export default function App() {
   } = useCircuitos();
 
   const circuitoActivo = circuitos.find((c) => c.id === circuitoActivoId) ?? null;
+
+  // Sub-pestaña activa dentro de "Esquemas" (Diagrama unifilar / Plano)
+  // — agrupados bajo un mismo apartado a pedido del usuario (2026-11-20),
+  // sin fusionar sus lienzos (ver SubTabs.jsx). Puramente de presentación,
+  // nunca se persiste (mismo criterio que `modo` en PlanoInteligente).
+  const [subTabEsquemas, setSubTabEsquemas] = useState(0);
 
   return (
     <div style={{ background: colores.bg, minHeight: "100vh", color: colores.textMain, fontFamily: fuentes.display, overflowX: "hidden" }}>
@@ -302,23 +309,75 @@ export default function App() {
             ),
           },
           {
-            id: "diagrama",
-            label: "Diagrama unifilar",
+            id: "esquemas",
+            label: "Esquemas",
             contenido: (
               <div style={{ padding: "20px 24px" }}>
-                <DiagramaUnifilar
-                  nodosDiagrama={nodosDiagrama}
-                  crearNodoDiagrama={crearNodoDiagrama}
-                  editarNodoDiagrama={editarNodoDiagrama}
-                  eliminarNodoDiagrama={eliminarNodoDiagrama}
-                  conexionesDiagrama={conexionesDiagrama}
-                  crearConexionDiagrama={crearConexionDiagrama}
-                  eliminarConexionDiagrama={eliminarConexionDiagrama}
-                  tableros={tableros}
-                  equipos={equipos}
-                  circuitos={circuitos}
-                  fuentesEnergia={fuentesEnergia}
-                  transformadores={transformadores}
+                <SubTabs
+                  activo={subTabEsquemas}
+                  onCambiar={setSubTabEsquemas}
+                  paneles={[
+                    {
+                      id: "diagrama",
+                      label: "Diagrama unifilar",
+                      contenido: (
+                        <DiagramaUnifilar
+                          nodosDiagrama={nodosDiagrama}
+                          crearNodoDiagrama={crearNodoDiagrama}
+                          editarNodoDiagrama={editarNodoDiagrama}
+                          eliminarNodoDiagrama={eliminarNodoDiagrama}
+                          conexionesDiagrama={conexionesDiagrama}
+                          crearConexionDiagrama={crearConexionDiagrama}
+                          eliminarConexionDiagrama={eliminarConexionDiagrama}
+                          tableros={tableros}
+                          equipos={equipos}
+                          circuitos={circuitos}
+                          fuentesEnergia={fuentesEnergia}
+                          transformadores={transformadores}
+                        />
+                      ),
+                    },
+                    {
+                      id: "plano",
+                      label: "Plano",
+                      contenido: (
+                        <PlanoInteligente
+                          planoImagen={planoImagen}
+                          cargarImagenPlano={cargarImagenPlano}
+                          quitarImagenPlano={quitarImagenPlano}
+                          planoCalibracion={planoCalibracion}
+                          calibrarPlano={calibrarPlano}
+                          nodosPlano={nodosPlano}
+                          segmentosPlano={segmentosPlano}
+                          agregarNodoPlano={agregarNodoPlano}
+                          agregarSegmentoPlano={agregarSegmentoPlano}
+                          eliminarNodoPlano={eliminarNodoPlano}
+                          eliminarSegmentoPlano={eliminarSegmentoPlano}
+                          habitacionesPlano={habitacionesPlano}
+                          cerrarHabitacionPlano={cerrarHabitacionPlano}
+                          eliminarHabitacionPlano={eliminarHabitacionPlano}
+                          renombrarHabitacionPlano={renombrarHabitacionPlano}
+                          generarHabitacionPlano={generarHabitacionPlano}
+                          moverHabitacionPlano={moverHabitacionPlano}
+                          rutasConductorPlano={rutasConductorPlano}
+                          cerrarRutaConductorPlano={cerrarRutaConductorPlano}
+                          eliminarRutaConductorPlano={eliminarRutaConductorPlano}
+                          renombrarRutaConductorPlano={renombrarRutaConductorPlano}
+                          marcadoresEquipoPlano={marcadoresEquipoPlano}
+                          agregarMarcadorEquipoPlano={agregarMarcadorEquipoPlano}
+                          editarMarcadorEquipoPlano={editarMarcadorEquipoPlano}
+                          eliminarMarcadorEquipoPlano={eliminarMarcadorEquipoPlano}
+                          corregirPerspectivaPlano={corregirPerspectivaPlano}
+                          exportarDXFPlano={exportarDXFPlano}
+                          tableros={tableros}
+                          equipos={equipos}
+                          circuitos={circuitos}
+                          fuentesEnergia={fuentesEnergia}
+                          transformadores={transformadores}
+                        />
+                      ),
+                    },
+                  ]}
                 />
               </div>
             ),
@@ -373,48 +432,6 @@ export default function App() {
                   marcadoresEquipoPlano={marcadoresEquipoPlano}
                   editarMarcadorEquipoPlano={editarMarcadorEquipoPlano}
                   eliminarMarcadorEquipoPlano={eliminarMarcadorEquipoPlano}
-                  fuentesEnergia={fuentesEnergia}
-                  transformadores={transformadores}
-                />
-              </div>
-            ),
-          },
-          {
-            id: "plano",
-            label: "Plano",
-            contenido: (
-              <div style={{ padding: "20px 24px" }}>
-                <PlanoInteligente
-                  planoImagen={planoImagen}
-                  cargarImagenPlano={cargarImagenPlano}
-                  quitarImagenPlano={quitarImagenPlano}
-                  planoCalibracion={planoCalibracion}
-                  calibrarPlano={calibrarPlano}
-                  nodosPlano={nodosPlano}
-                  segmentosPlano={segmentosPlano}
-                  agregarNodoPlano={agregarNodoPlano}
-                  agregarSegmentoPlano={agregarSegmentoPlano}
-                  eliminarNodoPlano={eliminarNodoPlano}
-                  eliminarSegmentoPlano={eliminarSegmentoPlano}
-                  habitacionesPlano={habitacionesPlano}
-                  cerrarHabitacionPlano={cerrarHabitacionPlano}
-                  eliminarHabitacionPlano={eliminarHabitacionPlano}
-                  renombrarHabitacionPlano={renombrarHabitacionPlano}
-                  generarHabitacionPlano={generarHabitacionPlano}
-                  moverHabitacionPlano={moverHabitacionPlano}
-                  rutasConductorPlano={rutasConductorPlano}
-                  cerrarRutaConductorPlano={cerrarRutaConductorPlano}
-                  eliminarRutaConductorPlano={eliminarRutaConductorPlano}
-                  renombrarRutaConductorPlano={renombrarRutaConductorPlano}
-                  marcadoresEquipoPlano={marcadoresEquipoPlano}
-                  agregarMarcadorEquipoPlano={agregarMarcadorEquipoPlano}
-                  editarMarcadorEquipoPlano={editarMarcadorEquipoPlano}
-                  eliminarMarcadorEquipoPlano={eliminarMarcadorEquipoPlano}
-                  corregirPerspectivaPlano={corregirPerspectivaPlano}
-                  exportarDXFPlano={exportarDXFPlano}
-                  tableros={tableros}
-                  equipos={equipos}
-                  circuitos={circuitos}
                   fuentesEnergia={fuentesEnergia}
                   transformadores={transformadores}
                 />
