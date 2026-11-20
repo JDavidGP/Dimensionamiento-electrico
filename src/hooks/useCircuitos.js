@@ -6,6 +6,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { TIPO_INSTALACION_POR_DEFECTO } from "../shared/constants/constantes.js";
+import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.js";
 
 const { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } = App.data.tablas.plantillas();
 
@@ -515,14 +516,28 @@ export function useCircuitos() {
     return App.tablero.sinAsignar(circuitos);
   }
 
-  // --- PLANO INTELIGENTE (Fase 1) ---
-  // Carga el archivo de imagen como data URL (embebida en el proyecto,
-  // ver la nota en modules/persistencia/proyecto.js sobre por qué).
-  // Al cargar una imagen NUEVA se resetea todo lo demás del plano
-  // (calibración/nodos/segmentos/habitaciones no tendrían sentido
-  // sobre un fondo distinto) — mismo criterio que nuevoProyecto()
-  // limpiando el resto del estado.
+  // --- PLANO INTELIGENTE (Fase 1 + soporte PDF de Fase 2) ---
+  // Carga el archivo (imagen o PDF) como data URL (embebida en el
+  // proyecto, ver la nota en modules/persistencia/proyecto.js sobre
+  // por qué). Un PDF se renderiza a un raster de referencia (ver
+  // shared/utils/pdfARaster.js — DPI fijo, independiente del
+  // dispositivo) y de ahí en más sigue EXACTAMENTE el mismo flujo que
+  // una imagen: ningún otro código (calibración/trazado/render/
+  // persistencia) distingue de dónde salió el raster. Al cargar un
+  // plano NUEVO se resetea todo lo demás del plano (calibración/
+  // nodos/segmentos/habitaciones no tendrían sentido sobre un fondo
+  // distinto) — mismo criterio que nuevoProyecto() limpiando el resto
+  // del estado.
   function cargarImagenPlano(archivo) {
+    if (esArchivoPDF(archivo)) {
+      return renderizarPrimeraPaginaPDF(archivo).then((raster) => {
+        setPlanoImagen({ dataUrl: raster.dataUrl, anchoPx: raster.anchoPx, altoPx: raster.altoPx, nombreArchivo: archivo.name, paginasTotal: raster.paginasTotal });
+        setPlanoCalibracion(null);
+        setNodosPlano([]);
+        setSegmentosPlano([]);
+        setHabitacionesPlano([]);
+      });
+    }
     return new Promise((resolve, reject) => {
       const lector = new FileReader();
       lector.onload = (e) => {

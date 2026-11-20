@@ -24,6 +24,7 @@ export default function PlanoCanvas({
   puntosCalibracionPendientes = [],
   nodoIdsTrazoActual = [],
   modo,
+  asistenciaBordes = false,
   onClickImagen,
 }) {
   const contenedorRef = useRef(null);
@@ -31,6 +32,11 @@ export default function PlanoCanvas({
   const [tamanoCanvas, setTamanoCanvas] = useState({ ancho: 0, alto: 0 });
   const [transformVista, setTransformVista] = useState(() => App.plano.transformVistaInicial());
   const arrastreRef = useRef(null); // { xInicial, yInicial, transformInicial } — solo en modo "mover"
+  // Canvas oculto con los píxeles de la imagen cargada — solo para que
+  // alClick pueda leer un parche chico y "pegarse" al borde más
+  // cercano (ver modules/plano/deteccionBordes.js). Se arma UNA vez
+  // por imagen, no en cada click.
+  const contextoPixelesRef = useRef(null);
 
   // Mide el contenedor al montar y en cada resize/orientation-change —
   // así "ajustar a ventana" siempre usa el tamaño REAL del dispositivo
@@ -55,6 +61,58 @@ export default function PlanoCanvas({
     setTransformVista(App.plano.ajustarAVentana(imagen.anchoPx, imagen.altoPx, tamanoCanvas.ancho, tamanoCanvas.alto));
   }, [imagen?.dataUrl, tamanoCanvas.ancho, tamanoCanvas.alto]);
 
+  // Decodifica la imagen en un <canvas> oculto para poder leer sus
+  // píxeles — ver alClick/ajustarABorde. Se rehace solo cuando cambia
+  // la imagen, nunca en cada click/frame.
+  useEffect(() => {
+    contextoPixelesRef.current = null;
+    if (!imagen) return;
+    let cancelado = false;
+    const img = new Image();
+    img.onload = () => {
+      if (cancelado) return;
+      const lienzo = document.createElement("canvas");
+      lienzo.width = imagen.anchoPx;
+      lienzo.height = imagen.altoPx;
+      const ctx = lienzo.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      contextoPixelesRef.current = ctx;
+    };
+    img.src = imagen.dataUrl;
+    return () => {
+      cancelado = true;
+    };
+  }, [imagen?.dataUrl]);
+
+  /**
+   * Ajusta un punto en espacio IMAGEN al borde más fuerte dentro de un
+   * radio chico — si no hay ninguno claro, devuelve el punto tal cual.
+   * Es solo una AYUDA al trazado manual, nunca detección automática de
+   * paredes (ver la nota larga en modules/plano/deteccionBordes.js).
+   */
+  function ajustarABorde(puntoImagen) {
+    const ctx = contextoPixelesRef.current;
+    if (!ctx) return puntoImagen;
+    const radio = App.plano.RADIO_BUSQUEDA_BORDE_PX;
+    const cx = Math.round(puntoImagen.x);
+    const cy = Math.round(puntoImagen.y);
+    const margen = radio + 2;
+    const x0 = Math.max(0, cx - margen);
+    const y0 = Math.max(0, cy - margen);
+    const ancho = Math.min(ctx.canvas.width - x0, margen * 2 + 1);
+    const alto = Math.min(ctx.canvas.height - y0, margen * 2 + 1);
+    if (ancho < 3 || alto < 3) return puntoImagen;
+
+    const datos = ctx.getImageData(x0, y0, ancho, alto).data;
+    const grises = new Float32Array(ancho * alto);
+    for (let i = 0; i < ancho * alto; i++) {
+      grises[i] = 0.299 * datos[i * 4] + 0.587 * datos[i * 4 + 1] + 0.114 * datos[i * 4 + 2];
+    }
+
+    const mejor = App.plano.pixelBordeMasFuerte(grises, ancho, alto, cx - x0, cy - y0, radio, App.plano.UMBRAL_MAGNITUD_BORDE);
+    return mejor ? { x: x0 + mejor.x, y: y0 + mejor.y } : puntoImagen;
+  }
+
   function puntoPantallaDesdeEvento(e) {
     const rect = svgRef.current.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -62,7 +120,8 @@ export default function PlanoCanvas({
 
   function alClick(e) {
     if (!imagen || !onClickImagen || arrastreRef.current?.seMovio) return;
-    const puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
+    let puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
+    if (asistenciaBordes && modo === "pared") puntoImagen = ajustarABorde(puntoImagen);
     onClickImagen(puntoImagen);
   }
 

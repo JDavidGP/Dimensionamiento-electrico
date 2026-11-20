@@ -403,13 +403,44 @@ es una excepción nueva, es la misma regla de oro de `ARCHITECTURE.md`
 
 ## 9. Qué queda pendiente, a propósito (no se construye en esta ronda)
 
-- Extracción automática de paths vectoriales de un PDF CAD.
-- Detección automática de paredes/esquinas por visión por computadora
-  (acordado explícitamente con el usuario: v1 es calibración + trazado
-  MANUAL).
+> Actualizado 2026-11-20 (Fase 2): soporte de PDF (render a raster) y
+> asistencia de bordes al trazar YA ESTÁN construidos — ver §10. Lo que
+> sigue acá es lo que se evaluó y se decidió NO construir todavía.
+
+- Extracción automática de paths vectoriales de un PDF CAD como
+  candidatos de pared (acordado con el usuario: primero confirmar que
+  el soporte básico de PDF — renderizar y trazar a mano — funciona
+  bien; esto queda para una ronda aparte).
+- Detección TOTALMENTE automática de paredes/esquinas con un pipeline
+  de visión por computadora (OpenCV.js) — evaluado y descartado para
+  esta etapa (acordado con el usuario, 2026-11-20): demasiado grande/
+  incierto en planos reales sin un modelo entrenado. Se construyó en
+  cambio la versión "asistida" (snap al borde más fuerte al trazar a
+  mano, ver §10) — mejora la precisión del trazado manual sin la
+  dependencia pesada ni el riesgo del pipeline completo.
 - Homografía de 4 puntos para fotos con perspectiva (v1 solo avisa del
   error, no corrige).
 - Corrección no lineal (thin-plate-spline) para escaneos muy deformados.
 - Regla normativa de "puntos de luz por m²" para sugerencia automática
   de dimensionamiento (necesita su propia investigación con fuente real).
+
+## 10. Fase 2 — lo construido (2026-11-20)
+
+- **Soporte de PDF** (`shared/utils/pdfARaster.js`): cualquier PDF se
+  renderiza (vía `pdfjs-dist`, import dinámico — no engorda la carga
+  inicial de la app para quien nunca sube un PDF) a un raster de
+  **150 DPI de referencia, una constante fija en el código, nunca
+  derivada del dispositivo** — mismo principio de independencia que el
+  resto del diseño, aplicado a la conversión PDF→imagen: el mismo PDF
+  rasteriza siempre al mismo tamaño en píxeles, lo abra quien lo abra.
+  De ahí en más sigue EXACTO el mismo flujo que una imagen (ningún
+  otro módulo distingue de dónde salió el raster). Solo la página 1
+  por ahora.
+- **Asistencia de bordes** (`modules/plano/deteccionBordes.js` +
+  `PlanoCanvas.jsx`): al trazar una pared, cada click se puede "pegar"
+  al borde más fuerte dentro de un radio chico (operador Sobel sobre
+  un parche local de la imagen, nunca la imagen completa — liviano,
+  sin OpenCV.js). Es una AYUDA al trazado manual, no detección
+  automática: si no hay un borde claro cerca, no ajusta nada. Toggle
+  en la UI, activo por defecto, el usuario lo puede apagar.
 - Exportación DXF/IFC.

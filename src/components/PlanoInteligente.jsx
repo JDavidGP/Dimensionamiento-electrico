@@ -42,6 +42,12 @@ export default function PlanoInteligente({
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
   const [aviso, setAviso] = useState("");
+  // Asistencia de bordes (Fase 2) — "pega" cada click de trazado al
+  // borde más fuerte cercano en la imagen, ver PlanoCanvas.jsx /
+  // modules/plano/deteccionBordes.js. Preferencia de herramienta, NO
+  // se persiste (no es un dato del proyecto, es solo cómo trabaja
+  // ahora mismo quien está trazando).
+  const [asistenciaBordes, setAsistenciaBordes] = useState(true);
 
   // Calibración: null, [puntoA], o [puntoA, puntoB] (ahí se muestra el
   // formulario de distancia real antes de confirmar).
@@ -147,14 +153,14 @@ export default function PlanoInteligente({
       <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
           <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            Plano inteligente — Fase 1
+            Plano inteligente
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <label
               style={{ padding: "6px 12px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.copper, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
             >
-              {cargando ? "Cargando…" : planoImagen ? "↻ Cambiar plano" : "↑ Cargar plano (imagen)"}
-              <input type="file" accept="image/*" style={{ display: "none" }} onChange={alSeleccionarArchivo} disabled={cargando} />
+              {cargando ? "Cargando…" : planoImagen ? "↻ Cambiar plano" : "↑ Cargar plano (imagen o PDF)"}
+              <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={alSeleccionarArchivo} disabled={cargando} />
             </label>
             {planoImagen && (
               <button
@@ -179,6 +185,12 @@ export default function PlanoInteligente({
           </div>
         )}
 
+        {planoImagen?.paginasTotal > 1 && (
+          <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10 }}>
+            Este PDF tiene {planoImagen.paginasTotal} páginas — por ahora se usa solo la primera.
+          </div>
+        )}
+
         {planoImagen && (
           <>
             <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
@@ -199,6 +211,15 @@ export default function PlanoInteligente({
                   </button>
                 </>
               )}
+              {modo === "pared" && planoCalibracion && (
+                <>
+                  {" "}·{" "}
+                  <label style={{ cursor: "pointer" }}>
+                    <input type="checkbox" checked={asistenciaBordes} onChange={(e) => setAsistenciaBordes(e.target.checked)} style={{ marginRight: 4 }} />
+                    Asistencia de bordes (pega el click al filo más cercano)
+                  </label>
+                </>
+              )}
             </div>
           </>
         )}
@@ -211,6 +232,7 @@ export default function PlanoInteligente({
           puntosCalibracionPendientes={puntosCalibracion}
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
+          asistenciaBordes={asistenciaBordes}
           onClickImagen={alClickImagen}
         />
 

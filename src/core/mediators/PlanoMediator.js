@@ -35,6 +35,9 @@ import {
   RADIO_SNAP_METROS,
   ZOOM_MIN,
   ZOOM_MAX,
+  pixelBordeMasFuerte,
+  RADIO_BUSQUEDA_BORDE_PX,
+  UMBRAL_MAGNITUD_BORDE,
 } from "../../modules/plano/index.js";
 import { distancia, areaPoligono, perimetroPoligono } from "../../modules/geometria/index.js";
 
@@ -42,6 +45,9 @@ export const PlanoMediator = {
   RADIO_SNAP_METROS,
   ZOOM_MIN,
   ZOOM_MAX,
+  RADIO_BUSQUEDA_BORDE_PX,
+  UMBRAL_MAGNITUD_BORDE,
+  pixelBordeMasFuerte,
 
   crearNodo,
   nodoCercano,
