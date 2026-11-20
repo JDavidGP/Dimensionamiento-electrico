@@ -25,7 +25,7 @@
 // modules/tablero/index.js con TableroMediator.
 
 import { generarId } from "../../shared/utils/id.js";
-import { distancia, areaPoligono, perimetroPoligono } from "../geometria/index.js";
+import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea } from "../geometria/index.js";
 
 export { calcularEscala, imagenAModelo, modeloAImagen } from "./calibracion.js";
 export { transformVistaInicial, aPantalla, aModelo, aplicarZoom, aplicarPan, ajustarAVentana, ZOOM_MIN, ZOOM_MAX } from "./coordenadas.js";
@@ -64,15 +64,17 @@ export function crearSegmento(nodoAId, nodoBId, tipo = "pared") {
 }
 
 /**
- * Elimina un nodo y, en cascada, los segmentos que lo usaban y las
- * habitaciones que lo tenían como vértice (no quedan apuntando a un id
- * muerto) — mismo criterio que liberarCircuitosDeTablero.
+ * Elimina un nodo y, en cascada, los segmentos que lo usaban, las
+ * habitaciones que lo tenían como vértice y las rutas de conductor que
+ * lo usaban (no quedan apuntando a un id muerto) — mismo criterio que
+ * liberarCircuitosDeTablero.
  */
-export function eliminarNodo(nodoId, nodos = [], segmentos = [], habitaciones = []) {
+export function eliminarNodo(nodoId, nodos = [], segmentos = [], habitaciones = [], rutasConductor = []) {
   return {
     nodos: nodos.filter((n) => n.id !== nodoId),
     segmentos: segmentos.filter((s) => s.nodoAId !== nodoId && s.nodoBId !== nodoId),
     habitaciones: habitaciones.filter((h) => !h.nodoIds.includes(nodoId)),
+    rutasConductor: rutasConductor.filter((r) => !r.nodoIds.includes(nodoId)),
   };
 }
 
@@ -97,4 +99,68 @@ export function crearHabitacion(nodoIds, nodos = [], nombre = "") {
     areaM2: areaPoligono(puntos),
     perimetroM: perimetroPoligono(puntos),
   };
+}
+
+// --- Rutas de conductor — Fase 2, 3ra ronda (2026-11-20) ---
+//
+// Misma idea que una habitación, pero para una cadena de nodos
+// ABIERTA (una ruta de punto a punto, no un lazo cerrado): los
+// segmentos que la forman ya se crean con crearSegmento(... , "conductor")
+// — igual mecanismo de trazado/"pegado" que las paredes, reutilizado
+// tal cual, solo cambia el `tipo` del segmento. Acá solo se registra
+// la ruta COMPLETA (qué nodos la forman, en orden) + su longitud total
+// — derivada, nunca una segunda copia editable a mano.
+
+/** Registra una ruta de conductor a partir de una cadena de nodos (abierta, >= 2). */
+export function crearRutaConductor(nodoIds, nodos = [], nombre = "") {
+  const puntos = nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter(Boolean);
+  if (puntos.length < 2) return null;
+  return {
+    id: generarId(),
+    nodoIds,
+    nombre: nombre?.trim() || "Ruta sin nombre",
+    longitudM: longitudPolilinea(puntos),
+  };
+}
+
+export function eliminarRutaConductor(rutaId, rutas = []) {
+  return rutas.filter((r) => r.id !== rutaId);
+}
+
+// --- Equipos ubicados en el plano — Fase 2, 3ra ronda (2026-11-20) ---
+//
+// Un marcador puntual (no forma parte del grafo de nodos/segmentos —
+// ver la nota en PlanoInteligente.jsx sobre por qué quedan
+// independientes en esta ronda) con un `tipo` del MISMO catálogo que
+// ya usa el diagrama unifilar (shared/data/bibliotecaComponentes.js —
+// ver PlanoMediator para `obtenerComponente`/`componentesPorCategoria`
+// reexportados, nunca un segundo catálogo) y un `entidadId` opcional
+// que lo vincula a un tablero/circuito/equipo/fuenteEnergia/
+// transformador YA existente en el proyecto — mismo "modelo canónico"
+// de ARCHITECTURE.md §9 (el marcador es una VISTA sobre la entidad
+// real, nunca duplica sus datos eléctricos).
+//
+// DECISIÓN DELIBERADA: la lista de "entidades ya vinculadas" para
+// excluir de los candidatos es PROPIA del plano (no cruza con los
+// vínculos que ya tenga el diagrama unifilar) — la misma entidad
+// (ej. un tablero) puede aparecer legítimamente en ambas vistas a la
+// vez: el diagrama muestra su TOPOLOGÍA eléctrica, el plano su
+// UBICACIÓN física — no es el mismo recurso "usado dos veces", son
+// dos aspectos distintos del mismo dato.
+
+export function crearMarcadorEquipo(puntoModelo, tipo, entidadId = null, nombre = "") {
+  return { id: generarId(), punto: puntoModelo, tipo, entidadId: entidadId || null, nombre: nombre?.trim() || "" };
+}
+
+export function editarMarcadorEquipo(marcador, cambios) {
+  return { ...marcador, ...cambios };
+}
+
+export function eliminarMarcadorEquipo(marcadorId, marcadores = []) {
+  return marcadores.filter((m) => m.id !== marcadorId);
+}
+
+/** Marcadores que apuntaban a una entidad eliminada quedan desvinculados (entidadId -> null), nunca borrados ni apuntando a un id muerto. */
+export function liberarMarcadoresDeEntidad(entidadId, marcadores = []) {
+  return marcadores.map((m) => (m.entidadId === entidadId ? { ...m, entidadId: null } : m));
 }

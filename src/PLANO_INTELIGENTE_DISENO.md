@@ -480,3 +480,78 @@ es una excepción nueva, es la misma regla de oro de `ARCHITECTURE.md`
   texto ya generado a los bytes reales de Windows-1252 antes de armar
   el `Blob` — verificado de nuevo con `ezdxf` que el texto con
   acentos ahora se preserva exacto.
+
+## 12. Fase 2, tercera ronda (2026-11-20) — rutas de conductor + equipos ubicados
+
+Pedido del usuario tras confirmar que la topografía/segmentación de
+áreas ya funciona (trazar un lazo cerrado sobre CUALQUIER contorno —
+no solo paredes interiores, también un deslinde de terreno — ya da
+área/perímetro; ver §0 y la respuesta directa en la conversación):
+"seguir con las rutas de los conductores y ubicación de los equipos a
+instalar dentro del plano".
+
+- **Rutas de conductor** (`modules/plano/index.js`:
+  `crearRutaConductor`/`eliminarRutaConductor`, modo "Trazar
+  conductor" en `PlanoInteligente.jsx`): reutiliza EXACTO el mismo
+  grafo nodos/segmentos y el mismo mecanismo de trazado/pegado
+  (`RADIO_SNAP_METROS`, asistencia de bordes) que las paredes — la
+  única diferencia es el `tipo` del segmento (`"conductor"` en vez de
+  `"pared"`, línea punteada color cobre en el render) y que la cadena
+  de nodos queda ABIERTA (punto a punto, nunca se cierra sola como un
+  ambiente) — se termina con un botón explícito. La longitud se
+  deriva con `longitudPolilinea()` (nueva función en
+  `modules/geometria/index.js`, hermana de `perimetroPoligono()` pero
+  sin el wraparound del último vértice al primero) — nunca una
+  segunda copia editable a mano, mismo criterio "anti-bucle" que
+  habitaciones.
+- **Equipos ubicados en el plano** (`modules/plano/index.js`:
+  `crearMarcadorEquipo`/`editarMarcadorEquipo`/
+  `eliminarMarcadorEquipo`/`liberarMarcadoresDeEntidad`, modo
+  "Colocar equipo"): un marcador puntual — DELIBERADAMENTE por fuera
+  del grafo de nodos/segmentos (no participa del trazado de paredes
+  ni se puede "pegar" a un nodo), porque un equipo es una POSICIÓN,
+  no un vértice de una poligonal. Reutiliza el MISMO catálogo de
+  tipos que ya usa el diagrama unifilar
+  (`shared/data/bibliotecaComponentes.js` — `CATALOGO_COMPONENTES`,
+  re-exportado íntegro desde `PlanoMediator`) y el mismo componente de
+  símbolo SVG (`SimboloDiagrama`), para que un mismo tipo de
+  componente se vea igual en las dos vistas.
+- **Vínculo a una entidad real** (tablero/circuito/equipo/
+  fuenteEnergia/transformador) — mismo patrón ya usado por el
+  diagrama unifilar (`DiagramaMediator.candidatosEntidad`/
+  `resolverEntidad`/`liberarNodosDeEntidad`, ver `DiagramaMediator.js`
+  líneas ~95-131), REPLICADO en `PlanoMediator`
+  (`candidatosEntidadEquipo`/`resolverEntidadEquipo`) en vez de
+  llamado directamente — **decisión de arquitectura deliberada**: la
+  exclusión de "entidad ya vinculada" es PROPIA de los marcadores del
+  plano, nunca cruza con los vínculos que ya tenga el diagrama
+  unifilar. La misma entidad (ej. un tablero) puede estar vinculada a
+  un nodo del diagrama Y a un marcador del plano al mismo tiempo — no
+  es el mismo recurso "usado dos veces", son dos aspectos distintos
+  del mismo dato: el diagrama documenta su TOPOLOGÍA eléctrica, el
+  plano su UBICACIÓN física.
+- **Persistencia**: `rutasConductor`/`marcadoresEquipo` se agregaron a
+  `planoVacio()` (`modules/persistencia/proyecto.js`); un proyecto
+  guardado ANTES de esta ronda simplemente no trae esas claves y el
+  merge `{ ...planoVacio(), ...data.plano }` ya existente las completa
+  vacías sin romper nada (mismo mecanismo de compatibilidad hacia
+  atrás que ya protegía `habitaciones`).
+- **Probado end-to-end** (Playwright, `test_plano_rutas_equipos.mjs`):
+  trazar una ruta en L de longitud real conocida (5 m + 3.75 m) y
+  confirmar que `longitudM` calculado coincide; colocar un marcador de
+  tipo "Tablero eléctrico", vincularlo a un tablero real creado en la
+  pestaña Tableros, confirmar que el vínculo se resuelve; guardar y
+  reabrir el proyecto y confirmar que ruta, longitud, marcador y
+  vínculo persisten idénticos; eliminar un marcador en modo "Borrar".
+
+**Deliberadamente NO construido en esta ronda** (no pedido, se queda
+afuera para no agregar alcance sin que lo pidan):
+
+- "Pegar" una ruta de conductor a la posición exacta de un marcador de
+  equipo (comparten el mismo nodo) — hoy son independientes a propósito.
+- Autocompletar `circuito.distancia`/`tablero.longitudAlimentador` a
+  partir de la longitud de una ruta trazada.
+- Sistema genérico de "capas" con toggles de visibilidad (paredes/
+  conductores/equipos por separado) — hoy todo se dibuja siempre.
+- Sugerencia automática de iluminación/circuitos a partir del área de
+  un ambiente (normativa real pendiente de investigar, ver §9).

@@ -23,6 +23,12 @@ import {
   eliminarNodo,
   eliminarSegmento,
   crearHabitacion,
+  crearRutaConductor,
+  eliminarRutaConductor,
+  crearMarcadorEquipo,
+  editarMarcadorEquipo,
+  eliminarMarcadorEquipo,
+  liberarMarcadoresDeEntidad,
   calcularEscala,
   imagenAModelo,
   modeloAImagen,
@@ -45,6 +51,8 @@ import {
   codificarDXFComoBytes,
 } from "../../modules/plano/index.js";
 import { distancia, areaPoligono, perimetroPoligono } from "../../modules/geometria/index.js";
+import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
+import { OrigenMediator } from "./OrigenMediator.js";
 
 export const PlanoMediator = {
   RADIO_SNAP_METROS,
@@ -60,6 +68,8 @@ export const PlanoMediator = {
   eliminarNodo,
   eliminarSegmento,
   crearHabitacion,
+  crearRutaConductor,
+  eliminarRutaConductor,
 
   calcularEscala,
   imagenAModelo,
@@ -82,4 +92,58 @@ export const PlanoMediator = {
 
   generarDXF,
   codificarDXFComoBytes,
+
+  // Catálogo de tipos de equipo — EL MISMO que usa el diagrama unifilar
+  // (shared/data/bibliotecaComponentes.js), nunca un segundo catálogo
+  // paralelo para los marcadores del plano.
+  CATALOGO_COMPONENTES,
+  CATEGORIAS_COMPONENTE,
+  obtenerComponente,
+  componentesPorCategoria,
+
+  crearMarcadorEquipo,
+  editarMarcadorEquipo,
+  eliminarMarcadorEquipo,
+  liberarMarcadoresDeEntidad,
+
+  /**
+   * Entidades candidatas para vincular a un marcador de este `tipo`, en
+   * el plano — EXCLUSIÓN PROPIA del plano, NO cruza con los vínculos
+   * que ya tenga el diagrama unifilar (ver nota de arquitectura en
+   * modules/plano/index.js): la misma entidad puede estar vinculada a
+   * un nodo del diagrama Y a un marcador del plano a la vez, son
+   * aspectos distintos (topología eléctrica vs. ubicación física).
+   */
+  candidatosEntidadEquipo(tipoEquipo, { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [], marcadores = [], marcadorId = null } = {}) {
+    const comp = obtenerComponente(tipoEquipo);
+    if (!comp?.entidadVinculada) return [];
+    const vinculados = new Set(marcadores.filter((m) => m.id !== marcadorId && m.entidadId).map((m) => m.entidadId));
+
+    if (comp.entidadVinculada === "tablero") {
+      return tableros.filter((t) => !vinculados.has(t.id));
+    }
+    if (comp.entidadVinculada === "equipo") {
+      return equipos.filter((e) => !vinculados.has(e.id));
+    }
+    if (comp.entidadVinculada === "fuenteEnergia") {
+      const { GENERADOR, BATERIA } = OrigenMediator.TIPOS_FUENTE_ENERGIA;
+      const tipoFuente = tipoEquipo === "generador" ? GENERADOR : tipoEquipo === "banco_baterias" ? BATERIA : null;
+      return fuentesEnergia.filter((f) => (!tipoFuente || f.tipo === tipoFuente) && !vinculados.has(f.id));
+    }
+    if (comp.entidadVinculada === "transformador") {
+      return transformadores.filter((t) => !vinculados.has(t.id));
+    }
+    return [];
+  },
+
+  /** La entidad real que representa este marcador, o null si no tiene vínculo o ya no existe. */
+  resolverEntidadEquipo(marcador, { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [] } = {}) {
+    if (!marcador?.entidadId) return null;
+    const comp = obtenerComponente(marcador.tipo);
+    if (comp?.entidadVinculada === "tablero") return tableros.find((t) => t.id === marcador.entidadId) ?? null;
+    if (comp?.entidadVinculada === "equipo") return equipos.find((e) => e.id === marcador.entidadId) ?? null;
+    if (comp?.entidadVinculada === "fuenteEnergia") return fuentesEnergia.find((f) => f.id === marcador.entidadId) ?? null;
+    if (comp?.entidadVinculada === "transformador") return transformadores.find((t) => t.id === marcador.entidadId) ?? null;
+    return null;
+  },
 };

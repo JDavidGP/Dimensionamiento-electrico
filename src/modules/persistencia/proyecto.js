@@ -27,7 +27,7 @@ function migrarTipoInstalacion(valor) {
 // fondo de referencia desaparecería al abrirlo en otra máquina, aunque
 // las medidas (que sí viven en metros, no en la imagen) sigan intactas.
 export function planoVacio() {
-  return { imagen: null, calibracion: null, nodos: [], segmentos: [], habitaciones: [] };
+  return { imagen: null, calibracion: null, nodos: [], segmentos: [], habitaciones: [], rutasConductor: [], marcadoresEquipo: [] };
 }
 
 export function proyectoVacio() {

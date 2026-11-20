@@ -45,3 +45,17 @@ export function perimetroPoligono(puntos) {
   }
   return total;
 }
+
+/**
+ * Longitud de una polilínea ABIERTA (ej. una ruta de conductor — a
+ * diferencia de perimetroPoligono, NO cierra el último vértice con el
+ * primero). Devuelve metros.
+ */
+export function longitudPolilinea(puntos) {
+  if (!Array.isArray(puntos) || puntos.length < 2) return 0;
+  let total = 0;
+  for (let i = 0; i < puntos.length - 1; i++) {
+    total += distancia(puntos[i], puntos[i + 1]);
+  }
+  return total;
+}

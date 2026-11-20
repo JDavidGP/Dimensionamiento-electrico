@@ -107,6 +107,14 @@ export default function App() {
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
+    rutasConductorPlano,
+    cerrarRutaConductorPlano,
+    eliminarRutaConductorPlano,
+    renombrarRutaConductorPlano,
+    marcadoresEquipoPlano,
+    agregarMarcadorEquipoPlano,
+    editarMarcadorEquipoPlano,
+    eliminarMarcadorEquipoPlano,
     corregirPerspectivaPlano,
     exportarDXFPlano,
     listaIntegridad,
@@ -356,8 +364,21 @@ export default function App() {
                   cerrarHabitacionPlano={cerrarHabitacionPlano}
                   eliminarHabitacionPlano={eliminarHabitacionPlano}
                   renombrarHabitacionPlano={renombrarHabitacionPlano}
+                  rutasConductorPlano={rutasConductorPlano}
+                  cerrarRutaConductorPlano={cerrarRutaConductorPlano}
+                  eliminarRutaConductorPlano={eliminarRutaConductorPlano}
+                  renombrarRutaConductorPlano={renombrarRutaConductorPlano}
+                  marcadoresEquipoPlano={marcadoresEquipoPlano}
+                  agregarMarcadorEquipoPlano={agregarMarcadorEquipoPlano}
+                  editarMarcadorEquipoPlano={editarMarcadorEquipoPlano}
+                  eliminarMarcadorEquipoPlano={eliminarMarcadorEquipoPlano}
                   corregirPerspectivaPlano={corregirPerspectivaPlano}
                   exportarDXFPlano={exportarDXFPlano}
+                  tableros={tableros}
+                  equipos={equipos}
+                  circuitos={circuitos}
+                  fuentesEnergia={fuentesEnergia}
+                  transformadores={transformadores}
                 />
               </div>
             ),

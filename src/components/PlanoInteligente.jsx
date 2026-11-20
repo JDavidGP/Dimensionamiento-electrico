@@ -20,8 +20,14 @@ const MODOS = [
   { valor: "perspectiva", label: "Corregir perspectiva", ayuda: "Para fotos: hacé click en las 4 esquinas de un rectángulo real (ej. una habitación), en orden, dando toda la vuelta." },
   { valor: "calibrar", label: "Calibrar", ayuda: "Hacé click en dos puntos cuya distancia real conozcas." },
   { valor: "pared", label: "Trazar pared", ayuda: "Click para ir agregando puntos. Volvé al punto de inicio para cerrar un ambiente." },
-  { valor: "eliminar", label: "Borrar", ayuda: "Click sobre un nodo o una pared para eliminarlo." },
+  { valor: "conductor", label: "Trazar conductor", ayuda: "Click para ir agregando el recorrido de un conductor. No hace falta cerrarlo — terminalo con el botón." },
+  { valor: "equipo", label: "Colocar equipo", ayuda: "Elegí el tipo abajo y hacé click en el plano donde va ubicado." },
+  { valor: "eliminar", label: "Borrar", ayuda: "Click sobre un nodo, una pared/conductor o un equipo para eliminarlo." },
 ];
+
+// Mismo mapa categoría->color que usa PlanoCanvas.jsx — para el punto
+// de color junto a cada opción del <select> de tipo de equipo.
+const COLOR_POR_CATEGORIA = { fuente: colores.ok, medicion_proteccion: colores.warn, distribucion: colores.copper, control: colores.copperDim, carga: colores.textDim };
 
 export default function PlanoInteligente({
   planoImagen,
@@ -39,8 +45,21 @@ export default function PlanoInteligente({
   cerrarHabitacionPlano,
   eliminarHabitacionPlano,
   renombrarHabitacionPlano,
+  rutasConductorPlano,
+  cerrarRutaConductorPlano,
+  eliminarRutaConductorPlano,
+  renombrarRutaConductorPlano,
+  marcadoresEquipoPlano,
+  agregarMarcadorEquipoPlano,
+  editarMarcadorEquipoPlano,
+  eliminarMarcadorEquipoPlano,
   corregirPerspectivaPlano,
   exportarDXFPlano,
+  tableros = [],
+  equipos = [],
+  circuitos = [],
+  fuentesEnergia = [],
+  transformadores = [],
 }) {
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
@@ -64,9 +83,30 @@ export default function PlanoInteligente({
   const [altoRealInput, setAltoRealInput] = useState("");
   const [corrigiendoPerspectiva, setCorrigiendoPerspectiva] = useState(false);
 
-  // Trazo de pared en curso — lista ORDENADA de ids de nodo. Se resetea
+  // Trazo de pared (o de conductor, mismo mecanismo — ver modo
+  // "conductor") en curso — lista ORDENADA de ids de nodo. Se resetea
   // al cambiar de modo o al cerrar/terminar el trazo.
   const [trazoActual, setTrazoActual] = useState([]);
+
+  // Modo "equipo" — tipo/nombre/entidad elegidos ANTES de hacer click
+  // en el plano (el click solo define la UBICACIÓN); mismo catálogo
+  // que el diagrama unifilar (ver PlanoMediator.componentesPorCategoria).
+  const categoriasEquipo = App.plano.componentesPorCategoria();
+  const primeraCategoriaEquipo = Object.keys(categoriasEquipo)[0];
+  const [tipoEquipoSeleccionado, setTipoEquipoSeleccionado] = useState(categoriasEquipo[primeraCategoriaEquipo]?.[0]?.id ?? "");
+  const [nombreEquipoNuevo, setNombreEquipoNuevo] = useState("");
+  const [entidadEquipoNuevo, setEntidadEquipoNuevo] = useState("");
+
+  function etiquetaEntidadEquipo(tipoEquipo, entidad) {
+    const comp = App.plano.obtenerComponente(tipoEquipo);
+    if (comp?.entidadVinculada === "equipo") {
+      const circuito = circuitos.find((c) => c.id === entidad.circuitoId);
+      const tablero = circuito ? tableros.find((t) => t.id === circuito.tableroId) : null;
+      const contexto = [circuito?.nombre, tablero?.nombre].filter(Boolean).join(" · ");
+      return contexto ? `${entidad.nombre || "Equipo sin nombre"} (${contexto})` : entidad.nombre || "Equipo sin nombre";
+    }
+    return entidad.nombre || "(sin nombre)";
+  }
 
   function mostrarAviso(texto) {
     setAviso(texto);
@@ -81,6 +121,7 @@ export default function PlanoInteligente({
     setAnchoRealInput("");
     setAltoRealInput("");
     setTrazoActual([]);
+    setEntidadEquipoNuevo("");
   }
 
   async function alSeleccionarArchivo(e) {
@@ -136,6 +177,26 @@ export default function PlanoInteligente({
       return;
     }
 
+    if (modo === "conductor") {
+      const nodo = agregarNodoPlano(puntoImagen);
+      if (!nodo) return; // sin calibrar todavía
+      if (trazoActual.length === 0) {
+        setTrazoActual([nodo.id]);
+        return;
+      }
+      const nodoAnteriorId = trazoActual[trazoActual.length - 1];
+      if (nodo.id === nodoAnteriorId) return; // click repetido sobre el mismo punto
+      agregarSegmentoPlano(nodoAnteriorId, nodo.id, "conductor");
+      setTrazoActual([...trazoActual, nodo.id]);
+      return;
+    }
+
+    if (modo === "equipo") {
+      if (!tipoEquipoSeleccionado) return;
+      agregarMarcadorEquipoPlano(puntoImagen, tipoEquipoSeleccionado, entidadEquipoNuevo || null, nombreEquipoNuevo);
+      return;
+    }
+
     if (modo === "eliminar") {
       const escala = planoCalibracion?.escalaMetrosPorPixel ?? 1;
       const puntoModelo = App.plano.imagenAModelo(puntoImagen, escala);
@@ -148,6 +209,22 @@ export default function PlanoInteligente({
       const segmentoCercano = segmentoMasCercano(puntoModelo, nodosPlano, segmentosPlano);
       if (segmentoCercano) eliminarSegmentoPlano(segmentoCercano.id);
     }
+  }
+
+  function alClickMarcador(marcador) {
+    if (modo !== "eliminar") return;
+    eliminarMarcadorEquipoPlano(marcador.id);
+  }
+
+  function terminarRutaConductor() {
+    if (trazoActual.length < 2) {
+      setTrazoActual([]);
+      return;
+    }
+    const nombre = window.prompt("Nombre del conductor/ruta (opcional):", "") ?? "";
+    const ruta = cerrarRutaConductorPlano(trazoActual, nombre);
+    setTrazoActual([]);
+    if (ruta) mostrarAviso(`Ruta registrada — longitud ${ruta.longitudM.toFixed(2)} m.`);
   }
 
   function terminarTrazo() {
@@ -249,7 +326,7 @@ export default function PlanoInteligente({
             <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10, lineHeight: 1.4 }}>
               {MODOS.find((m) => m.valor === modo)?.ayuda}
               {modo === "perspectiva" && puntosPerspectiva.length > 0 && puntosPerspectiva.length < 4 && ` (van ${puntosPerspectiva.length} de 4)`}
-              {modo === "pared" && !planoCalibracion && " — primero calibrá la escala."}
+              {(modo === "pared" || modo === "conductor") && !planoCalibracion && " — primero calibrá la escala."}
               {modo === "pared" && trazoActual.length > 0 && (
                 <>
                   {" "}·{" "}
@@ -258,7 +335,15 @@ export default function PlanoInteligente({
                   </button>
                 </>
               )}
-              {modo === "pared" && planoCalibracion && (
+              {modo === "conductor" && trazoActual.length > 0 && (
+                <>
+                  {" "}·{" "}
+                  <button type="button" onClick={terminarRutaConductor} style={{ background: "none", border: "none", color: colores.copper, fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 11 }}>
+                    Terminar ruta ({trazoActual.length} punto{trazoActual.length === 1 ? "" : "s"})
+                  </button>
+                </>
+              )}
+              {(modo === "pared" || modo === "conductor") && planoCalibracion && (
                 <>
                   {" "}·{" "}
                   <label style={{ cursor: "pointer" }}>
@@ -268,6 +353,51 @@ export default function PlanoInteligente({
                 </>
               )}
             </div>
+
+            {modo === "equipo" && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+                <select
+                  value={tipoEquipoSeleccionado}
+                  onChange={(e) => {
+                    setTipoEquipoSeleccionado(e.target.value);
+                    setEntidadEquipoNuevo("");
+                  }}
+                  style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12 }}
+                >
+                  {Object.entries(categoriasEquipo).map(([cat, items]) => (
+                    <optgroup key={cat} label={cat}>
+                      {items.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <input
+                  value={nombreEquipoNuevo}
+                  onChange={(e) => setNombreEquipoNuevo(e.target.value)}
+                  placeholder="Nombre (opcional)"
+                  style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, width: 140 }}
+                />
+                {App.plano.obtenerComponente(tipoEquipoSeleccionado)?.entidadVinculada && (
+                  <select
+                    value={entidadEquipoNuevo}
+                    onChange={(e) => setEntidadEquipoNuevo(e.target.value)}
+                    style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, maxWidth: 220 }}
+                  >
+                    <option value="">— Vincular a (opcional) —</option>
+                    {App.plano
+                      .candidatosEntidadEquipo(tipoEquipoSeleccionado, { tableros, equipos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano })
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {etiquetaEntidadEquipo(tipoEquipoSeleccionado, c)}
+                        </option>
+                      ))}
+                  </select>
+                )}
+              </div>
+            )}
           </>
         )}
 
@@ -275,12 +405,14 @@ export default function PlanoInteligente({
           imagen={planoImagen}
           nodos={nodosPlano}
           segmentos={segmentosPlano}
+          marcadoresEquipo={marcadoresEquipoPlano}
           escalaMetrosPorPixel={planoCalibracion?.escalaMetrosPorPixel ?? null}
           puntosGuiaPendientes={modo === "perspectiva" ? puntosPerspectiva : puntosCalibracion}
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
           asistenciaBordes={asistenciaBordes}
           onClickImagen={alClickImagen}
+          onClickMarcador={alClickMarcador}
         />
 
         {modo === "perspectiva" && puntosPerspectiva.length === 4 && (
@@ -358,40 +490,134 @@ export default function PlanoInteligente({
         )}
       </div>
 
-      <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
-        <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
-          Ambientes ({habitacionesPlano.length})
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
+          <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
+            Ambientes ({habitacionesPlano.length})
+          </div>
+          {habitacionesPlano.length === 0 ? (
+            <div style={{ fontSize: 12, color: colores.textDim, lineHeight: 1.4 }}>
+              Cerrá un trazo de pared (volvé al punto de inicio) para que aparezca acá, con su área y perímetro ya calculados.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {habitacionesPlano.map((h) => (
+                <div key={h.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <input
+                      style={{ ...inputStyle(), flex: 1, padding: "4px 6px", fontSize: 12 }}
+                      value={h.nombre}
+                      onChange={(e) => renombrarHabitacionPlano(h.id, e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => eliminarHabitacionPlano(h.id)}
+                      style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 14 }}
+                      aria-label={`Eliminar ${h.nombre}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ fontFamily: fuentes.mono, fontSize: 11.5, color: colores.textDim }}>
+                    {h.areaM2.toFixed(2)} m² · perímetro {h.perimetroM.toFixed(2)} m
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {habitacionesPlano.length === 0 ? (
-          <div style={{ fontSize: 12, color: colores.textDim, lineHeight: 1.4 }}>
-            Cerrá un trazo de pared (volvé al punto de inicio) para que aparezca acá, con su área y perímetro ya calculados.
+
+        <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
+          <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
+            Rutas de conductor ({rutasConductorPlano.length})
           </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {habitacionesPlano.map((h) => (
-              <div key={h.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                  <input
-                    style={{ ...inputStyle(), flex: 1, padding: "4px 6px", fontSize: 12 }}
-                    value={h.nombre}
-                    onChange={(e) => renombrarHabitacionPlano(h.id, e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => eliminarHabitacionPlano(h.id)}
-                    style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 14 }}
-                    aria-label={`Eliminar ${h.nombre}`}
-                  >
-                    ×
-                  </button>
+          {rutasConductorPlano.length === 0 ? (
+            <div style={{ fontSize: 12, color: colores.textDim, lineHeight: 1.4 }}>
+              Trazá el recorrido de un conductor ("Trazar conductor") y terminalo para que aparezca acá, con su longitud ya calculada.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {rutasConductorPlano.map((r) => (
+                <div key={r.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <input
+                      style={{ ...inputStyle(), flex: 1, padding: "4px 6px", fontSize: 12 }}
+                      value={r.nombre}
+                      onChange={(e) => renombrarRutaConductorPlano(r.id, e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => eliminarRutaConductorPlano(r.id)}
+                      style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 14 }}
+                      aria-label={`Eliminar ${r.nombre}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ fontFamily: fuentes.mono, fontSize: 11.5, color: colores.textDim }}>longitud {r.longitudM.toFixed(2)} m</div>
                 </div>
-                <div style={{ fontFamily: fuentes.mono, fontSize: 11.5, color: colores.textDim }}>
-                  {h.areaM2.toFixed(2)} m² · perímetro {h.perimetroM.toFixed(2)} m
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
+          <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
+            Equipos en el plano ({marcadoresEquipoPlano.length})
           </div>
-        )}
+          {marcadoresEquipoPlano.length === 0 ? (
+            <div style={{ fontSize: 12, color: colores.textDim, lineHeight: 1.4 }}>
+              Elegí "Colocar equipo", el tipo que corresponda, y hacé click en su ubicación dentro del plano.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {marcadoresEquipoPlano.map((m) => {
+                const comp = App.plano.obtenerComponente(m.tipo);
+                const entidad = App.plano.resolverEntidadEquipo(m, { tableros, equipos, fuentesEnergia, transformadores });
+                const candidatos = App.plano.candidatosEntidadEquipo(m.tipo, { tableros, equipos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano, marcadorId: m.id });
+                return (
+                  <div key={m.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: COLOR_POR_CATEGORIA[comp?.categoria] ?? colores.border, flexShrink: 0 }} />
+                      <div style={{ flex: 1, fontSize: 12, color: colores.textMain }}>{comp?.nombre ?? m.tipo}</div>
+                      <button
+                        type="button"
+                        onClick={() => eliminarMarcadorEquipoPlano(m.id)}
+                        style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 14 }}
+                        aria-label={`Eliminar ${comp?.nombre ?? m.tipo}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <input
+                      style={{ ...inputStyle(), width: "100%", padding: "4px 6px", fontSize: 11.5, marginBottom: comp?.entidadVinculada ? 4 : 0 }}
+                      value={m.nombre}
+                      placeholder="Nombre (opcional)"
+                      onChange={(e) => editarMarcadorEquipoPlano(m.id, { nombre: e.target.value })}
+                    />
+                    {comp?.entidadVinculada && (
+                      <select
+                        value={m.entidadId ?? ""}
+                        onChange={(e) => editarMarcadorEquipoPlano(m.id, { entidadId: e.target.value || null })}
+                        style={{ width: "100%", padding: "4px 6px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 11.5 }}
+                      >
+                        <option value="">— Sin vincular —</option>
+                        {entidad && !candidatos.some((c) => c.id === entidad.id) && (
+                          <option value={entidad.id}>{etiquetaEntidadEquipo(m.tipo, entidad)}</option>
+                        )}
+                        {candidatos.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {etiquetaEntidadEquipo(m.tipo, c)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

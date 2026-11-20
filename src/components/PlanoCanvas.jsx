@@ -1,6 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
 import { colores } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
+
+// Mismo mapa categoría->color que ya usa DiagramaUnifilar.jsx — un
+// equipo marcado en el plano se ve del mismo color que su nodo en el
+// diagrama unifilar, coherencia visual entre las dos vistas de la
+// misma entidad (ver nota de arquitectura en modules/plano/index.js).
+const COLOR_POR_CATEGORIA = {
+  fuente: colores.ok,
+  medicion_proteccion: colores.warn,
+  distribucion: colores.copper,
+  control: colores.copperDim,
+  carga: colores.textDim,
+};
+
+function colorDeEquipo(tipo) {
+  const comp = App.plano.obtenerComponente(tipo);
+  return COLOR_POR_CATEGORIA[comp?.categoria] ?? colores.border;
+}
 
 // Motor de renderizado — ver PLANO_INTELIGENTE_DISENO.md §2. Es el
 // ÚNICO componente que sabe de `transformVista` (zoom/pan, efímero) y
@@ -20,12 +38,14 @@ export default function PlanoCanvas({
   imagen,
   nodos = [],
   segmentos = [],
+  marcadoresEquipo = [],
   escalaMetrosPorPixel,
   puntosGuiaPendientes = [],
   nodoIdsTrazoActual = [],
   modo,
   asistenciaBordes = false,
   onClickImagen,
+  onClickMarcador,
 }) {
   const contenedorRef = useRef(null);
   const svgRef = useRef(null);
@@ -121,7 +141,7 @@ export default function PlanoCanvas({
   function alClick(e) {
     if (!imagen || !onClickImagen || arrastreRef.current?.seMovio) return;
     let puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
-    if (asistenciaBordes && modo === "pared") puntoImagen = ajustarABorde(puntoImagen);
+    if (asistenciaBordes && (modo === "pared" || modo === "conductor")) puntoImagen = ajustarABorde(puntoImagen);
     onClickImagen(puntoImagen);
   }
 
@@ -202,6 +222,7 @@ export default function PlanoCanvas({
                 const a = px(nodoA.punto);
                 const b = px(nodoB.punto);
                 const enTrazo = nodoIdsTrazoActual.includes(seg.nodoAId) && nodoIdsTrazoActual.includes(seg.nodoBId);
+                const esConductor = seg.tipo === "conductor";
                 return (
                   <line
                     key={seg.id}
@@ -209,10 +230,31 @@ export default function PlanoCanvas({
                     y1={a.y}
                     x2={b.x}
                     y2={b.y}
-                    stroke={enTrazo ? colores.copper : colores.ok}
-                    strokeWidth={grosorLinea}
+                    stroke={enTrazo ? colores.warn : esConductor ? colores.copper : colores.ok}
+                    strokeWidth={esConductor ? grosorLinea * 0.7 : grosorLinea}
+                    strokeDasharray={esConductor ? `${grosorLinea} ${grosorLinea}` : undefined}
                     strokeLinecap="round"
                   />
+                );
+              })}
+
+              {marcadoresEquipo.map((marcador) => {
+                const p = px(marcador.punto);
+                const tamano = 22 / transformVista.zoom;
+                return (
+                  <g
+                    key={marcador.id}
+                    transform={`translate(${p.x - tamano / 2},${p.y - tamano / 2})`}
+                    style={{ cursor: onClickMarcador ? "pointer" : undefined }}
+                    onClick={(e) => {
+                      if (!onClickMarcador) return;
+                      e.stopPropagation();
+                      onClickMarcador(marcador);
+                    }}
+                  >
+                    <circle cx={tamano / 2} cy={tamano / 2} r={tamano / 2 + 3 / transformVista.zoom} fill={colores.panel} opacity={0.85} />
+                    <SimboloDiagrama tipo={marcador.tipo} x={0} y={0} size={tamano} color={colorDeEquipo(marcador.tipo)} />
+                  </g>
                 );
               })}
 

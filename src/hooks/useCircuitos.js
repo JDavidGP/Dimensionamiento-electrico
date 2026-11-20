@@ -35,6 +35,16 @@ export function useCircuitos() {
   const [nodosPlano, setNodosPlano] = useState([]);
   const [segmentosPlano, setSegmentosPlano] = useState([]);
   const [habitacionesPlano, setHabitacionesPlano] = useState([]);
+  // --- Rutas de conductor + equipos en el plano (2026-11-20) — ver nota
+  // de arquitectura en modules/plano/index.js. `rutasConductorPlano`
+  // reusa el MISMO grafo nodosPlano/segmentosPlano (los tramos de ruta
+  // se crean como segmentos con tipo "conductor"), solo agrupa qué
+  // nodos forman cada ruta + su longitud ya calculada.
+  // `marcadoresEquipoPlano` son puntos independientes del grafo (no son
+  // nodos ni paredes) — mismo catálogo de tipos que el diagrama
+  // unifilar (ver PlanoMediator.CATALOGO_COMPONENTES).
+  const [rutasConductorPlano, setRutasConductorPlano] = useState([]);
+  const [marcadoresEquipoPlano, setMarcadoresEquipoPlano] = useState([]);
   const [normativaActiva, setNormativaActivaBase] = useState(
     App.config.normativaPorDefecto
   );
@@ -537,6 +547,8 @@ export function useCircuitos() {
         setNodosPlano([]);
         setSegmentosPlano([]);
         setHabitacionesPlano([]);
+        setRutasConductorPlano([]);
+        setMarcadoresEquipoPlano([]);
       });
     }
     return new Promise((resolve, reject) => {
@@ -549,6 +561,8 @@ export function useCircuitos() {
           setNodosPlano([]);
           setSegmentosPlano([]);
           setHabitacionesPlano([]);
+          setRutasConductorPlano([]);
+          setMarcadoresEquipoPlano([]);
           resolve();
         };
         img.onerror = () => reject(new Error("El archivo no es una imagen válida."));
@@ -582,20 +596,21 @@ export function useCircuitos() {
     return nodo;
   }
 
-  function agregarSegmentoPlano(nodoAId, nodoBId) {
+  function agregarSegmentoPlano(nodoAId, nodoBId, tipo = "pared") {
     if (nodoAId === nodoBId) return;
     const yaExiste = segmentosPlano.some(
       (s) => (s.nodoAId === nodoAId && s.nodoBId === nodoBId) || (s.nodoAId === nodoBId && s.nodoBId === nodoAId)
     );
     if (yaExiste) return;
-    setSegmentosPlano([...segmentosPlano, App.plano.crearSegmento(nodoAId, nodoBId)]);
+    setSegmentosPlano([...segmentosPlano, App.plano.crearSegmento(nodoAId, nodoBId, tipo)]);
   }
 
   function eliminarNodoPlano(nodoId) {
-    const resultado = App.plano.eliminarNodo(nodoId, nodosPlano, segmentosPlano, habitacionesPlano);
+    const resultado = App.plano.eliminarNodo(nodoId, nodosPlano, segmentosPlano, habitacionesPlano, rutasConductorPlano);
     setNodosPlano(resultado.nodos);
     setSegmentosPlano(resultado.segmentos);
     setHabitacionesPlano(resultado.habitaciones);
+    setRutasConductorPlano(resultado.rutasConductor);
   }
 
   function eliminarSegmentoPlano(segmentoId) {
@@ -621,12 +636,53 @@ export function useCircuitos() {
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, nombre: nombre.trim() || "Ambiente sin nombre" } : h)));
   }
 
+  // Registra una ruta de conductor a partir de una cadena de nodos YA
+  // trazada como segmentos tipo "conductor" (mismo mecanismo de
+  // trazado/pegado que las paredes — ver agregarSegmentoPlano con
+  // tipo="conductor"). No se cierra en lazo: es punto a punto.
+  function cerrarRutaConductorPlano(nodoIds, nombre = "") {
+    const ruta = App.plano.crearRutaConductor(nodoIds, nodosPlano, nombre);
+    if (!ruta) return null;
+    setRutasConductorPlano([...rutasConductorPlano, ruta]);
+    return ruta;
+  }
+
+  function eliminarRutaConductorPlano(rutaId) {
+    setRutasConductorPlano(App.plano.eliminarRutaConductor(rutaId, rutasConductorPlano));
+  }
+
+  function renombrarRutaConductorPlano(rutaId, nombre) {
+    setRutasConductorPlano(rutasConductorPlano.map((r) => (r.id === rutaId ? { ...r, nombre: nombre.trim() || "Ruta sin nombre" } : r)));
+  }
+
+  // Marcadores de equipo — puntos independientes del grafo de
+  // nodos/segmentos (ver nota de arquitectura en modules/plano/index.js).
+  function agregarMarcadorEquipoPlano(puntoImagen, tipo, entidadId = null, nombre = "") {
+    if (!planoCalibracion) return null;
+    const puntoModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
+    const marcador = App.plano.crearMarcadorEquipo(puntoModelo, tipo, entidadId, nombre);
+    setMarcadoresEquipoPlano([...marcadoresEquipoPlano, marcador]);
+    return marcador;
+  }
+
+  function editarMarcadorEquipoPlano(marcadorId, cambios) {
+    setMarcadoresEquipoPlano(
+      marcadoresEquipoPlano.map((m) => (m.id === marcadorId ? App.plano.editarMarcadorEquipo(m, cambios) : m))
+    );
+  }
+
+  function eliminarMarcadorEquipoPlano(marcadorId) {
+    setMarcadoresEquipoPlano(App.plano.eliminarMarcadorEquipo(marcadorId, marcadoresEquipoPlano));
+  }
+
   function quitarImagenPlano() {
     setPlanoImagen(null);
     setPlanoCalibracion(null);
     setNodosPlano([]);
     setSegmentosPlano([]);
     setHabitacionesPlano([]);
+    setRutasConductorPlano([]);
+    setMarcadoresEquipoPlano([]);
   }
 
   // Corrección de perspectiva (Fase 2, 2do pedido) — ver
@@ -678,6 +734,8 @@ export function useCircuitos() {
         setNodosPlano([]);
         setSegmentosPlano([]);
         setHabitacionesPlano([]);
+        setRutasConductorPlano([]);
+        setMarcadoresEquipoPlano([]);
         return { ok: true };
       })
       .catch((err) => ({ ok: false, motivo: err.message }));
@@ -714,7 +772,15 @@ export function useCircuitos() {
       transformadores,
       nodosDiagrama,
       conexionesDiagrama,
-      plano: { imagen: planoImagen, calibracion: planoCalibracion, nodos: nodosPlano, segmentos: segmentosPlano, habitaciones: habitacionesPlano },
+      plano: {
+        imagen: planoImagen,
+        calibracion: planoCalibracion,
+        nodos: nodosPlano,
+        segmentos: segmentosPlano,
+        habitaciones: habitacionesPlano,
+        rutasConductor: rutasConductorPlano,
+        marcadoresEquipo: marcadoresEquipoPlano,
+      },
     });
     setAvisoArchivo(`Guardado como ${nombre}`);
     setTimeout(() => setAvisoArchivo(""), 4000);
@@ -738,6 +804,8 @@ export function useCircuitos() {
         setNodosPlano(cargado.plano?.nodos ?? []);
         setSegmentosPlano(cargado.plano?.segmentos ?? []);
         setHabitacionesPlano(cargado.plano?.habitaciones ?? []);
+        setRutasConductorPlano(cargado.plano?.rutasConductor ?? []);
+        setMarcadoresEquipoPlano(cargado.plano?.marcadoresEquipo ?? []);
         setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
         setAvisoArchivo(`Proyecto "${cargado.proyecto.nombre}" cargado.`);
         setTimeout(() => setAvisoArchivo(""), 5000);
@@ -762,6 +830,8 @@ export function useCircuitos() {
     setNodosPlano([]);
     setSegmentosPlano([]);
     setHabitacionesPlano([]);
+    setRutasConductorPlano([]);
+    setMarcadoresEquipoPlano([]);
     setCircuitoActivoId(null);
     setFormCircuito({ ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, []) });
     setFormEquipo({ ...EQUIPO_VACIO, etiqueta: App.etiquetado.sugerirEquipo(null, []) });
@@ -851,6 +921,14 @@ export function useCircuitos() {
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
+    rutasConductorPlano,
+    cerrarRutaConductorPlano,
+    eliminarRutaConductorPlano,
+    renombrarRutaConductorPlano,
+    marcadoresEquipoPlano,
+    agregarMarcadorEquipoPlano,
+    editarMarcadorEquipoPlano,
+    eliminarMarcadorEquipoPlano,
     corregirPerspectivaPlano,
     exportarDXFPlano,
     listaIntegridad,
