@@ -23,6 +23,8 @@ import {
   eliminarNodo,
   eliminarSegmento,
   crearHabitacion,
+  crearHabitacionRectangular,
+  moverNodos,
   crearRutaConductor,
   eliminarRutaConductor,
   crearMarcadorEquipo,
@@ -50,7 +52,7 @@ import {
   generarDXF,
   codificarDXFComoBytes,
 } from "../../modules/plano/index.js";
-import { distancia, areaPoligono, perimetroPoligono } from "../../modules/geometria/index.js";
+import { distancia, areaPoligono, perimetroPoligono, puntoDentroDePoligono } from "../../modules/geometria/index.js";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
 import { OrigenMediator } from "./OrigenMediator.js";
 
@@ -68,6 +70,8 @@ export const PlanoMediator = {
   eliminarNodo,
   eliminarSegmento,
   crearHabitacion,
+  crearHabitacionRectangular,
+  moverNodos,
   crearRutaConductor,
   eliminarRutaConductor,
 
@@ -85,6 +89,7 @@ export const PlanoMediator = {
   distancia,
   areaPoligono,
   perimetroPoligono,
+  puntoDentroDePoligono,
 
   calcularHomografia,
   aplicarHomografia,

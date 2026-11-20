@@ -21,6 +21,8 @@ const MODOS = [
   { valor: "calibrar", label: "Calibrar", ayuda: "Hacé click en dos puntos cuya distancia real conozcas." },
   { valor: "pared", label: "Trazar pared", ayuda: "Click para ir agregando puntos. Volvé al punto de inicio para cerrar un ambiente." },
   { valor: "conductor", label: "Trazar conductor", ayuda: "Click para ir agregando el recorrido de un conductor. No hace falta cerrarlo — terminalo con el botón." },
+  { valor: "ambiente", label: "Generar ambiente", ayuda: "Completá el nombre y la medida abajo, y hacé click en el plano donde va el CENTRO del ambiente." },
+  { valor: "mover-ambiente", label: "Mover ambiente", ayuda: "Arrastrá un ambiente ya trazado (manual o generado) para reposicionarlo, manteniendo su forma y medida exactas." },
   { valor: "equipo", label: "Colocar equipo", ayuda: "Elegí el tipo abajo y hacé click en el plano donde va ubicado." },
   { valor: "eliminar", label: "Borrar", ayuda: "Click sobre un nodo, una pared/conductor o un equipo para eliminarlo." },
 ];
@@ -45,6 +47,8 @@ export default function PlanoInteligente({
   cerrarHabitacionPlano,
   eliminarHabitacionPlano,
   renombrarHabitacionPlano,
+  generarHabitacionPlano,
+  moverHabitacionPlano,
   rutasConductorPlano,
   cerrarRutaConductorPlano,
   eliminarRutaConductorPlano,
@@ -96,6 +100,15 @@ export default function PlanoInteligente({
   const [tipoEquipoSeleccionado, setTipoEquipoSeleccionado] = useState(categoriasEquipo[primeraCategoriaEquipo]?.[0]?.id ?? "");
   const [nombreEquipoNuevo, setNombreEquipoNuevo] = useState("");
   const [entidadEquipoNuevo, setEntidadEquipoNuevo] = useState("");
+
+  // Modo "ambiente" — generador por dimensión conocida (pedido
+  // explícito del usuario: "etiqueta + perímetro 12x8m" → un polígono
+  // de ese tamaño exacto, en vez de trazarlo a mano). nombre/ancho/alto
+  // se completan ANTES de hacer click (el click solo define el CENTRO
+  // donde aparece), mismo criterio que el modo "equipo".
+  const [nombreAmbienteNuevo, setNombreAmbienteNuevo] = useState("");
+  const [anchoAmbienteInput, setAnchoAmbienteInput] = useState("");
+  const [altoAmbienteInput, setAltoAmbienteInput] = useState("");
 
   function etiquetaEntidadEquipo(tipoEquipo, entidad) {
     const comp = App.plano.obtenerComponente(tipoEquipo);
@@ -188,6 +201,19 @@ export default function PlanoInteligente({
       if (nodo.id === nodoAnteriorId) return; // click repetido sobre el mismo punto
       agregarSegmentoPlano(nodoAnteriorId, nodo.id, "conductor");
       setTrazoActual([...trazoActual, nodo.id]);
+      return;
+    }
+
+    if (modo === "ambiente") {
+      const ancho = parseFloat(anchoAmbienteInput);
+      const alto = parseFloat(altoAmbienteInput);
+      if (!(ancho > 0) || !(alto > 0)) {
+        mostrarAviso("Completá un ancho y un alto mayores a 0 antes de hacer click.");
+        return;
+      }
+      const habitacion = generarHabitacionPlano(puntoImagen, nombreAmbienteNuevo, ancho, alto);
+      if (!habitacion) return; // sin calibrar todavía
+      mostrarAviso(`"${habitacion.nombre}" generado — ${habitacion.areaM2.toFixed(2)} m². Podés reposicionarlo con "Mover ambiente".`);
       return;
     }
 
@@ -326,7 +352,7 @@ export default function PlanoInteligente({
             <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10, lineHeight: 1.4 }}>
               {MODOS.find((m) => m.valor === modo)?.ayuda}
               {modo === "perspectiva" && puntosPerspectiva.length > 0 && puntosPerspectiva.length < 4 && ` (van ${puntosPerspectiva.length} de 4)`}
-              {(modo === "pared" || modo === "conductor") && !planoCalibracion && " — primero calibrá la escala."}
+              {(modo === "pared" || modo === "conductor" || modo === "ambiente") && !planoCalibracion && " — primero calibrá la escala."}
               {modo === "pared" && trazoActual.length > 0 && (
                 <>
                   {" "}·{" "}
@@ -398,6 +424,34 @@ export default function PlanoInteligente({
                 )}
               </div>
             )}
+
+            {modo === "ambiente" && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+                <input
+                  value={nombreAmbienteNuevo}
+                  onChange={(e) => setNombreAmbienteNuevo(e.target.value)}
+                  placeholder="Nombre (ej. Habitación #1)"
+                  style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, width: 170 }}
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  value={anchoAmbienteInput}
+                  onChange={(e) => setAnchoAmbienteInput(e.target.value)}
+                  placeholder="Ancho (m)"
+                  style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, width: 90 }}
+                />
+                <span style={{ color: colores.textDim, fontSize: 12 }}>×</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={altoAmbienteInput}
+                  onChange={(e) => setAltoAmbienteInput(e.target.value)}
+                  placeholder="Alto (m)"
+                  style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, width: 90 }}
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -406,10 +460,12 @@ export default function PlanoInteligente({
           nodos={nodosPlano}
           segmentos={segmentosPlano}
           marcadoresEquipo={marcadoresEquipoPlano}
+          habitaciones={habitacionesPlano}
           escalaMetrosPorPixel={planoCalibracion?.escalaMetrosPorPixel ?? null}
           puntosGuiaPendientes={modo === "perspectiva" ? puntosPerspectiva : puntosCalibracion}
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
+          onArrastrarHabitacion={moverHabitacionPlano}
           asistenciaBordes={asistenciaBordes}
           onClickImagen={alClickImagen}
           onClickMarcador={alClickMarcador}

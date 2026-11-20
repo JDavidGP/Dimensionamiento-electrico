@@ -59,3 +59,46 @@ export function longitudPolilinea(puntos) {
   }
   return total;
 }
+
+/**
+ * Las 4 esquinas de un rectángulo de `anchoM`×`altoM`, centrado en
+ * `centro` — en orden (da la vuelta), listo para pasarle directo a
+ * crearHabitacion/areaPoligono/perimetroPoligono. Usado por el
+ * "generador de ambiente por dimensión" (modules/plano/index.js,
+ * crearHabitacionRectangular) — pedido explícito del usuario
+ * (2026-11-20): escribir una etiqueta + un ancho×alto conocido y que
+ * aparezca un polígono de ESE tamaño exacto, en vez de tener que
+ * trazarlo a mano punto por punto.
+ */
+export function puntosRectangulo(centro, anchoM, altoM) {
+  const mitadAncho = anchoM / 2;
+  const mitadAlto = altoM / 2;
+  return [
+    { x: centro.x - mitadAncho, y: centro.y - mitadAlto },
+    { x: centro.x + mitadAncho, y: centro.y - mitadAlto },
+    { x: centro.x + mitadAncho, y: centro.y + mitadAlto },
+    { x: centro.x - mitadAncho, y: centro.y + mitadAlto },
+  ];
+}
+
+/**
+ * ¿`punto` cae DENTRO de `poligono` (lista de vértices, cerrado
+ * implícito)? Ray casting estándar (cuenta cruces de una semirrecta
+ * horizontal hacia +x) — usado para el "hit test" de arrastrar un
+ * ambiente: al hacer click/touch, con qué habitación (si alguna)
+ * coincide el punto.
+ */
+export function puntoDentroDePoligono(punto, poligono) {
+  if (!Array.isArray(poligono) || poligono.length < 3) return false;
+  let dentro = false;
+  for (let i = 0, j = poligono.length - 1; i < poligono.length; j = i++) {
+    const a = poligono[i];
+    const b = poligono[j];
+    const cruza = a.y > punto.y !== b.y > punto.y;
+    if (cruza) {
+      const xCruce = ((b.x - a.x) * (punto.y - a.y)) / (b.y - a.y) + a.x;
+      if (punto.x < xCruce) dentro = !dentro;
+    }
+  }
+  return dentro;
+}

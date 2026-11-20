@@ -660,6 +660,35 @@ export function useCircuitos() {
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, nombre: nombre.trim() || "Ambiente sin nombre" } : h)));
   }
 
+  // Generador de ambiente por dimensión conocida (2026-11-20) — el
+  // usuario hace click en dónde quiere el CENTRO del ambiente y acá se
+  // arma un rectángulo de anchoM×altoM exacto (4 nodos + 4 paredes +
+  // la habitación), con el mismo mecanismo de siempre (ver la nota
+  // larga en modules/plano/index.js). `puntoImagen` sigue el mismo
+  // contrato que agregarNodoPlano: ya viene en espacio imagen, se
+  // convierte acá con la calibración vigente.
+  function generarHabitacionPlano(puntoImagen, nombre, anchoM, altoM) {
+    if (!planoCalibracion) return null;
+    const centroModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
+    const resultado = App.plano.crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre);
+    if (!resultado) return null;
+    setNodosPlano([...nodosPlano, ...resultado.nodos]);
+    setSegmentosPlano([...segmentosPlano, ...resultado.segmentos]);
+    setHabitacionesPlano([...habitacionesPlano, resultado.habitacion]);
+    return resultado.habitacion;
+  }
+
+  // Arrastrar un ambiente entero (ver modo "Mover ambiente" en
+  // PlanoCanvas.jsx) — `deltaM` ya viene en metros, calculado por el
+  // canvas a partir del movimiento del puntero (el hook no sabe nada
+  // de píxeles de pantalla ni de zoom, ver la nota de arquitectura en
+  // modules/plano/coordenadas.js).
+  function moverHabitacionPlano(habitacionId, deltaM) {
+    const habitacion = habitacionesPlano.find((h) => h.id === habitacionId);
+    if (!habitacion) return;
+    setNodosPlano(App.plano.moverNodos(habitacion.nodoIds, deltaM, nodosPlano));
+  }
+
   // Registra una ruta de conductor a partir de una cadena de nodos YA
   // trazada como segmentos tipo "conductor" (mismo mecanismo de
   // trazado/pegado que las paredes — ver agregarSegmentoPlano con
@@ -947,6 +976,8 @@ export function useCircuitos() {
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
+    generarHabitacionPlano,
+    moverHabitacionPlano,
     rutasConductorPlano,
     cerrarRutaConductorPlano,
     eliminarRutaConductorPlano,

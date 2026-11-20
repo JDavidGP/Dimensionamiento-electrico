@@ -555,3 +555,66 @@ afuera para no agregar alcance sin que lo pidan):
   conductores/equipos por separado) — hoy todo se dibuja siempre.
 - Sugerencia automática de iluminación/circuitos a partir del área de
   un ambiente (normativa real pendiente de investigar, ver §9).
+
+## 13. Generador de ambiente por dimensión conocida (2026-11-20)
+
+Pedido explícito del usuario, tras discutir una idea más grande (un
+"chat" de comandos de texto libre tipo "Habitación #1, 12×8m" → objeto
+en el plano, extendido incluso a creación masiva de equipos): se
+recomendó explícitamente NO construir un chatbot con IA real — el
+mismo valor se logra con un formulario chico y determinístico, sin
+mandar nada a ningún servidor (la app no hace llamadas de red, ver
+README §Privacidad) y sin la ambigüedad de parsear texto libre. El
+usuario aceptó: primero Directorio editable (ver más abajo en el
+historial), DESPUÉS este generador, dejando la creación masiva de
+equipos por texto para otra ronda.
+
+- **Generar por dimensión** (`modules/geometria/index.js`:
+  `puntosRectangulo`; `modules/plano/index.js`:
+  `crearHabitacionRectangular`): modo "Generar ambiente" — el usuario
+  completa nombre + ancho×alto (metros, ya conocidos) y hace UN click
+  en el plano, que define el CENTRO. Se generan 4 nodos NUEVOS + 4
+  segmentos tipo "pared" + la habitación — reutilizando TAL CUAL
+  `crearNodo`/`crearSegmento`/`crearHabitacion` (nunca una fábrica
+  paralela): el resultado es indistinguible de un ambiente trazado a
+  mano, se puede seguir editando con las mismas herramientas de
+  siempre (borrar un nodo, extender con una pared trazada a mano que
+  se "pega" a una esquina generada, etc.). Deliberadamente SIN el
+  pegado de 30cm (`RADIO_SNAP_METROS`) al generar — son 4 nodos
+  siempre nuevos, para no fusionar sin querer con una pared cercana;
+  si el usuario sí quiere conectarlo a algo, traza una pared a mano
+  después (eso sí se pega solo, como siempre).
+- **Arrastrar un ambiente ya existente** (`modules/plano/index.js`:
+  `moverNodos`, genérica — traslada CUALQUIER grupo de nodos por un
+  delta, no es "mover habitación" específicamente; `modules/geometria/
+  index.js`: `puntoDentroDePoligono`, ray casting estándar, para el
+  hit-test de "¿qué ambiente hay bajo este click?"): modo "Mover
+  ambiente", nuevo en `PlanoCanvas.jsx` — clickear y arrastrar DENTRO
+  del contorno de un ambiente (trazado a mano o generado, da igual) lo
+  traslada en tiempo real; clickear fuera de cualquier ambiente no
+  hace nada (no hay pan en este modo, a propósito — "Mover vista"
+  sigue siendo la herramienta dedicada a eso). El delta de arrastre se
+  calcula en la MISMA cadena de conversión de siempre (pantalla →
+  imagen dividiendo por el zoom, después imagen → metros con la
+  escala de calibración — nunca una fórmula nueva) y se aplica a los
+  nodos en METROS, así que el área/perímetro quedan matemáticamente
+  IDÉNTICOS tras arrastrar (es una traslación rígida, no una
+  deformación) — probado explícitamente con Playwright, no solo
+  "se ve bien".
+- **Probado end-to-end**: `puntosRectangulo`/`puntoDentroDePoligono`/
+  `crearHabitacionRectangular`/`moverNodos` con Node puro (área/
+  perímetro exactos para 12×8m, que cada nodo generado participe de
+  exactamente 2 segmentos — un lazo cerrado válido, que mover NO
+  toque nodos ajenos al grupo); con Playwright: generar un ambiente de
+  10×6m con un click y verificar 60m²/32m EXACTOS, que haya quedado
+  centrado en el punto clickeado, arrastrarlo y confirmar que el
+  área/perímetro NO cambiaron, que arrastrar desde FUERA de cualquier
+  ambiente no mueva nada, y persistencia idéntica tras guardar y
+  reabrir el proyecto.
+
+**Deliberadamente NO construido en esta ronda**: formas que no sean
+rectángulos (L, polígonos irregulares por dimensión — seguiría
+necesitando trazado manual o una especificación más rica que un solo
+ancho×alto); arrastrar una ruta de conductor completa (moverNodos ya
+es genérica y lo permitiría, pero no hay UI para eso todavía); snap/
+pegado del ambiente generado a paredes existentes cercanas.

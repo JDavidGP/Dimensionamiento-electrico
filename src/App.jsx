@@ -109,6 +109,8 @@ export default function App() {
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
+    generarHabitacionPlano,
+    moverHabitacionPlano,
     rutasConductorPlano,
     cerrarRutaConductorPlano,
     eliminarRutaConductorPlano,
@@ -390,6 +392,8 @@ export default function App() {
                   cerrarHabitacionPlano={cerrarHabitacionPlano}
                   eliminarHabitacionPlano={eliminarHabitacionPlano}
                   renombrarHabitacionPlano={renombrarHabitacionPlano}
+                  generarHabitacionPlano={generarHabitacionPlano}
+                  moverHabitacionPlano={moverHabitacionPlano}
                   rutasConductorPlano={rutasConductorPlano}
                   cerrarRutaConductorPlano={cerrarRutaConductorPlano}
                   eliminarRutaConductorPlano={eliminarRutaConductorPlano}

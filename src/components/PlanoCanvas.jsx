@@ -39,6 +39,7 @@ export default function PlanoCanvas({
   nodos = [],
   segmentos = [],
   marcadoresEquipo = [],
+  habitaciones = [],
   escalaMetrosPorPixel,
   puntosGuiaPendientes = [],
   nodoIdsTrazoActual = [],
@@ -46,12 +47,17 @@ export default function PlanoCanvas({
   asistenciaBordes = false,
   onClickImagen,
   onClickMarcador,
+  onArrastrarHabitacion,
 }) {
   const contenedorRef = useRef(null);
   const svgRef = useRef(null);
   const [tamanoCanvas, setTamanoCanvas] = useState({ ancho: 0, alto: 0 });
   const [transformVista, setTransformVista] = useState(() => App.plano.transformVistaInicial());
   const arrastreRef = useRef(null); // { xInicial, yInicial, transformInicial } — solo en modo "mover"
+  // Arrastre de un ambiente entero — modo "mover-ambiente", separado
+  // del de arriba (uno mueve la VISTA, este mueve DATOS del proyecto).
+  // { habitacionId, x, y, seMovio }.
+  const arrastreAmbienteRef = useRef(null);
   // Canvas oculto con los píxeles de la imagen cargada — solo para que
   // alClick pueda leer un parche chico y "pegarse" al borde más
   // cercano (ver modules/plano/deteccionBordes.js). Se arma UNA vez
@@ -138,8 +144,21 @@ export default function PlanoCanvas({
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
+  /** Puntos (espacio MODELO, metros) de los nodos de una habitación, en el orden que ya trae — para el hit-test de arrastre y nada más (el área/perímetro YA están calculados, esto no los vuelve a tocar). */
+  function puntosDeHabitacion(h) {
+    return h.nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter(Boolean);
+  }
+
+  /** La habitación (si alguna) bajo `puntoImagen` — convierte a espacio modelo para el point-in-polygon, ya que ahí es donde viven los nodos. */
+  function habitacionEn(puntoImagen) {
+    if (!escalaMetrosPorPixel) return null;
+    const puntoModelo = App.plano.imagenAModelo(puntoImagen, escalaMetrosPorPixel);
+    return habitaciones.find((h) => App.plano.puntoDentroDePoligono(puntoModelo, puntosDeHabitacion(h))) ?? null;
+  }
+
   function alClick(e) {
-    if (!imagen || !onClickImagen || arrastreRef.current?.seMovio) return;
+    if (!imagen || !onClickImagen || arrastreRef.current?.seMovio || arrastreAmbienteRef.current?.seMovio) return;
+    if (modo === "mover-ambiente") return; // ese modo es solo para arrastrar, un click sin arrastre no hace nada
     let puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
     if (asistenciaBordes && (modo === "pared" || modo === "conductor")) puntoImagen = ajustarABorde(puntoImagen);
     onClickImagen(puntoImagen);
@@ -153,22 +172,49 @@ export default function PlanoCanvas({
   }
 
   function alPointerDown(e) {
-    if (modo !== "mover" || !imagen) return;
-    arrastreRef.current = { x: e.clientX, y: e.clientY, seMovio: false };
+    if (!imagen) return;
+    if (modo === "mover") {
+      arrastreRef.current = { x: e.clientX, y: e.clientY, seMovio: false };
+      return;
+    }
+    if (modo === "mover-ambiente" && onArrastrarHabitacion) {
+      const puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
+      const habitacion = habitacionEn(puntoImagen);
+      if (habitacion) {
+        arrastreAmbienteRef.current = { habitacionId: habitacion.id, x: e.clientX, y: e.clientY, seMovio: false };
+      }
+    }
   }
 
   function alPointerMove(e) {
-    if (!arrastreRef.current || modo !== "mover") return;
-    const dx = e.clientX - arrastreRef.current.x;
-    const dy = e.clientY - arrastreRef.current.y;
-    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) arrastreRef.current.seMovio = true;
-    setTransformVista((actual) => App.plano.aplicarPan(actual, { x: dx, y: dy }));
-    arrastreRef.current.x = e.clientX;
-    arrastreRef.current.y = e.clientY;
+    if (arrastreRef.current && modo === "mover") {
+      const dx = e.clientX - arrastreRef.current.x;
+      const dy = e.clientY - arrastreRef.current.y;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) arrastreRef.current.seMovio = true;
+      setTransformVista((actual) => App.plano.aplicarPan(actual, { x: dx, y: dy }));
+      arrastreRef.current.x = e.clientX;
+      arrastreRef.current.y = e.clientY;
+      return;
+    }
+    if (arrastreAmbienteRef.current && modo === "mover-ambiente" && escalaMetrosPorPixel) {
+      const dx = e.clientX - arrastreAmbienteRef.current.x;
+      const dy = e.clientY - arrastreAmbienteRef.current.y;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        arrastreAmbienteRef.current.seMovio = true;
+        // pantalla -> imagen: el pan se cancela en una resta de dos
+        // puntos, solo queda dividir por el zoom (ver coordenadas.js).
+        const deltaImagen = { x: dx / transformVista.zoom, y: dy / transformVista.zoom };
+        const deltaModelo = App.plano.imagenAModelo(deltaImagen, escalaMetrosPorPixel);
+        onArrastrarHabitacion(arrastreAmbienteRef.current.habitacionId, deltaModelo);
+        arrastreAmbienteRef.current.x = e.clientX;
+        arrastreAmbienteRef.current.y = e.clientY;
+      }
+    }
   }
 
   function alPointerUp() {
     arrastreRef.current = null;
+    arrastreAmbienteRef.current = null;
   }
 
   function zoomBoton(factor) {
@@ -193,7 +239,7 @@ export default function PlanoCanvas({
     <div style={{ position: "relative" }}>
       <div
         ref={contenedorRef}
-        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" ? "none" : "pan-y" }}
+        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" || modo === "mover-ambiente" ? "none" : "pan-y" }}
       >
         {!imagen ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: colores.textDim, fontSize: 13 }}>
@@ -204,7 +250,7 @@ export default function PlanoCanvas({
             ref={svgRef}
             width={tamanoCanvas.ancho}
             height={tamanoCanvas.alto}
-            style={{ display: "block", cursor: modo === "mover" ? "grab" : "crosshair" }}
+            style={{ display: "block", cursor: modo === "mover" || modo === "mover-ambiente" ? "grab" : "crosshair" }}
             onClick={alClick}
             onWheel={alWheel}
             onPointerDown={alPointerDown}

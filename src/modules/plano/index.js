@@ -25,7 +25,7 @@
 // modules/tablero/index.js con TableroMediator.
 
 import { generarId } from "../../shared/utils/id.js";
-import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea } from "../geometria/index.js";
+import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo } from "../geometria/index.js";
 
 export { calcularEscala, imagenAModelo, modeloAImagen } from "./calibracion.js";
 export { transformVistaInicial, aPantalla, aModelo, aplicarZoom, aplicarPan, ajustarAVentana, ZOOM_MIN, ZOOM_MAX } from "./coordenadas.js";
@@ -83,6 +83,22 @@ export function eliminarSegmento(segmentoId, segmentos = []) {
 }
 
 /**
+ * Traslada un GRUPO de nodos (ej. todos los de una habitación) por
+ * `deltaM` (metros) — para arrastrar un ambiente entero de un lugar a
+ * otro del plano, manteniendo su forma exacta (es la misma operación
+ * aplicada a cada nodo, no se recalcula nada). Genérica a propósito —
+ * no es "mover habitación", es "mover estos nodos"; quien llama decide
+ * cuáles (hoy: los nodoIds de una habitación; en el futuro, podría
+ * servir para arrastrar una ruta de conductor completa igual).
+ */
+export function moverNodos(nodoIds, deltaM, nodos = []) {
+  const idsAMover = new Set(nodoIds);
+  return nodos.map((n) =>
+    idsAMover.has(n.id) ? { ...n, punto: { x: n.punto.x + deltaM.x, y: n.punto.y + deltaM.y } } : n
+  );
+}
+
+/**
  * Registra una habitación a partir de una cadena de nodos YA cerrada
  * (el último igual al primero no hace falta repetirlo — ver nota de
  * Fase 1 arriba). Calcula área/perímetro de una — no se vuelven a
@@ -99,6 +115,36 @@ export function crearHabitacion(nodoIds, nodos = [], nombre = "") {
     areaM2: areaPoligono(puntos),
     perimetroM: perimetroPoligono(puntos),
   };
+}
+
+// --- Generador de ambiente por dimensión conocida (2026-11-20) ---
+//
+// Pedido explícito del usuario: escribir una etiqueta + un ancho×alto
+// ya conocidos (ej. "Habitación #1, 12×8m") y que aparezca un
+// rectángulo de ESE tamaño exacto en el plano, en vez de tener que
+// trazarlo a mano punto por punto — "que puedas arrastrar" después
+// (ver moverNodos arriba, usado por PlanoCanvas.jsx en el modo
+// "Mover ambiente"). Deliberadamente NO reusa nodoCercano/el pegado
+// de 30cm: son 4 nodos NUEVOS siempre, para no fusionar sin querer con
+// una pared manual cercana — si el usuario SÍ quiere conectarlas, basta
+// con trazar una pared a mano después, que si se pega sola (eso ya
+// funciona con cualquier nodo del grafo, generado o manual).
+//
+// Reusa crearNodo/crearSegmento/crearHabitacion tal cual (nunca una
+// segunda fábrica paralela) — el resultado es indistinguible de una
+// habitación trazada a mano: se puede seguir editando con las mismas
+// herramientas (borrar un nodo, agregar una pared, etc.).
+export function crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre = "") {
+  if (!(anchoM > 0) || !(altoM > 0)) return null;
+  const puntos = puntosRectangulo(centroModelo, anchoM, altoM);
+  const nodos = puntos.map((p) => crearNodo(p));
+  const segmentos = nodos.map((n, i) => crearSegmento(n.id, nodos[(i + 1) % nodos.length].id, "pared"));
+  const habitacion = crearHabitacion(
+    nodos.map((n) => n.id),
+    nodos,
+    nombre
+  );
+  return { nodos, segmentos, habitacion };
 }
 
 // --- Rutas de conductor — Fase 2, 3ra ronda (2026-11-20) ---
