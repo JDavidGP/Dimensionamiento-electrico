@@ -4,6 +4,7 @@
  */
 export {
   proyectoVacio,
+  planoVacio,
   serializarProyecto,
   deserializarProyecto,
   nombreArchivo,

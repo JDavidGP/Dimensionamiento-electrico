@@ -19,6 +19,20 @@ export function useCircuitos() {
   const [transformadores, setTransformadores] = useState([]);
   const [nodosDiagrama, setNodosDiagrama] = useState([]);
   const [conexionesDiagrama, setConexionesDiagrama] = useState([]);
+  // --- Plano inteligente (Fase 1, 2026-11-20) — ver
+  // PLANO_INTELIGENTE_DISENO.md. `planoImagen`/`planoCalibracion` son
+  // metadatos del archivo cargado y del escalar metros/píxel;
+  // `nodosPlano`/`segmentosPlano` son el grafo de paredes YA en
+  // espacio modelo (metros); `habitacionesPlano` son polígonos
+  // cerrados derivados (área/perímetro ya calculados, nunca se tocan
+  // a mano). El `transformVista` (zoom/pan) NO vive acá — es estado
+  // efímero de PlanoInteligente.jsx, nunca se persiste como parte del
+  // cálculo (ver el diseño, §1 y §4).
+  const [planoImagen, setPlanoImagen] = useState(null);
+  const [planoCalibracion, setPlanoCalibracion] = useState(null);
+  const [nodosPlano, setNodosPlano] = useState([]);
+  const [segmentosPlano, setSegmentosPlano] = useState([]);
+  const [habitacionesPlano, setHabitacionesPlano] = useState([]);
   const [normativaActiva, setNormativaActivaBase] = useState(
     App.config.normativaPorDefecto
   );
@@ -501,6 +515,104 @@ export function useCircuitos() {
     return App.tablero.sinAsignar(circuitos);
   }
 
+  // --- PLANO INTELIGENTE (Fase 1) ---
+  // Carga el archivo de imagen como data URL (embebida en el proyecto,
+  // ver la nota en modules/persistencia/proyecto.js sobre por qué).
+  // Al cargar una imagen NUEVA se resetea todo lo demás del plano
+  // (calibración/nodos/segmentos/habitaciones no tendrían sentido
+  // sobre un fondo distinto) — mismo criterio que nuevoProyecto()
+  // limpiando el resto del estado.
+  function cargarImagenPlano(archivo) {
+    return new Promise((resolve, reject) => {
+      const lector = new FileReader();
+      lector.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          setPlanoImagen({ dataUrl: e.target.result, anchoPx: img.naturalWidth, altoPx: img.naturalHeight, nombreArchivo: archivo.name });
+          setPlanoCalibracion(null);
+          setNodosPlano([]);
+          setSegmentosPlano([]);
+          setHabitacionesPlano([]);
+          resolve();
+        };
+        img.onerror = () => reject(new Error("El archivo no es una imagen válida."));
+        img.src = e.target.result;
+      };
+      lector.onerror = () => reject(new Error("No se pudo leer el archivo."));
+      lector.readAsDataURL(archivo);
+    });
+  }
+
+  function calibrarPlano(puntoImagenA, puntoImagenB, distanciaRealM) {
+    const resultado = App.plano.calcularEscala(puntoImagenA, puntoImagenB, distanciaRealM);
+    if (!resultado.ok) return resultado;
+    setPlanoCalibracion(resultado.calibracion);
+    return resultado;
+  }
+
+  // Convierte un punto YA en espacio imagen (píxeles) a metros reales y
+  // lo registra como nodo nuevo — o reutiliza uno existente si cae
+  // dentro del radio de "pegado" (ver RADIO_SNAP_METROS), para que
+  // cerrar un polígono comparta el mismo nodo en vez de superponer dos.
+  // Devuelve el nodo usado (nuevo o reusado) para que quien llama (el
+  // hook de interacción del canvas) pueda encadenar el segmento.
+  function agregarNodoPlano(puntoImagen) {
+    if (!planoCalibracion) return null;
+    const puntoModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
+    const existente = App.plano.nodoCercano(puntoModelo, nodosPlano);
+    if (existente) return existente;
+    const nodo = App.plano.crearNodo(puntoModelo);
+    setNodosPlano([...nodosPlano, nodo]);
+    return nodo;
+  }
+
+  function agregarSegmentoPlano(nodoAId, nodoBId) {
+    if (nodoAId === nodoBId) return;
+    const yaExiste = segmentosPlano.some(
+      (s) => (s.nodoAId === nodoAId && s.nodoBId === nodoBId) || (s.nodoAId === nodoBId && s.nodoBId === nodoAId)
+    );
+    if (yaExiste) return;
+    setSegmentosPlano([...segmentosPlano, App.plano.crearSegmento(nodoAId, nodoBId)]);
+  }
+
+  function eliminarNodoPlano(nodoId) {
+    const resultado = App.plano.eliminarNodo(nodoId, nodosPlano, segmentosPlano, habitacionesPlano);
+    setNodosPlano(resultado.nodos);
+    setSegmentosPlano(resultado.segmentos);
+    setHabitacionesPlano(resultado.habitaciones);
+  }
+
+  function eliminarSegmentoPlano(segmentoId) {
+    setSegmentosPlano(App.plano.eliminarSegmento(segmentoId, segmentosPlano));
+  }
+
+  // Registra una habitación a partir de una cadena de nodos YA cerrada
+  // (el trazo volvió a su propio nodo de inicio) — ver la nota de Fase
+  // 1 en modules/plano/index.js sobre por qué no es detección
+  // arbitraria de ciclos.
+  function cerrarHabitacionPlano(nodoIds, nombre = "") {
+    const habitacion = App.plano.crearHabitacion(nodoIds, nodosPlano, nombre);
+    if (!habitacion) return null;
+    setHabitacionesPlano([...habitacionesPlano, habitacion]);
+    return habitacion;
+  }
+
+  function eliminarHabitacionPlano(habitacionId) {
+    setHabitacionesPlano(habitacionesPlano.filter((h) => h.id !== habitacionId));
+  }
+
+  function renombrarHabitacionPlano(habitacionId, nombre) {
+    setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, nombre: nombre.trim() || "Ambiente sin nombre" } : h)));
+  }
+
+  function quitarImagenPlano() {
+    setPlanoImagen(null);
+    setPlanoCalibracion(null);
+    setNodosPlano([]);
+    setSegmentosPlano([]);
+    setHabitacionesPlano([]);
+  }
+
   // --- PROYECTO ---
   function guardarProyecto() {
     const nombre = App.guardarProyecto({
@@ -514,6 +626,7 @@ export function useCircuitos() {
       transformadores,
       nodosDiagrama,
       conexionesDiagrama,
+      plano: { imagen: planoImagen, calibracion: planoCalibracion, nodos: nodosPlano, segmentos: segmentosPlano, habitaciones: habitacionesPlano },
     });
     setAvisoArchivo(`Guardado como ${nombre}`);
     setTimeout(() => setAvisoArchivo(""), 4000);
@@ -532,6 +645,11 @@ export function useCircuitos() {
         setTransformadores(cargado.transformadores ?? []);
         setNodosDiagrama(cargado.nodosDiagrama ?? []);
         setConexionesDiagrama(cargado.conexionesDiagrama ?? []);
+        setPlanoImagen(cargado.plano?.imagen ?? null);
+        setPlanoCalibracion(cargado.plano?.calibracion ?? null);
+        setNodosPlano(cargado.plano?.nodos ?? []);
+        setSegmentosPlano(cargado.plano?.segmentos ?? []);
+        setHabitacionesPlano(cargado.plano?.habitaciones ?? []);
         setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
         setAvisoArchivo(`Proyecto "${cargado.proyecto.nombre}" cargado.`);
         setTimeout(() => setAvisoArchivo(""), 5000);
@@ -551,6 +669,11 @@ export function useCircuitos() {
     setTransformadores([]);
     setNodosDiagrama([]);
     setConexionesDiagrama([]);
+    setPlanoImagen(null);
+    setPlanoCalibracion(null);
+    setNodosPlano([]);
+    setSegmentosPlano([]);
+    setHabitacionesPlano([]);
     setCircuitoActivoId(null);
     setFormCircuito({ ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, []) });
     setFormEquipo({ ...EQUIPO_VACIO, etiqueta: App.etiquetado.sugerirEquipo(null, []) });
@@ -625,6 +748,21 @@ export function useCircuitos() {
     crearConexionDiagrama,
     editarConexionDiagrama,
     eliminarConexionDiagrama,
+    planoImagen,
+    cargarImagenPlano,
+    quitarImagenPlano,
+    planoCalibracion,
+    calibrarPlano,
+    nodosPlano,
+    segmentosPlano,
+    agregarNodoPlano,
+    agregarSegmentoPlano,
+    eliminarNodoPlano,
+    eliminarSegmentoPlano,
+    habitacionesPlano,
+    cerrarHabitacionPlano,
+    eliminarHabitacionPlano,
+    renombrarHabitacionPlano,
     listaIntegridad,
     resumenIntegridad: resumenInt,
     detalleElectrico,

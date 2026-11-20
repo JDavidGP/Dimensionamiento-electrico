@@ -19,6 +19,17 @@ function migrarTipoInstalacion(valor) {
   return MIGRACION_TIPO_INSTALACION[valor] ?? TIPO_INSTALACION_POR_DEFECTO;
 }
 
+// Plano vacío — ver modules/plano/index.js y PLANO_INTELIGENTE_DISENO.md.
+// `imagen` guarda el archivo cargado como data URL (embebido en el
+// propio JSON del proyecto) — necesario para que el plano se vea
+// IGUAL al compartir el proyecto entre dispositivos (ver la tabla de
+// escenarios del diseño): si la imagen no viaja con el archivo, el
+// fondo de referencia desaparecería al abrirlo en otra máquina, aunque
+// las medidas (que sí viven en metros, no en la imagen) sigan intactas.
+export function planoVacio() {
+  return { imagen: null, calibracion: null, nodos: [], segmentos: [], habitaciones: [] };
+}
+
 export function proyectoVacio() {
   return {
     id: generarId(),
@@ -31,7 +42,7 @@ export function proyectoVacio() {
 // Empaqueta el estado completo de la app en un solo objeto serializable.
 // Este es el "documento" que se guarda/abre — versión de formato incluida
 // por si en el futuro cambia la estructura y hay que migrar archivos viejos.
-export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama }) {
+export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, plano }) {
   return {
     formatoVersion: 1,
     proyecto: { ...proyecto, fechaModificacion: new Date().toISOString() },
@@ -44,6 +55,7 @@ export function serializarProyecto({ proyecto, normativaActiva, tipoInstalacion,
     transformadores: transformadores ?? [],
     nodosDiagrama: nodosDiagrama ?? [],
     conexionesDiagrama: conexionesDiagrama ?? [],
+    plano: plano ?? planoVacio(),
   };
 }
 
@@ -78,6 +90,9 @@ export function deserializarProyecto(data) {
     // (Fase 1) no traen nodos/conexiones.
     nodosDiagrama: Array.isArray(data.nodosDiagrama) ? data.nodosDiagrama : [],
     conexionesDiagrama: Array.isArray(data.conexionesDiagrama) ? data.conexionesDiagrama : [],
+    // Compatibilidad: archivos guardados antes del plano inteligente
+    // (Fase 1, 2026-11-20) no traen `plano` — cae al vacío.
+    plano: data.plano && typeof data.plano === "object" ? { ...planoVacio(), ...data.plano } : planoVacio(),
   };
 }
 

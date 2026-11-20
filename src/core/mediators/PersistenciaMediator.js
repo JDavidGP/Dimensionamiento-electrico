@@ -4,6 +4,7 @@
  */
 import {
   proyectoVacio,
+  planoVacio,
   serializarProyecto,
   deserializarProyecto,
   nombreArchivo,
@@ -13,9 +14,10 @@ import { Config } from "../services/Config.js";
 
 export const PersistenciaMediator = {
   proyectoVacio,
+  planoVacio,
   nombreArchivo,
 
-  serializar({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama }) {
+  serializar({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, plano }) {
     const data = serializarProyecto({
       proyecto,
       normativaActiva,
@@ -27,6 +29,7 @@ export const PersistenciaMediator = {
       transformadores,
       nodosDiagrama,
       conexionesDiagrama,
+      plano,
     });
     data.formatoVersion = data.formatoVersion ?? Config.formatoVersion;
     return data;
@@ -42,7 +45,7 @@ export const PersistenciaMediator = {
   },
 
   /** Descarga el proyecto como archivo .json en el navegador. */
-  descargarJson({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama }) {
+  descargarJson({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, plano }) {
     const datos = this.serializar({
       proyecto,
       normativaActiva,
@@ -54,6 +57,7 @@ export const PersistenciaMediator = {
       transformadores,
       nodosDiagrama,
       conexionesDiagrama,
+      plano,
     });
     const blob = new Blob([JSON.stringify(datos, null, 2)], {
       type: "application/json",
