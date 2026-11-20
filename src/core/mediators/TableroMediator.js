@@ -50,8 +50,28 @@ import {
 } from "../../modules/motor/index.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
+import { OrigenMediator } from "./OrigenMediator.js";
 import { Logger } from "../services/Logger.js";
 import { Config } from "../services/Config.js";
+
+/**
+ * Si el tablero no declaró su propia distancia de alimentador, y su
+ * origen directo es una fuente de energía (Red local/Batería/Generador,
+ * ver modules/origen/fuentesEnergia.js) que SÍ tiene distancia/material
+ * propios, los usa como respaldo — evita pedir el mismo dato dos veces
+ * en el caso común (un tablero cuelga directo de una fuente ya
+ * caracterizada). Si el tablero declaró los suyos, esos mandan siempre
+ * (hace falta cuando varios tableros cuelgan de la misma fuente con
+ * tramos reales distintos — calibres distintos, pedido explícito del
+ * usuario 2026-11-20). NO muta `tablero`.
+ */
+function conRespaldoDeFuente(tablero, tableros, fuentesEnergia) {
+  if (Number(tablero.longitudAlimentador) > 0) return tablero;
+  const origen = OrigenMediator.resolver(tablero.tableroPadreId, tableros, fuentesEnergia, []);
+  const fuente = origen?.fuente;
+  if (!fuente || !(Number(fuente.distanciaM) > 0)) return tablero;
+  return { ...tablero, longitudAlimentador: fuente.distanciaM, materialAlimentador: fuente.materialConductor || tablero.materialAlimentador };
+}
 
 export const TableroMediator = {
   /** Grados de electrificación REBT ITC-BT-10 (§2.1), expuestos para la UI — mismo patrón que OrigenMediator.MODOS_CONMUTACION. */
@@ -254,8 +274,9 @@ export const TableroMediator = {
    * tensión, balance de fases, subtablero con alimentación mixta
    * 120V/240V simultánea.
    */
-  calcularAlimentadorAgregado(tableroId, { tableros, circuitos, resultados, normativaId } = {}) {
+  calcularAlimentadorAgregado(tableroId, { tableros, circuitos, resultados, normativaId, fuentesEnergia } = {}) {
     const listaTableros = tableros ?? DataProvider.getTableros();
+    const listaFuentesEnergia = fuentesEnergia ?? DataProvider.getFuentesEnergia();
     const { orden, ciclo, tableroCiclo } = obtenerArbolDescendentePostOrden(tableroId, listaTableros);
 
     if (ciclo) {
@@ -356,7 +377,8 @@ export const TableroMediator = {
         }));
       }
 
-      const resultado = calcularAlimentador(t, [...resultadosPropios, ...pseudoResultadosHijos], t.fases, normativa);
+      const tEfectivo = conRespaldoDeFuente(t, listaTableros, listaFuentesEnergia);
+      const resultado = calcularAlimentador(tEfectivo, [...resultadosPropios, ...pseudoResultadosHijos], t.fases, normativa);
       // Detalle del cálculo REBT adjunto para que la UI lo muestre sin
       // recalcularlo (mismo criterio que contribuyentesPorLinea en
       // balanceFasesDeTablero) — campo opcional, no cambia el contrato

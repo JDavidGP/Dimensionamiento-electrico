@@ -24,7 +24,9 @@ import {
   crearFuenteEnergia,
   editarFuenteEnergia,
   liberarTablerosDeFuente,
+  limpiarRolDuplicado,
   TIPOS_FUENTE_ENERGIA,
+  ROLES_FUENTE,
   MODOS_CONMUTACION,
   CONMUTACION_VACIA,
   normalizarConmutacion,
@@ -39,6 +41,7 @@ import {
 export const OrigenMediator = {
   // Enums expuestos para la UI — mismo patrón que ValidacionMediator.ESTADOS.
   TIPOS_FUENTE_ENERGIA,
+  ROLES_FUENTE,
   MODOS_CONMUTACION,
   CONMUTACION_VACIA,
   TRANSFORMADOR_VACIO,
@@ -51,6 +54,11 @@ export const OrigenMediator = {
   /** Devuelve la fuente editada; el hook decide cómo guardarla. */
   editarFuente(fuente, cambios) {
     return editarFuenteEnergia(fuente, cambios);
+  },
+
+  /** Deja a lo sumo una fuente con `rol` (se lo quita a cualquier otra que lo tuviera). */
+  limpiarRolDuplicado(fuentes, fuenteId, rol) {
+    return limpiarRolDuplicado(fuentes ?? [], fuenteId, rol);
   },
 
   /** Al eliminar una fuente, los tableros que la tenían como padre quedan libres (null), no rotos. */

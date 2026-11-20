@@ -126,10 +126,12 @@ export function resolverOrigen(origenId, tableros = [], fuentesEnergia = [], tra
 
 export {
   TIPOS_FUENTE_ENERGIA,
+  ROLES_FUENTE,
   FUENTE_ENERGIA_VACIA,
   crearFuenteEnergia,
   editarFuenteEnergia,
   liberarTablerosDeFuente,
+  limpiarRolDuplicado,
 } from "./fuentesEnergia.js";
 
 export {

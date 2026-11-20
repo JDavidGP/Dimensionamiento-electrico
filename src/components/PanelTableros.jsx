@@ -67,6 +67,7 @@ const FORM_TRANSFORMADOR_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "
 // de energía, con su CRUD completo) use las mismas etiquetas — nunca
 // un segundo mapeo que se pueda desincronizar del de acá.
 export const TIPOS_FUENTE_UI = [
+  { valor: "red_local", label: "Red local" },
   { valor: "bateria", label: "Batería" },
   { valor: "generador", label: "Generador" },
 ];
@@ -243,6 +244,17 @@ function etiquetaFuentePrincipal(padre, padreFuente, padreTransformador) {
     return `${padreTransformador.nombre} (Transformador${padreTransformador.tensionPrimariaV && padreTransformador.tensionSecundariaV ? ` · ${padreTransformador.tensionPrimariaV}V→${padreTransformador.tensionSecundariaV}V` : ""})`;
   }
   return "Red eléctrica local (acometida / poste)";
+}
+
+// Distancia/material EFECTIVOS que usa el alimentador de este tablero
+// — los propios si los declaró, si no los de la fuente de origen como
+// respaldo (ver conRespaldoDeFuente en TableroMediator.js; acá solo se
+// refleja en texto lo mismo que el motor ya está usando, no se
+// recalcula nada).
+function etiquetaDistanciaAlimentador(t, padreFuente) {
+  if (t.longitudAlimentador > 0) return `${t.longitudAlimentador}m de ${t.materialAlimentador}`;
+  if (padreFuente?.distanciaM > 0) return `${padreFuente.distanciaM}m de ${padreFuente.materialConductor} (de la fuente)`;
+  return null;
 }
 
 // Fuentes de energía secundaria/auxiliar de un tablero — pedido
@@ -1057,6 +1069,8 @@ export default function PanelTableros({
             </Campo>
           )}
 
+          {tipoInstalacion !== TIPOS_INSTALACION.RESIDENCIAL_BASICO ? (
+          <>
           <Campo label="Fuente de energía — Secundaria (autoconsumo, opcional)">
             <select
               style={inputStyle()}
@@ -1142,6 +1156,14 @@ export default function PanelTableros({
           <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, margin: "-4px 0 12px" }}>
             Distancia medida desde la fuente de energía (red local, batería, generador, tablero padre o transformador) hasta este tablero.
           </div>
+          </>
+          ) : (
+            fuentesEnergia.some((f) => f.id === form.tableroPadreId) && (
+              <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, margin: "-4px 0 12px" }}>
+                La distancia, el material del conductor y el rol (principal/secundaria/auxiliar) de esta fuente se configuran en la pestaña "Fuentes de energía".
+              </div>
+            )
+          )}
 
           <Campo label="Notas (opcional)">
             <textarea
@@ -1196,7 +1218,9 @@ export default function PanelTableros({
             const origenResuelto = t.tableroPadreId ? App.origen.resolver(t.tableroPadreId, tableros, fuentesEnergia, transformadores) : { tipo: "acometida" };
             const padre = origenResuelto.tipo === "tablero" ? origenResuelto.tablero : null;
             const padreFuente =
-              origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.BATERIA || origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.GENERADOR
+              origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.RED_LOCAL ||
+              origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.BATERIA ||
+              origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.GENERADOR
                 ? origenResuelto.fuente
                 : null;
             const padreTransformador = origenResuelto.tipo === "transformador" ? origenResuelto.transformador : null;
@@ -1285,7 +1309,7 @@ export default function PanelTableros({
                       <span>
                         Alimenta desde:{" "}
                         <strong style={{ color: colores.textMain }}>{etiquetaFuentePrincipal(padre, padreFuente, padreTransformador)}</strong>
-                        {t.longitudAlimentador > 0 && ` · ${t.longitudAlimentador}m de ${t.materialAlimentador}`}
+                        {etiquetaDistanciaAlimentador(t, padreFuente) && ` · ${etiquetaDistanciaAlimentador(t, padreFuente)}`}
                       </span>
                       <button
                         onClick={(e) => {

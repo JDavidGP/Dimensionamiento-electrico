@@ -3,28 +3,44 @@ import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
 import { TIPOS_FUENTE_UI, BotonPill } from "./PanelTableros";
 
-// Lista propia de fuentes de energía (Batería/Generador), con su CRUD
-// completo — antes solo se podían CREAR desde un mini-formulario
-// inline dentro del selector "Fuente de energía" de un tablero (que sigue
-// existiendo, es un atajo útil); para EDITARLAS o ELIMINARLAS no había
-// ninguna pantalla (editarFuenteEnergia/eliminarFuenteEnergia ya
-// existían en el hook, pero nunca estuvieron conectadas a la UI).
+// Rediseño (usuario, 2026-11-20, con el ejemplo de las 3 casas: solo
+// red local / red local + generador / las 3 fuentes): el cuadro de
+// ARRIBA declara rápido qué fuente existe y qué rol global juega en la
+// instalación (principal/secundaria/auxiliar — uno de cada, para toda
+// la instalación, ver ROLES_FUENTE en modules/origen/fuentesEnergia.js)
+// y solo guarda eso. El cuadro de ABAJO es la lista de fuentes ya
+// declaradas — tocar una la expande para configurar sus características
+// (entrada de energía prevista, distancia de conexión, material del
+// conductor, horario de uso, notas), sin volver a tocar qué ES ni qué
+// ROL juega (aunque ambos siguen editables ahí si hace falta corregirlos).
 //
-// Pedido explícito del usuario (2026-11-19, al agregar el caso inverso
-// de la sincronización diagrama↔tabla para fuentesEnergia): tarjetas
-// propias, mismo patrón que las de tablero en PanelTableros.jsx
-// (acordeón: fila colapsada con un punto de color por integridad,
-// click para expandir y ver detalle + editar/eliminar).
-//
-// Este panel YA NO tiene campo "Rol" (principal/secundaria/auxiliar):
-// el usuario notó el conflicto — una fuente se podía editar acá con un
-// rol fijo, que contradecía el rol real que ya se había elegido POR
-// TABLERO en PanelTableros.jsx (donde una misma fuente puede ser
-// principal para un tablero y auxiliar para otro). El rol es
-// contextual a cada tablero, nunca una propiedad de la fuente — acá
-// solo se edita QUÉ ES la fuente (nombre/tipo/capacidad/notas), sin
-// pisar esa otra fuente de verdad.
-const FORM_VACIO = { nombre: "", tipo: "bateria", capacidadKW: "", notas: "" };
+// "Red local" (red eléctrica pública) es ahora una fuente más, creable
+// igual que batería/generador — antes solo existía como condición
+// implícita (tableroPadreId null, sin datos propios). Ver la nota larga
+// en modules/origen/fuentesEnergia.js para por qué esto es aditivo y no
+// rompe proyectos viejos (ese null sigue significando "acometida
+// genérica, sin detalle").
+const FORM_CREAR_VACIO = { nombre: "", tipo: "red_local", rol: "" };
+
+const ROLES_UI = [
+  { valor: "principal", label: "Principal" },
+  { valor: "secundaria", label: "Secundaria" },
+  { valor: "auxiliar", label: "Auxiliar" },
+];
+
+function formDetalleDesde(f) {
+  return {
+    nombre: f.nombre,
+    tipo: f.tipo,
+    rol: f.rol || "",
+    capacidadKW: f.capacidadKW === "" || f.capacidadKW == null ? "" : String(f.capacidadKW),
+    distanciaM: f.distanciaM === "" || f.distanciaM == null ? "" : String(f.distanciaM),
+    materialConductor: f.materialConductor || "cobre",
+    horarioInicio: f.horarioInicio || "",
+    horarioFin: f.horarioFin || "",
+    notas: f.notas || "",
+  };
+}
 
 function colorEstadoDe(entrada) {
   if (!entrada) return colores.ok;
@@ -35,222 +51,308 @@ function colorEstadoDe(entrada) {
 
 export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEnergia, editarFuenteEnergia, eliminarFuenteEnergia, listaIntegridad = [] }) {
   const [activaId, setActivaId] = useState(null);
-  const [formAbierto, setFormAbierto] = useState(false);
-  const [editandoId, setEditandoId] = useState(null);
-  const [form, setForm] = useState(FORM_VACIO);
+  const [formCrear, setFormCrear] = useState(FORM_CREAR_VACIO);
+  const [formDetalle, setFormDetalle] = useState(null);
 
-  function abrirCreacion() {
-    setForm(FORM_VACIO);
-    setEditandoId(null);
-    setFormAbierto(true);
+  function rolTomadoPor(rol, excluirId) {
+    if (!rol) return null;
+    return fuentesEnergia.find((f) => f.rol === rol && f.id !== excluirId) || null;
   }
 
-  function abrirEdicion(f) {
-    setForm({
-      nombre: f.nombre,
-      tipo: f.tipo,
-      capacidadKW: f.capacidadKW === "" || f.capacidadKW == null ? "" : String(f.capacidadKW),
-      notas: f.notas || "",
-    });
-    setEditandoId(f.id);
-    setFormAbierto(true);
-  }
-
-  function cerrarForm() {
-    setForm(FORM_VACIO);
-    setEditandoId(null);
-    setFormAbierto(false);
-  }
-
-  function alGuardar(e) {
+  function alCrear(e) {
     e.preventDefault();
-    if (!form.nombre.trim()) return;
-    if (editandoId) {
-      editarFuenteEnergia(editandoId, form);
+    if (!formCrear.nombre.trim()) return;
+    const f = crearFuenteEnergia(formCrear);
+    setFormCrear(FORM_CREAR_VACIO);
+    setActivaId(f.id);
+    setFormDetalle(formDetalleDesde(f));
+  }
+
+  function alExpandir(f) {
+    if (activaId === f.id) {
+      setActivaId(null);
+      setFormDetalle(null);
     } else {
-      const f = crearFuenteEnergia(form);
       setActivaId(f.id);
+      setFormDetalle(formDetalleDesde(f));
     }
-    cerrarForm();
+  }
+
+  function alGuardarDetalle(e) {
+    e.preventDefault();
+    if (!formDetalle || !formDetalle.nombre.trim()) return;
+    editarFuenteEnergia(activaId, formDetalle);
   }
 
   function alEliminar(f) {
     eliminarFuenteEnergia(f.id);
-    if (activaId === f.id) setActivaId(null);
-    if (editandoId === f.id) cerrarForm();
+    if (activaId === f.id) {
+      setActivaId(null);
+      setFormDetalle(null);
+    }
   }
 
   return (
-    <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-          Editar fuentes de energía
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* --- Cuadro de arriba: declarar fuente + rol en la instalación --- */}
+      <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
+        <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
+          Declarar fuente de energía
         </div>
-        {!formAbierto && (
-          <button
-            onClick={abrirCreacion}
-            style={{ padding: "4px 10px", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
-          >
-            + Nueva fuente
-          </button>
-        )}
-      </div>
-
-      {formAbierto && (
-        <form onSubmit={alGuardar} style={{ border: `1px solid ${colores.border}`, borderRadius: 4, padding: 12, marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: colores.copper, fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            {editandoId ? "Editar fuente de energía" : "Nueva fuente de energía"}
-          </div>
-
+        <form onSubmit={alCrear}>
           <Campo label="Nombre">
             <input
               style={inputStyle()}
-              value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              placeholder="Ej: Banco de baterías solar, Generador diesel 10kW"
+              value={formCrear.nombre}
+              onChange={(e) => setFormCrear({ ...formCrear, nombre: e.target.value })}
+              placeholder="Ej: Red eléctrica local, Generador diesel 10kW"
             />
           </Campo>
 
           <Campo label="Tipo">
             <div style={{ display: "flex", gap: 6 }}>
               {TIPOS_FUENTE_UI.map((t) => (
-                <BotonPill key={t.valor} activo={form.tipo === t.valor} onClick={() => setForm({ ...form, tipo: t.valor })}>
+                <BotonPill key={t.valor} activo={formCrear.tipo === t.valor} onClick={() => setFormCrear({ ...formCrear, tipo: t.valor })}>
                   {t.label}
                 </BotonPill>
               ))}
             </div>
           </Campo>
 
-          <Campo label="Capacidad (kW, opcional)">
-            <input
-              type="number"
-              style={inputStyle()}
-              value={form.capacidadKW}
-              onChange={(e) => setForm({ ...form, capacidadKW: e.target.value })}
-              placeholder="Ej: 10"
-            />
-          </Campo>
-
-          <Campo label="Notas (opcional)">
-            <input
-              style={inputStyle()}
-              value={form.notas}
-              onChange={(e) => setForm({ ...form, notas: e.target.value })}
-              placeholder="Notas (opcional)"
-            />
-          </Campo>
-
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              type="submit"
-              disabled={!form.nombre.trim()}
-              style={{
-                flex: 1,
-                padding: "8px 0",
-                borderRadius: 3,
-                border: "none",
-                background: form.nombre.trim() ? colores.copper : colores.border,
-                color: form.nombre.trim() ? "#171512" : colores.textDim,
-                fontWeight: 700,
-                fontSize: 12.5,
-                cursor: form.nombre.trim() ? "pointer" : "not-allowed",
-              }}
-            >
-              {editandoId ? "Guardar cambios" : "+ Crear fuente"}
-            </button>
-            <button
-              type="button"
-              onClick={cerrarForm}
-              style={{ padding: "8px 14px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 12.5, cursor: "pointer" }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      )}
-
-      {fuentesEnergia.length === 0 && !formAbierto && (
-        <div style={{ fontSize: 12, color: colores.textDim }}>
-          Sin fuentes de energía todavía — "+ Nueva fuente" acá, o desde el selector "Fuente de energía" al crear/editar un tablero.
-        </div>
-      )}
-
-      {fuentesEnergia.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {fuentesEnergia.map((f) => {
-            const activa = activaId === f.id;
-            const entradaIntegridad = listaIntegridad.find((e) => e.tipo === "fuenteEnergia" && e.id === f.id);
-            const colorEstado = colorEstadoDe(entradaIntegridad);
-            const tipoLabel = TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label ?? f.tipo;
-            return (
-              <div key={f.id} style={{ border: `1px solid ${activa ? colores.copper : colores.border}`, borderRadius: 4, overflow: "hidden" }}>
-                <div
-                  onClick={() => setActivaId(activa ? null : f.id)}
-                  style={{
-                    padding: "10px 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    cursor: "pointer",
-                    background: activa ? `${colores.copper}14` : "transparent",
-                  }}
+          <Campo label="Rol en la instalación (opcional)">
+            <div style={{ display: "flex", gap: 6 }}>
+              {ROLES_UI.map((r) => (
+                <BotonPill
+                  key={r.valor}
+                  activo={formCrear.rol === r.valor}
+                  onClick={() => setFormCrear({ ...formCrear, rol: formCrear.rol === r.valor ? "" : r.valor })}
                 >
-                  <span style={{ color: colores.textDim, fontSize: 11, width: 12, textAlign: "center" }}>{activa ? "▾" : "▸"}</span>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: colorEstado, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13.5, color: colores.textMain }}>{f.nombre}</div>
-                    <div style={{ fontFamily: fuentes.mono, fontSize: 11, color: colores.textDim }}>
-                      {tipoLabel}
-                      {f.capacidadKW !== "" && f.capacidadKW != null ? ` · ${f.capacidadKW} kW` : ""}
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      abrirEdicion(f);
-                    }}
-                    style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 13 }}
-                    aria-label={`Editar fuente ${f.nombre}`}
-                    title="Editar fuente de energía"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      alEliminar(f);
-                    }}
-                    style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 15 }}
-                    aria-label={`Eliminar fuente ${f.nombre}`}
-                    title="Eliminar fuente de energía (los tableros que la usaban como origen quedan sin asignar, no se borran)"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                {activa && (
-                  <div style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    {entradaIntegridad?.problemas?.length > 0 && (
-                      <div>
-                        {entradaIntegridad.problemas.map((p, i) => (
-                          <div
-                            key={i}
-                            style={{ color: entradaIntegridad.estado === "error" ? colores.error : colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}
-                            title="Integridad de datos, no cálculo eléctrico"
-                          >
-                            <span>🗂</span> <span>{p}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {f.notas && <div style={{ fontSize: 12, color: colores.textDim }}>{f.notas}</div>}
-                  </div>
-                )}
+                  {r.label}
+                </BotonPill>
+              ))}
+            </div>
+            {formCrear.rol && rolTomadoPor(formCrear.rol, null) && (
+              <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4 }}>
+                Le quitará el rol "{ROLES_UI.find((r) => r.valor === formCrear.rol)?.label}" a "{rolTomadoPor(formCrear.rol, null).nombre}" (solo puede
+                haber una fuente con cada rol).
               </div>
-            );
-          })}
+            )}
+          </Campo>
+
+          <button
+            type="submit"
+            disabled={!formCrear.nombre.trim()}
+            style={{
+              width: "100%",
+              padding: "8px 0",
+              borderRadius: 3,
+              border: "none",
+              background: formCrear.nombre.trim() ? colores.copper : colores.border,
+              color: formCrear.nombre.trim() ? "#171512" : colores.textDim,
+              fontWeight: 700,
+              fontSize: 12.5,
+              cursor: formCrear.nombre.trim() ? "pointer" : "not-allowed",
+            }}
+          >
+            + Crear fuente
+          </button>
+        </form>
+      </div>
+
+      {/* --- Cuadro de abajo: tocar una fuente para configurar sus características --- */}
+      <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
+        <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
+          Configurar características
         </div>
-      )}
+
+        {fuentesEnergia.length === 0 && (
+          <div style={{ fontSize: 12, color: colores.textDim }}>Todavía no declaraste ninguna fuente de energía arriba.</div>
+        )}
+
+        {fuentesEnergia.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {fuentesEnergia.map((f) => {
+              const activa = activaId === f.id;
+              const entradaIntegridad = listaIntegridad.find((e) => e.tipo === "fuenteEnergia" && e.id === f.id);
+              const colorEstado = colorEstadoDe(entradaIntegridad);
+              const tipoLabel = TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label ?? f.tipo;
+              const rolLabel = ROLES_UI.find((r) => r.valor === f.rol)?.label;
+              return (
+                <div key={f.id} style={{ border: `1px solid ${activa ? colores.copper : colores.border}`, borderRadius: 4, overflow: "hidden" }}>
+                  <div
+                    onClick={() => alExpandir(f)}
+                    style={{
+                      padding: "10px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      cursor: "pointer",
+                      background: activa ? `${colores.copper}14` : "transparent",
+                    }}
+                  >
+                    <span style={{ color: colores.textDim, fontSize: 11, width: 12, textAlign: "center" }}>{activa ? "▾" : "▸"}</span>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: colorEstado, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13.5, color: colores.textMain }}>{f.nombre}</div>
+                      <div style={{ fontFamily: fuentes.mono, fontSize: 11, color: colores.textDim }}>
+                        {tipoLabel}
+                        {rolLabel ? ` · ${rolLabel}` : ""}
+                        {f.capacidadKW !== "" && f.capacidadKW != null ? ` · ${f.capacidadKW} kW` : ""}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        alEliminar(f);
+                      }}
+                      style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 15 }}
+                      aria-label={`Eliminar fuente ${f.nombre}`}
+                      title="Eliminar fuente de energía (los tableros que la usaban como origen quedan sin asignar, no se borran)"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {activa && formDetalle && (
+                    <form
+                      onSubmit={alGuardarDetalle}
+                      style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px", display: "flex", flexDirection: "column", gap: 8 }}
+                    >
+                      {entradaIntegridad?.problemas?.length > 0 && (
+                        <div>
+                          {entradaIntegridad.problemas.map((p, i) => (
+                            <div
+                              key={i}
+                              style={{ color: entradaIntegridad.estado === "error" ? colores.error : colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}
+                              title="Integridad de datos, no cálculo eléctrico"
+                            >
+                              <span>🗂</span> <span>{p}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Campo label="Nombre">
+                        <input
+                          style={inputStyle()}
+                          value={formDetalle.nombre}
+                          onChange={(e) => setFormDetalle({ ...formDetalle, nombre: e.target.value })}
+                        />
+                      </Campo>
+
+                      <Campo label="Tipo">
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {TIPOS_FUENTE_UI.map((t) => (
+                            <BotonPill key={t.valor} activo={formDetalle.tipo === t.valor} onClick={() => setFormDetalle({ ...formDetalle, tipo: t.valor })}>
+                              {t.label}
+                            </BotonPill>
+                          ))}
+                        </div>
+                      </Campo>
+
+                      <Campo label="Rol en la instalación (opcional)">
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {ROLES_UI.map((r) => (
+                            <BotonPill
+                              key={r.valor}
+                              activo={formDetalle.rol === r.valor}
+                              onClick={() => setFormDetalle({ ...formDetalle, rol: formDetalle.rol === r.valor ? "" : r.valor })}
+                            >
+                              {r.label}
+                            </BotonPill>
+                          ))}
+                        </div>
+                        {formDetalle.rol && rolTomadoPor(formDetalle.rol, f.id) && (
+                          <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4 }}>
+                            Le quitará el rol "{ROLES_UI.find((r) => r.valor === formDetalle.rol)?.label}" a "{rolTomadoPor(formDetalle.rol, f.id).nombre}".
+                          </div>
+                        )}
+                      </Campo>
+
+                      <Campo label="Entrada de energía prevista (kW, opcional)">
+                        <input
+                          type="number"
+                          style={inputStyle()}
+                          value={formDetalle.capacidadKW}
+                          onChange={(e) => setFormDetalle({ ...formDetalle, capacidadKW: e.target.value })}
+                          placeholder="Ej: 10"
+                        />
+                      </Campo>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <Campo label="Distancia donde se conecta (m)">
+                          <input
+                            type="number"
+                            style={inputStyle()}
+                            value={formDetalle.distanciaM}
+                            onChange={(e) => setFormDetalle({ ...formDetalle, distanciaM: e.target.value })}
+                            placeholder="Ej: 15"
+                          />
+                        </Campo>
+                        <Campo label="Material del conductor">
+                          <div style={{ display: "flex", gap: 6 }}>
+                            {["cobre", "aluminio"].map((m) => (
+                              <BotonPill
+                                key={m}
+                                activo={formDetalle.materialConductor === m}
+                                onClick={() => setFormDetalle({ ...formDetalle, materialConductor: m })}
+                              >
+                                <span style={{ textTransform: "capitalize" }}>{m}</span>
+                              </BotonPill>
+                            ))}
+                          </div>
+                        </Campo>
+                      </div>
+                      <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, marginTop: -4 }}>
+                        Si un tablero cuelga directo de esta fuente y no declaró su propia distancia, el cálculo del alimentador usa esta como respaldo.
+                      </div>
+
+                      <Campo label="Horario de uso (opcional — vacío = sin restricción)">
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Desde:</div>
+                            <input
+                              type="time"
+                              style={inputStyle()}
+                              value={formDetalle.horarioInicio}
+                              onChange={(e) => setFormDetalle({ ...formDetalle, horarioInicio: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Hasta:</div>
+                            <input
+                              type="time"
+                              style={inputStyle()}
+                              value={formDetalle.horarioFin}
+                              onChange={(e) => setFormDetalle({ ...formDetalle, horarioFin: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </Campo>
+
+                      <Campo label="Notas (opcional)">
+                        <input
+                          style={inputStyle()}
+                          value={formDetalle.notas}
+                          onChange={(e) => setFormDetalle({ ...formDetalle, notas: e.target.value })}
+                          placeholder="Cualquier detalle útil para la memoria del proyecto"
+                        />
+                      </Campo>
+
+                      <button
+                        type="submit"
+                        style={{ padding: "8px 0", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}
+                      >
+                        Guardar cambios
+                      </button>
+                    </form>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

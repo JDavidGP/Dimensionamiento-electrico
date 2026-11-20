@@ -137,10 +137,11 @@ export function useCircuitos() {
         circuitos,
         resultados,
         normativaId: normativaActiva,
+        fuentesEnergia,
       });
     });
     return mapa;
-  }, [tableros, circuitos, resultados, normativaActiva]);
+  }, [tableros, circuitos, resultados, normativaActiva, fuentesEnergia]);
 
   // Chequeo ADICIONAL de caída de tensión acumulada, recorriendo la
   // cadena de tableros hacia arriba (tableroPadreId). Límite 5%
@@ -453,10 +454,15 @@ export function useCircuitos() {
     setTableros(tableros.filter((t) => t.id !== id));
   }
 
-  // --- FUENTE DE ENERGÍA (Batería/Generador, origen alternativo de un tablero) ---
+  // --- FUENTE DE ENERGÍA (Red local/Batería/Generador, origen alternativo
+  // de un tablero) --- El `rol` (principal/secundaria/auxiliar) es GLOBAL
+  // de la instalación, no por fuente aislada: tras crear/editar, se
+  // limpia de cualquier otra fuente que lo tuviera, para que nunca haya
+  // dos con el mismo rol (ver limpiarRolDuplicado en fuentesEnergia.js).
   function crearFuenteEnergia(datos) {
     const fuente = App.origen.crearFuente(datos);
-    setFuentesEnergia([...fuentesEnergia, fuente]);
+    const lista = App.origen.limpiarRolDuplicado([...fuentesEnergia, fuente], fuente.id, fuente.rol);
+    setFuentesEnergia(lista);
     return fuente;
   }
 
@@ -464,7 +470,12 @@ export function useCircuitos() {
     const fuente = fuentesEnergia.find((f) => f.id === id);
     if (!fuente) return;
     const actualizada = App.origen.editarFuente(fuente, cambios);
-    setFuentesEnergia(fuentesEnergia.map((f) => (f.id === id ? actualizada : f)));
+    const lista = App.origen.limpiarRolDuplicado(
+      fuentesEnergia.map((f) => (f.id === id ? actualizada : f)),
+      id,
+      actualizada.rol
+    );
+    setFuentesEnergia(lista);
   }
 
   function eliminarFuenteEnergia(id) {

@@ -25,6 +25,7 @@ function etiquetaOrigen(tablero, tableros, fuentesEnergia, transformadores) {
   const resuelto = OrigenMediator.resolver(tablero.tableroPadreId, tableros, fuentesEnergia, transformadores);
   if (resuelto.tipo === "tablero") return resuelto.tablero.nombre;
   if (resuelto.tipo === "transformador") return `${resuelto.transformador.nombre} (Transformador)`;
+  if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.RED_LOCAL) return `${resuelto.fuente.nombre} (Red local)`;
   if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.BATERIA) return `${resuelto.fuente.nombre} (Batería)`;
   if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.GENERADOR) return `${resuelto.fuente.nombre} (Generador)`;
   return `Origen desconocido (referencia rota: ${tablero.tableroPadreId})`;

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { TIPOS_FUENTE_UI } from "./PanelTableros";
 
 // Memoria técnica / informe — 5ta pestaña, el lugar que ya estaba
 // anotado como pendiente en App.jsx desde que se armó el layout por
@@ -252,7 +253,7 @@ export default function InformeTecnico({
           <Seccion titulo="Fuentes de energía y transformadores">
             {informe.fuentesEnergia.map((f) => (
               <div key={f.id} style={{ fontSize: 12, marginBottom: 2 }}>
-                {f.nombre} — {f.tipo === "bateria" ? "Batería" : "Generador"}
+                {f.nombre} — {TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label ?? f.tipo}
                 {f.capacidadKW !== "" && f.capacidadKW != null ? ` (${f.capacidadKW} kW)` : ""}
               </div>
             ))}
