@@ -45,6 +45,7 @@ import {
   invertirMatriz3x3,
   generarDXF,
   codificarDXFComoBytes,
+  detectarParedesCandidatas,
 } from "../../modules/plano/index.js";
 import {
   distancia,
@@ -70,6 +71,7 @@ export const PlanoMediator = {
   RADIO_BUSQUEDA_BORDE_PX,
   UMBRAL_MAGNITUD_BORDE,
   pixelBordeMasFuerte,
+  detectarParedesCandidatas,
 
   crearNodo,
   nodoCercano,

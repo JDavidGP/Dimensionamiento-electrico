@@ -3,7 +3,7 @@
  * Toda interacción entre dominios pasa por ApplicationMediator
  * (no importa motor, normativa ni validación directamente).
  */
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { TIPO_INSTALACION_POR_DEFECTO } from "../shared/constants/constantes.js";
 import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.js";
@@ -672,13 +672,26 @@ export function useCircuitos() {
   // cerrar un polígono comparta el mismo nodo en vez de superponer dos.
   // Devuelve el nodo usado (nuevo o reusado) para que quien llama (el
   // hook de interacción del canvas) pueda encadenar el segmento.
+  //
+  // nodosPlanoRef: espejo mutable de nodosPlano, sincronizado en cada
+  // render. Hace falta porque "aceptar una pared candidata sugerida"
+  // llama esta función DOS veces en el mismo evento (un nodo por
+  // extremo) — si la segunda lectura usara el nodosPlano del closure
+  // (el de ANTES de la primera llamada, ya que setState todavía no
+  // re-renderizó), el segundo setNodosPlano pisaría al primero y se
+  // perdería ese nodo. Mutar el ref en el momento mismo de crear el
+  // nodo mantiene ambas llamadas, dentro del mismo tick, viendo el
+  // resultado real de la anterior.
+  const nodosPlanoRef = useRef(nodosPlano);
+  nodosPlanoRef.current = nodosPlano;
   function agregarNodoPlano(puntoImagen) {
     if (!planoCalibracion) return null;
     const puntoModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
-    const existente = App.plano.nodoCercano(puntoModelo, nodosPlano);
+    const existente = App.plano.nodoCercano(puntoModelo, nodosPlanoRef.current);
     if (existente) return existente;
     const nodo = App.plano.crearNodo(puntoModelo);
-    setNodosPlano([...nodosPlano, nodo]);
+    nodosPlanoRef.current = [...nodosPlanoRef.current, nodo];
+    setNodosPlano(nodosPlanoRef.current);
     return nodo;
   }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { colores } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
@@ -34,21 +34,27 @@ function colorDeEquipo(tipo) {
 // vuelta con `modeloAImagen` usando la escala de calibración. Esta es
 // la única razón por la que este componente necesita la escala: para
 // posicionar el fondo correctamente, nunca para calcular nada.
-export default function PlanoCanvas({
-  imagen,
-  nodos = [],
-  segmentos = [],
-  marcadoresEquipo = [],
-  habitaciones = [],
-  escalaMetrosPorPixel,
-  puntosGuiaPendientes = [],
-  nodoIdsTrazoActual = [],
-  modo,
-  asistenciaBordes = false,
-  onClickImagen,
-  onClickMarcador,
-  onArrastrarHabitacion,
-}) {
+const PlanoCanvas = forwardRef(function PlanoCanvas(
+  {
+    imagen,
+    nodos = [],
+    segmentos = [],
+    marcadoresEquipo = [],
+    habitaciones = [],
+    escalaMetrosPorPixel,
+    puntosGuiaPendientes = [],
+    nodoIdsTrazoActual = [],
+    modo,
+    asistenciaBordes = false,
+    paredesCandidatas = [],
+    puertasCandidatas = [],
+    onClickImagen,
+    onClickMarcador,
+    onArrastrarHabitacion,
+    onClickParedCandidata,
+  },
+  ref
+) {
   const contenedorRef = useRef(null);
   const svgRef = useRef(null);
   const [tamanoCanvas, setTamanoCanvas] = useState({ ancho: 0, alto: 0 });
@@ -63,6 +69,26 @@ export default function PlanoCanvas({
   // cercano (ver modules/plano/deteccionBordes.js). Se arma UNA vez
   // por imagen, no en cada click.
   const contextoPixelesRef = useRef(null);
+
+  // Único método expuesto al padre (PlanoInteligente.jsx): "Sugerir
+  // paredes" (usuario, 2026-11-20) necesita leer TODOS los píxeles de
+  // la imagen (no un parche chico como ajustarABorde) — se expone así,
+  // en vez de duplicar el acceso al canvas oculto afuera, porque este
+  // sigue siendo el ÚNICO componente que toca el DOM/canvas (ver nota
+  // de cabecera del archivo).
+  useImperativeHandle(ref, () => ({
+    detectarParedesCandidatas() {
+      const ctx = contextoPixelesRef.current;
+      if (!ctx) return { paredes: [], puertas: [] };
+      const { width: ancho, height: alto } = ctx.canvas;
+      const datos = ctx.getImageData(0, 0, ancho, alto).data;
+      const grises = new Float32Array(ancho * alto);
+      for (let i = 0; i < ancho * alto; i++) {
+        grises[i] = 0.299 * datos[i * 4] + 0.587 * datos[i * 4 + 1] + 0.114 * datos[i * 4 + 2];
+      }
+      return App.plano.detectarParedesCandidatas(grises, ancho, alto, { escalaMetrosPorPixel });
+    },
+  }));
 
   // Mide el contenedor al montar y en cada resize/orientation-change —
   // así "ajustar a ventana" siempre usa el tamaño REAL del dispositivo
@@ -357,6 +383,43 @@ export default function PlanoCanvas({
                   strokeDasharray={`${grosorLinea * 2} ${grosorLinea * 2}`}
                 />
               )}
+
+              {/* Paredes candidatas (usuario, 2026-11-20, "asistencia mejorada") —
+                  sugerencias, no datos del proyecto todavía: un click las confirma
+                  (crea la pared real), nada se crea solo. Ya vienen en espacio
+                  IMAGEN (píxeles), igual que puntosGuiaPendientes — sin pasar por px(). */}
+              {paredesCandidatas.map((c, i) => (
+                <line
+                  key={`pc-${i}`}
+                  x1={c.x1}
+                  y1={c.y1}
+                  x2={c.x2}
+                  y2={c.y2}
+                  stroke={colores.copper}
+                  strokeWidth={grosorLinea * 1.3}
+                  strokeDasharray={`${grosorLinea * 2.5} ${grosorLinea * 1.5}`}
+                  strokeLinecap="round"
+                  style={{ cursor: onClickParedCandidata ? "pointer" : "default" }}
+                  onClick={(e) => {
+                    if (!onClickParedCandidata) return;
+                    e.stopPropagation();
+                    onClickParedCandidata(c);
+                  }}
+                />
+              ))}
+              {puertasCandidatas.map((c, i) => (
+                <line
+                  key={`pt-${i}`}
+                  x1={c.x1}
+                  y1={c.y1}
+                  x2={c.x2}
+                  y2={c.y2}
+                  stroke={colores.warn}
+                  strokeWidth={grosorLinea * 1.3}
+                  strokeDasharray={`${grosorLinea} ${grosorLinea}`}
+                  strokeLinecap="round"
+                />
+              ))}
             </g>
           </svg>
         )}
@@ -377,7 +440,9 @@ export default function PlanoCanvas({
       )}
     </div>
   );
-}
+});
+
+export default PlanoCanvas;
 
 const botonZoomEstilo = {
   width: 30,

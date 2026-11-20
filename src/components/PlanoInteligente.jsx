@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import { inputStyle } from "./Campo";
 import { BotonPill } from "./PanelTableros";
@@ -72,6 +72,16 @@ export default function PlanoInteligente({
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
   const [aviso, setAviso] = useState("");
+
+  // "Sugerir paredes" (usuario, 2026-11-20, "asistencia mejorada, no
+  // automática") — PlanoCanvas.jsx expone la detección vía ref porque
+  // sigue siendo el ÚNICO componente que toca el DOM/canvas (ver su
+  // nota de cabecera). Las sugerencias son ESTADO EFÍMERO (no se
+  // persisten como parte del proyecto) hasta que el instalador acepta
+  // una con un click — recién ahí se convierte en una pared real.
+  const canvasRef = useRef(null);
+  const [paredesCandidatas, setParedesCandidatas] = useState([]);
+  const [puertasCandidatas, setPuertasCandidatas] = useState([]);
   // Asistencia de bordes (Fase 2) — "pega" cada click de trazado al
   // borde más fuerte cercano en la imagen, ver PlanoCanvas.jsx /
   // modules/plano/deteccionBordes.js. Preferencia de herramienta, NO
@@ -313,6 +323,32 @@ export default function PlanoInteligente({
     setTrazoActual([]);
   }
 
+  function sugerirParedes() {
+    const resultado = canvasRef.current?.detectarParedesCandidatas() ?? { paredes: [], puertas: [] };
+    setParedesCandidatas(resultado.paredes);
+    setPuertasCandidatas(resultado.puertas);
+    if (resultado.paredes.length === 0) {
+      mostrarAviso("No se encontraron líneas rectas candidatas en esta imagen (solo detecta horizontales/verticales).");
+    } else {
+      mostrarAviso(
+        `${resultado.paredes.length} pared(es) candidata(s)${resultado.puertas.length > 0 ? ` y ${resultado.puertas.length} posible(s) puerta(s)` : ""} — hacé click en una línea naranja para confirmarla como pared real.`
+      );
+    }
+  }
+
+  function descartarSugerencias() {
+    setParedesCandidatas([]);
+    setPuertasCandidatas([]);
+  }
+
+  /** Confirma UNA pared candidata: crea los 2 nodos reales (reusando cercanos, igual que un trazo a mano) + el segmento, y la saca de la lista de sugerencias. */
+  function aceptarParedCandidata(candidato) {
+    const nodoA = agregarNodoPlano({ x: candidato.x1, y: candidato.y1 });
+    const nodoB = agregarNodoPlano({ x: candidato.x2, y: candidato.y2 });
+    if (nodoA && nodoB) agregarSegmentoPlano(nodoA.id, nodoB.id, "pared");
+    setParedesCandidatas(paredesCandidatas.filter((c) => c !== candidato));
+  }
+
   async function confirmarPerspectiva(e) {
     e.preventDefault();
     setCorrigiendoPerspectiva(true);
@@ -416,6 +452,35 @@ export default function PlanoInteligente({
                   {m.label}
                 </BotonPill>
               ))}
+            </div>
+
+            {/* "Sugerir paredes" (usuario, 2026-11-20) — no es un modo de
+                trazado, es una acción puntual: analiza la imagen YA
+                cargada y ofrece líneas candidatas, que se aceptan de a
+                una con un click (ver aceptarParedCandidata). Nada se crea
+                solo. */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={sugerirParedes}
+                style={{ padding: "5px 10px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.copper, fontWeight: 600, fontSize: 11.5, cursor: "pointer" }}
+              >
+                ◫ Sugerir paredes
+              </button>
+              {(paredesCandidatas.length > 0 || puertasCandidatas.length > 0) && (
+                <>
+                  <span style={{ fontSize: 11, color: colores.textDim }}>
+                    {paredesCandidatas.length} candidata(s){puertasCandidatas.length > 0 ? `, ${puertasCandidatas.length} posible(s) puerta(s)` : ""} — click en una línea naranja del lienzo para confirmarla.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={descartarSugerencias}
+                    style={{ padding: "5px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11, cursor: "pointer" }}
+                  >
+                    Descartar
+                  </button>
+                </>
+              )}
             </div>
             <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10, lineHeight: 1.4 }}>
               {MODOS.find((m) => m.valor === modo)?.ayuda}
@@ -524,6 +589,7 @@ export default function PlanoInteligente({
         )}
 
         <PlanoCanvas
+          ref={canvasRef}
           imagen={planoImagen}
           nodos={nodosPlano}
           segmentos={segmentosPlano}
@@ -545,6 +611,9 @@ export default function PlanoInteligente({
           asistenciaBordes={asistenciaBordes}
           onClickImagen={alClickImagen}
           onClickMarcador={alClickMarcador}
+          paredesCandidatas={paredesCandidatas}
+          puertasCandidatas={puertasCandidatas}
+          onClickParedCandidata={aceptarParedCandidata}
         />
 
         {modo === "perspectiva" && puntosPerspectiva.length === 4 && (

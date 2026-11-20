@@ -35,6 +35,7 @@ export { calcularEscala, calcularEscalaPorPerimetro, imagenAModelo, modeloAImage
 // propio de Plano; PlanoMediator las importa directo de geometria/
 // ahora, este módulo ya no las re-exporta.
 export { pixelBordeMasFuerte, RADIO_BUSQUEDA_BORDE_PX, UMBRAL_MAGNITUD_BORDE } from "./deteccionBordes.js";
+export { detectarParedesCandidatas } from "./deteccionLineas.js";
 export { calcularHomografia, aplicarHomografia, invertirMatriz3x3 } from "./homografia.js";
 export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.js";
 
