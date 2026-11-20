@@ -319,6 +319,40 @@ function validarFuenteEnergia(fuente, idsVistos, proyectoId, nodosDiagrama = [])
 }
 
 /**
+ * Transformador como entrada propia de integridad — mismo criterio y
+ * mismos 2 chequeos que validarFuenteEnergia (ID duplicado, representación
+ * en el diagrama), agregado cuando Transformador recibió su propia lista
+ * en la UI (PanelTransformadores.jsx, mismo patrón que PanelFuentesEnergia).
+ * Capacidad/conexiones/%Z siguen sin campo de UI (ver TRANSFORMADOR_VACIO),
+ * así que no hay nada más que validar todavía.
+ */
+function validarTransformador(transformador, idsVistos, proyectoId, nodosDiagrama = []) {
+  const problemas = [];
+  let estado = ESTADOS.OK;
+
+  if (idsVistos.has(transformador.id)) {
+    problemas.push("ID duplicado en el proyecto");
+    estado = ESTADOS.ERROR;
+  }
+  idsVistos.add(transformador.id);
+
+  if (!nodosDiagrama.some((n) => n.entidadId === transformador.id)) {
+    problemas.push("Sin representar en el diagrama unifilar");
+    estado = peorEstado(estado, ESTADOS.ADVERTENCIA);
+  }
+
+  return crearEntrada({
+    id: transformador.id,
+    tipo: "transformador",
+    nombre: transformador.nombre || transformador.id,
+    parentId: proyectoId,
+    estado,
+    resumen: `${transformador.fases}${transformador.tensionPrimariaV && transformador.tensionSecundariaV ? ` · ${transformador.tensionPrimariaV}V→${transformador.tensionSecundariaV}V` : ""}`,
+    problemas,
+  });
+}
+
+/**
  * Punto de entrada de Fase 1 (+ Fase 3, Tablero).
  * @param {Object} proyecto - metadatos del proyecto ({ id, nombre, ... })
  * @param {Array}  circuitos - array plano de circuitos
@@ -344,6 +378,10 @@ export function validarIntegridadReferencial(proyecto, circuitos = [], equipos =
 
   fuentesEnergia.forEach((f) => {
     entradas.push(validarFuenteEnergia(f, idsVistos, proj.id, nodosDiagrama));
+  });
+
+  transformadores.forEach((tr) => {
+    entradas.push(validarTransformador(tr, idsVistos, proj.id, nodosDiagrama));
   });
 
   circuitos.forEach((c) => {

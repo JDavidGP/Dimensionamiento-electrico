@@ -488,16 +488,32 @@ export function useCircuitos() {
 
   // --- TRANSFORMADOR (origen alternativo de un tablero, solo instalaciones
   // industriales — ver tipoInstalacion arriba) ---
-  // Deliberadamente solo "crear" por ahora, igual criterio que
-  // fuentesEnergia tuvo al principio: "nos hace falta datos para
-  // desarrollar ese apartado" (usuario, 2026-11-19) — editar/eliminar
-  // (y una lista propia tipo PanelFuentesEnergia) quedan para cuando
-  // haya un proyecto industrial real que lo pida, igual que pasó con
-  // fuentesEnergia.
   function crearTransformador(datos) {
     const transformador = App.origen.crearTransformador(datos);
     setTransformadores([...transformadores, transformador]);
     return transformador;
+  }
+
+  // CRUD completo (usuario, 2026-11-20): mismo patrón exacto que
+  // editarFuenteEnergia/eliminarFuenteEnergia — ya existía la base pura
+  // (editarTransformador/liberarTablerosDeTransformador en
+  // modules/motor/transformador.js, expuesta en OrigenMediator), solo
+  // faltaba conectarla al hook y a una UI con lista propia
+  // (PanelTransformadores.jsx).
+  function editarTransformador(id, cambios) {
+    const transformador = transformadores.find((t) => t.id === id);
+    if (!transformador) return;
+    const actualizado = App.origen.editarTransformador(transformador, cambios);
+    setTransformadores(transformadores.map((t) => (t.id === id ? actualizado : t)));
+  }
+
+  function eliminarTransformador(id) {
+    // Libera (no rompe) los tableros que lo tenían como origen y los
+    // nodos del diagrama que lo representaban — igual criterio que
+    // eliminarFuenteEnergia.
+    setTableros(App.origen.liberarTablerosDeTransformador(id, tableros));
+    setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
+    setTransformadores(transformadores.filter((t) => t.id !== id));
   }
 
   // --- DIAGRAMA UNIFILAR (Fase 1: modelo de datos — nodos y conexiones) ---
@@ -987,6 +1003,8 @@ export function useCircuitos() {
     eliminarFuenteEnergia,
     transformadores,
     crearTransformador,
+    editarTransformador,
+    eliminarTransformador,
     nodosDiagrama,
     crearNodoDiagrama,
     editarNodoDiagrama,

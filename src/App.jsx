@@ -9,6 +9,7 @@ import TablaResultados from "./components/TablaResultados";
 import PanelBreakers from "./components/PanelBreakers";
 import PanelTableros from "./components/PanelTableros";
 import PanelFuentesEnergia from "./components/PanelFuentesEnergia";
+import PanelTransformadores from "./components/PanelTransformadores";
 import SelectorNormativa from "./components/SelectorNormativa";
 import DiagramaUnifilar from "./components/DiagramaUnifilar";
 import InformeTecnico from "./components/InformeTecnico";
@@ -19,7 +20,7 @@ import SubTabs from "./components/SubTabs";
 import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
-import { OPCIONES_TIPO_INSTALACION } from "./shared/constants/constantes.js";
+import { OPCIONES_TIPO_INSTALACION, TIPOS_INSTALACION } from "./shared/constants/constantes.js";
 
 // Tab layout + ViewPager2 (pedido del usuario, retomado 2026-11-19):
 // 7 pestañas, escalonadas por el ORDEN en que se van ingresando los
@@ -91,6 +92,8 @@ export default function App() {
     eliminarFuenteEnergia,
     transformadores,
     crearTransformador,
+    editarTransformador,
+    eliminarTransformador,
     nodosDiagrama,
     crearNodoDiagrama,
     editarNodoDiagrama,
@@ -236,6 +239,22 @@ export default function App() {
                     listaIntegridad={listaIntegridad}
                   />
                 </div>
+
+                {/* Transformador: origen seleccionable SOLO en instalación
+                    industrial (ver TIPOS_ORIGEN.TRANSFORMADOR en
+                    modules/origen/index.js) — su lista propia sigue el
+                    mismo gateo. */}
+                {tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL && (
+                  <div style={{ marginTop: 16 }}>
+                    <PanelTransformadores
+                      transformadores={transformadores}
+                      crearTransformador={crearTransformador}
+                      editarTransformador={editarTransformador}
+                      eliminarTransformador={eliminarTransformador}
+                      listaIntegridad={listaIntegridad}
+                    />
+                  </div>
+                )}
               </div>
             ),
           },
