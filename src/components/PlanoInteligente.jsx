@@ -17,6 +17,7 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // función del hook, que es quien de verdad guarda algo en el proyecto.
 const MODOS = [
   { valor: "mover", label: "Mover vista", ayuda: "Arrastrá para mover, rueda del mouse (o los botones +/−) para zoom." },
+  { valor: "perspectiva", label: "Corregir perspectiva", ayuda: "Para fotos: hacé click en las 4 esquinas de un rectángulo real (ej. una habitación), en orden, dando toda la vuelta." },
   { valor: "calibrar", label: "Calibrar", ayuda: "Hacé click en dos puntos cuya distancia real conozcas." },
   { valor: "pared", label: "Trazar pared", ayuda: "Click para ir agregando puntos. Volvé al punto de inicio para cerrar un ambiente." },
   { valor: "eliminar", label: "Borrar", ayuda: "Click sobre un nodo o una pared para eliminarlo." },
@@ -38,6 +39,8 @@ export default function PlanoInteligente({
   cerrarHabitacionPlano,
   eliminarHabitacionPlano,
   renombrarHabitacionPlano,
+  corregirPerspectivaPlano,
+  exportarDXFPlano,
 }) {
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
@@ -54,6 +57,13 @@ export default function PlanoInteligente({
   const [puntosCalibracion, setPuntosCalibracion] = useState([]);
   const [distanciaRealInput, setDistanciaRealInput] = useState("");
 
+  // Corrección de perspectiva — 4 puntos (esquinas del rectángulo real
+  // en la foto), en orden; al completar los 4 se pide ancho/alto real.
+  const [puntosPerspectiva, setPuntosPerspectiva] = useState([]);
+  const [anchoRealInput, setAnchoRealInput] = useState("");
+  const [altoRealInput, setAltoRealInput] = useState("");
+  const [corrigiendoPerspectiva, setCorrigiendoPerspectiva] = useState(false);
+
   // Trazo de pared en curso — lista ORDENADA de ids de nodo. Se resetea
   // al cambiar de modo o al cerrar/terminar el trazo.
   const [trazoActual, setTrazoActual] = useState([]);
@@ -67,6 +77,9 @@ export default function PlanoInteligente({
     setModo(nuevoModo);
     setPuntosCalibracion([]);
     setDistanciaRealInput("");
+    setPuntosPerspectiva([]);
+    setAnchoRealInput("");
+    setAltoRealInput("");
     setTrazoActual([]);
   }
 
@@ -86,6 +99,13 @@ export default function PlanoInteligente({
   }
 
   function alClickImagen(puntoImagen) {
+    if (modo === "perspectiva") {
+      if (puntosPerspectiva.length < 4) {
+        setPuntosPerspectiva([...puntosPerspectiva, puntoImagen]);
+      }
+      return;
+    }
+
     if (modo === "calibrar") {
       if (puntosCalibracion.length < 2) {
         setPuntosCalibracion([...puntosCalibracion, puntoImagen]);
@@ -134,6 +154,22 @@ export default function PlanoInteligente({
     setTrazoActual([]);
   }
 
+  async function confirmarPerspectiva(e) {
+    e.preventDefault();
+    setCorrigiendoPerspectiva(true);
+    try {
+      const resultado = await corregirPerspectivaPlano(puntosPerspectiva, parseFloat(anchoRealInput), parseFloat(altoRealInput));
+      if (!resultado.ok) {
+        mostrarAviso(resultado.motivo);
+        return;
+      }
+      mostrarAviso("Perspectiva corregida — el plano ya quedó calibrado, podés trazar directo.");
+      cambiarModo("pared");
+    } finally {
+      setCorrigiendoPerspectiva(false);
+    }
+  }
+
   function confirmarCalibracion(e) {
     e.preventDefault();
     const distancia = parseFloat(distanciaRealInput);
@@ -162,6 +198,16 @@ export default function PlanoInteligente({
               {cargando ? "Cargando…" : planoImagen ? "↻ Cambiar plano" : "↑ Cargar plano (imagen o PDF)"}
               <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={alSeleccionarArchivo} disabled={cargando} />
             </label>
+            {segmentosPlano.length > 0 && (
+              <button
+                type="button"
+                onClick={exportarDXFPlano}
+                style={{ padding: "6px 12px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.copper, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+                title="Exporta las paredes y ambientes trazados como archivo .dxf, para abrir en AutoCAD/LibreCAD/QCAD"
+              >
+                ⬇ Exportar DXF
+              </button>
+            )}
             {planoImagen && (
               <button
                 type="button"
@@ -202,6 +248,7 @@ export default function PlanoInteligente({
             </div>
             <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10, lineHeight: 1.4 }}>
               {MODOS.find((m) => m.valor === modo)?.ayuda}
+              {modo === "perspectiva" && puntosPerspectiva.length > 0 && puntosPerspectiva.length < 4 && ` (van ${puntosPerspectiva.length} de 4)`}
               {modo === "pared" && !planoCalibracion && " — primero calibrá la escala."}
               {modo === "pared" && trazoActual.length > 0 && (
                 <>
@@ -229,12 +276,48 @@ export default function PlanoInteligente({
           nodos={nodosPlano}
           segmentos={segmentosPlano}
           escalaMetrosPorPixel={planoCalibracion?.escalaMetrosPorPixel ?? null}
-          puntosCalibracionPendientes={puntosCalibracion}
+          puntosGuiaPendientes={modo === "perspectiva" ? puntosPerspectiva : puntosCalibracion}
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
           asistenciaBordes={asistenciaBordes}
           onClickImagen={alClickImagen}
         />
+
+        {modo === "perspectiva" && puntosPerspectiva.length === 4 && (
+          <form onSubmit={confirmarPerspectiva} style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Ancho real del rectángulo (m):</div>
+              <input style={{ ...inputStyle(), width: 110 }} type="number" step="0.01" autoFocus value={anchoRealInput} onChange={(e) => setAnchoRealInput(e.target.value)} placeholder="Ej: 4" />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Alto real del rectángulo (m):</div>
+              <input style={{ ...inputStyle(), width: 110 }} type="number" step="0.01" value={altoRealInput} onChange={(e) => setAltoRealInput(e.target.value)} placeholder="Ej: 3" />
+            </div>
+            <button
+              type="submit"
+              disabled={!anchoRealInput || !altoRealInput || corrigiendoPerspectiva}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 3,
+                border: "none",
+                background: anchoRealInput && altoRealInput && !corrigiendoPerspectiva ? colores.copper : colores.border,
+                color: "#171512",
+                fontWeight: 700,
+                fontSize: 12.5,
+                cursor: anchoRealInput && altoRealInput && !corrigiendoPerspectiva ? "pointer" : "not-allowed",
+              }}
+            >
+              {corrigiendoPerspectiva ? "Corrigiendo…" : "Corregir perspectiva"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPuntosPerspectiva([])}
+              style={{ padding: "8px 12px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 12.5, cursor: "pointer" }}
+            >
+              Cancelar
+            </button>
+          </form>
+        )}
 
         {modo === "calibrar" && puntosCalibracion.length === 2 && (
           <form onSubmit={confirmarCalibracion} style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "flex-end" }}>

@@ -107,6 +107,8 @@ export default function App() {
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
+    corregirPerspectivaPlano,
+    exportarDXFPlano,
     listaIntegridad,
   } = useCircuitos();
 
@@ -354,6 +356,8 @@ export default function App() {
                   cerrarHabitacionPlano={cerrarHabitacionPlano}
                   eliminarHabitacionPlano={eliminarHabitacionPlano}
                   renombrarHabitacionPlano={renombrarHabitacionPlano}
+                  corregirPerspectivaPlano={corregirPerspectivaPlano}
+                  exportarDXFPlano={exportarDXFPlano}
                 />
               </div>
             ),

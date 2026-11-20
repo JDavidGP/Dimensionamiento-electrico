@@ -21,7 +21,7 @@ export default function PlanoCanvas({
   nodos = [],
   segmentos = [],
   escalaMetrosPorPixel,
-  puntosCalibracionPendientes = [],
+  puntosGuiaPendientes = [],
   nodoIdsTrazoActual = [],
   modo,
   asistenciaBordes = false,
@@ -222,15 +222,33 @@ export default function PlanoCanvas({
                 return <circle key={nodo.id} cx={p.x} cy={p.y} r={enTrazo ? radioNodo * 1.4 : radioNodo} fill={enTrazo ? colores.copper : colores.ok} />;
               })}
 
-              {puntosCalibracionPendientes.map((p, i) => (
+              {/* Puntos guía pendientes — mismo dibujo para la calibración (2 puntos)
+                  y para la corrección de perspectiva (4 puntos, ver modo "perspectiva"):
+                  un círculo por punto + la poligonal abierta que los va conectando; con
+                  4 puntos se cierra el cuadrilátero para que se vea la forma completa
+                  antes de confirmar. */}
+              {puntosGuiaPendientes.map((p, i) => (
                 <circle key={i} cx={p.x} cy={p.y} r={radioNodo * 1.4} fill="none" stroke={colores.warn} strokeWidth={grosorLinea} />
               ))}
-              {puntosCalibracionPendientes.length === 2 && (
+              {puntosGuiaPendientes.length >= 2 &&
+                puntosGuiaPendientes.slice(1).map((p, i) => (
+                  <line
+                    key={i}
+                    x1={puntosGuiaPendientes[i].x}
+                    y1={puntosGuiaPendientes[i].y}
+                    x2={p.x}
+                    y2={p.y}
+                    stroke={colores.warn}
+                    strokeWidth={grosorLinea}
+                    strokeDasharray={`${grosorLinea * 2} ${grosorLinea * 2}`}
+                  />
+                ))}
+              {puntosGuiaPendientes.length === 4 && (
                 <line
-                  x1={puntosCalibracionPendientes[0].x}
-                  y1={puntosCalibracionPendientes[0].y}
-                  x2={puntosCalibracionPendientes[1].x}
-                  y2={puntosCalibracionPendientes[1].y}
+                  x1={puntosGuiaPendientes[3].x}
+                  y1={puntosGuiaPendientes[3].y}
+                  x2={puntosGuiaPendientes[0].x}
+                  y2={puntosGuiaPendientes[0].y}
                   stroke={colores.warn}
                   strokeWidth={grosorLinea}
                   strokeDasharray={`${grosorLinea * 2} ${grosorLinea * 2}`}

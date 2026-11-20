@@ -30,6 +30,8 @@ import { distancia, areaPoligono, perimetroPoligono } from "../geometria/index.j
 export { calcularEscala, imagenAModelo, modeloAImagen } from "./calibracion.js";
 export { transformVistaInicial, aPantalla, aModelo, aplicarZoom, aplicarPan, ajustarAVentana, ZOOM_MIN, ZOOM_MAX } from "./coordenadas.js";
 export { pixelBordeMasFuerte, RADIO_BUSQUEDA_BORDE_PX, UMBRAL_MAGNITUD_BORDE } from "./deteccionBordes.js";
+export { calcularHomografia, aplicarHomografia, invertirMatriz3x3 } from "./homografia.js";
+export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.js";
 
 // Radio de "pegado" al trazar — un click a menos de 30cm (en el mundo
 // real, no en píxeles de pantalla: así es independiente del zoom) de

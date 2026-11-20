@@ -418,11 +418,10 @@ es una excepción nueva, es la misma regla de oro de `ARCHITECTURE.md`
   cambio la versión "asistida" (snap al borde más fuerte al trazar a
   mano, ver §10) — mejora la precisión del trazado manual sin la
   dependencia pesada ni el riesgo del pipeline completo.
-- Homografía de 4 puntos para fotos con perspectiva (v1 solo avisa del
-  error, no corrige).
 - Corrección no lineal (thin-plate-spline) para escaneos muy deformados.
 - Regla normativa de "puntos de luz por m²" para sugerencia automática
   de dimensionamiento (necesita su propia investigación con fuente real).
+- Extracción de IFC/BIM (DXF sí está construido — ver §11).
 
 ## 10. Fase 2 — lo construido (2026-11-20)
 
@@ -443,4 +442,41 @@ es una excepción nueva, es la misma regla de oro de `ARCHITECTURE.md`
   sin OpenCV.js). Es una AYUDA al trazado manual, no detección
   automática: si no hay un borde claro cerca, no ajusta nada. Toggle
   en la UI, activo por defecto, el usuario lo puede apagar.
-- Exportación DXF/IFC.
+
+## 11. Fase 2, segunda ronda (2026-11-20) — corrección de perspectiva + DXF
+
+- **Corrección de perspectiva** (`modules/plano/homografia.js` +
+  `shared/utils/rectificarImagen.js`): modo "Corregir perspectiva" —
+  4 clicks en las esquinas de un rectángulo real conocido (ej. una
+  habitación, en una foto), se ingresa su ancho/alto reales, y se
+  resuelve una homografía 3×3 (DLT — Direct Linear Transform, álgebra
+  lineal pura, eliminación de Gauss-Jordan con pivoteo parcial, sin
+  librería de CV) que mapea esas 4 esquinas DISTORSIONADAS a un
+  rectángulo ideal. La imagen completa se "endereza" con esa
+  homografía (muestreo inverso, vecino-más-cercano) a una resolución
+  de referencia FIJA (120px/metro — misma idea que el DPI fijo del
+  PDF). Como el rectángulo destino tiene un tamaño real conocido, la
+  imagen rectificada queda **autocalibrada** — no hace falta repetir
+  la calibración de 2 puntos después (aunque se puede recalibrar si
+  se quiere). Probado con un cuadrilátero genuinamente distorsionado
+  (no un rectángulo): el round-trip de la homografía es exacto
+  (`H⁻¹(H(p)) = p`), y trazar el contorno completo de la imagen YA
+  rectificada da el área/perímetro reales esperados — la prueba de que
+  el deskewing es matemáticamente correcto, no solo visual.
+- **Exportación DXF** (`modules/plano/exportarDXF.js`): el grafo de
+  paredes/habitaciones (ya en metros, el mismo que usa el motor
+  geométrico) se serializa a DXF R12 (ENTITIES: LINE por pared, TEXT
+  por ambiente con su área) — formato ASCII simple, sin librería,
+  compatible con AutoCAD/LibreCAD/QCAD. Y mismo eje Y invertido al
+  exportar (el modelo usa Y hacia abajo, CAD usa Y hacia arriba — el
+  modelo interno no cambia, solo la conversión de salida).
+  **Bug real encontrado y corregido durante las pruebas** (validando
+  el DXF generado con `ezdxf`, un parser DXF real, no solo mirando el
+  texto): los acentos salían corruptos ("Habitación" → "HabitaciÃ³n")
+  porque un DXF R12 sin `$DWGCODEPAGE` declarado se asume en
+  Windows-1252/Latin-1 de 8 bits, nunca UTF-8 — y un `Blob` de
+  JavaScript construido desde un string codifica en UTF-8 por
+  defecto. Se agregó `codificarDXFComoBytes()`, que convierte el
+  texto ya generado a los bytes reales de Windows-1252 antes de armar
+  el `Blob` — verificado de nuevo con `ezdxf` que el texto con
+  acentos ahora se preserva exacto.

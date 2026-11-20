@@ -38,6 +38,11 @@ import {
   pixelBordeMasFuerte,
   RADIO_BUSQUEDA_BORDE_PX,
   UMBRAL_MAGNITUD_BORDE,
+  calcularHomografia,
+  aplicarHomografia,
+  invertirMatriz3x3,
+  generarDXF,
+  codificarDXFComoBytes,
 } from "../../modules/plano/index.js";
 import { distancia, areaPoligono, perimetroPoligono } from "../../modules/geometria/index.js";
 
@@ -70,4 +75,11 @@ export const PlanoMediator = {
   distancia,
   areaPoligono,
   perimetroPoligono,
+
+  calcularHomografia,
+  aplicarHomografia,
+  invertirMatriz3x3,
+
+  generarDXF,
+  codificarDXFComoBytes,
 };

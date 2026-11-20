@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { TIPO_INSTALACION_POR_DEFECTO } from "../shared/constants/constantes.js";
 import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.js";
+import { rectificarImagen } from "../shared/utils/rectificarImagen.js";
 
 const { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } = App.data.tablas.plantillas();
 
@@ -628,6 +629,78 @@ export function useCircuitos() {
     setHabitacionesPlano([]);
   }
 
+  // Corrección de perspectiva (Fase 2, 2do pedido) — ver
+  // modules/plano/homografia.js para el porqué. PX_POR_METRO_RECTIFICADO
+  // es una constante FIJA, igual criterio que DPI_REFERENCIA en
+  // shared/utils/pdfARaster.js: no depende del dispositivo, así que la
+  // imagen rectificada (y su escala) sale igual en cualquier lado.
+  //
+  // Como el rectángulo destino se define con un tamaño real conocido
+  // (anchoRealM × altoRealM), la imagen YA sale calibrada — no hace
+  // falta que el usuario repita la calibración de 2 puntos después
+  // (aunque la puede rehacer si quiere, "Recalibrar" sigue ahí).
+  const PX_POR_METRO_RECTIFICADO = 120;
+
+  function corregirPerspectivaPlano(puntosImagenOrigen, anchoRealM, altoRealM) {
+    if (!(anchoRealM > 0) || !(altoRealM > 0)) {
+      return Promise.resolve({ ok: false, motivo: "El ancho y el alto reales deben ser mayores a 0." });
+    }
+    const anchoDestinoPx = Math.round(anchoRealM * PX_POR_METRO_RECTIFICADO);
+    const altoDestinoPx = Math.round(altoRealM * PX_POR_METRO_RECTIFICADO);
+    const puntosDestino = [
+      { x: 0, y: 0 },
+      { x: anchoDestinoPx, y: 0 },
+      { x: anchoDestinoPx, y: altoDestinoPx },
+      { x: 0, y: altoDestinoPx },
+    ];
+    const homografia = App.plano.calcularHomografia(puntosImagenOrigen, puntosDestino);
+    if (!homografia) {
+      return Promise.resolve({ ok: false, motivo: "Esos 4 puntos no forman un cuadrilátero válido (¿hay varios alineados?). Probá de nuevo." });
+    }
+    const homografiaInversa = App.plano.invertirMatriz3x3(homografia);
+    if (!homografiaInversa) {
+      return Promise.resolve({ ok: false, motivo: "No se pudo invertir la transformación — probá con otros puntos." });
+    }
+    return rectificarImagen(planoImagen.dataUrl, homografiaInversa, anchoDestinoPx, altoDestinoPx)
+      .then((resultado) => {
+        setPlanoImagen({
+          dataUrl: resultado.dataUrl,
+          anchoPx: resultado.anchoPx,
+          altoPx: resultado.altoPx,
+          nombreArchivo: `${planoImagen.nombreArchivo} (perspectiva corregida)`,
+        });
+        setPlanoCalibracion({
+          puntoA: { x: 0, y: 0 },
+          puntoB: { x: anchoDestinoPx, y: 0 },
+          distanciaRealM: anchoRealM,
+          escalaMetrosPorPixel: 1 / PX_POR_METRO_RECTIFICADO,
+        });
+        setNodosPlano([]);
+        setSegmentosPlano([]);
+        setHabitacionesPlano([]);
+        return { ok: true };
+      })
+      .catch((err) => ({ ok: false, motivo: err.message }));
+  }
+
+  // Exportación CAD (Fase 2, 2do pedido) — descarga el grafo de
+  // paredes/habitaciones como .dxf (ver modules/plano/exportarDXF.js).
+  // Mismo patrón de descarga que PersistenciaMediator.descargarJson.
+  function exportarDXFPlano() {
+    const contenido = App.plano.generarDXF({ nodos: nodosPlano, segmentos: segmentosPlano, habitaciones: habitacionesPlano });
+    // Bytes de Windows-1252, NUNCA el string directo (UTF-8 por
+    // defecto en un Blob) — ver la nota larga en exportarDXF.js sobre
+    // por qué, si no, los acentos salen corruptos al abrir el DXF.
+    const blob = new Blob([App.plano.codificarDXFComoBytes(contenido)], { type: "application/dxf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const slug = (proyecto.nombre || "plano").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    a.download = `${slug || "plano"}.dxf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // --- PROYECTO ---
   function guardarProyecto() {
     const nombre = App.guardarProyecto({
@@ -778,6 +851,8 @@ export function useCircuitos() {
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
+    corregirPerspectivaPlano,
+    exportarDXFPlano,
     listaIntegridad,
     resumenIntegridad: resumenInt,
     detalleElectrico,
