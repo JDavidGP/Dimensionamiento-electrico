@@ -10,7 +10,6 @@ import {
   obtenerNormativaPorId,
 } from "../../modules/normativa/index.js";
 import { Cache } from "../services/Cache.js";
-import { Logger } from "../services/Logger.js";
 import { Config } from "../services/Config.js";
 
 const CACHE_KEY = "normativa:activa:";
@@ -47,12 +46,6 @@ export const NormativaMediator = {
     return n.voltajesPorFase?.[fases] ?? [];
   },
 
-  /** Parámetro puntual (ampacidad, breakers, etc.). */
-  parametro(normativaId, campo) {
-    const n = this.obtener(normativaId);
-    return n?.[campo];
-  },
-
   /**
    * Gancho futuro: verificación normativa explícita de un circuito.
    * Hoy las reglas viven dentro del dimensionamiento del motor.
@@ -63,12 +56,5 @@ export const NormativaMediator = {
       return n.verificarCircuito(circuito, contexto);
     }
     return { ok: true, mensajes: [] };
-  },
-
-  invalidateCache() {
-    Cache.keys()
-      .filter((k) => k.startsWith("normativa:"))
-      .forEach((k) => Cache.delete(k));
-    Logger.debug("NormativaMediator cache invalidada");
   },
 };

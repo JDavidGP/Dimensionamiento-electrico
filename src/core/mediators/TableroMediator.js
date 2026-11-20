@@ -47,7 +47,6 @@ import {
   calcularCargaSimultaneaViviendas,
   potenciaMinimaGrado,
   GRADOS_ELECTRIFICACION,
-  normalizarSimultaneidadREBT,
 } from "../../modules/motor/index.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
@@ -57,11 +56,6 @@ import { Config } from "../services/Config.js";
 export const TableroMediator = {
   /** Grados de electrificación REBT ITC-BT-10 (§2.1), expuestos para la UI — mismo patrón que OrigenMediator.MODOS_CONMUTACION. */
   GRADOS_ELECTRIFICACION,
-
-  /** Normaliza tablero.simultaneidadREBT antes de guardarlo. */
-  normalizarSimultaneidadREBT(datos) {
-    return normalizarSimultaneidadREBT(datos);
-  },
 
   /** Fábrica de un tablero nuevo (no lo guarda — eso lo hace el hook). */
   crear(datos) {
@@ -110,10 +104,6 @@ export const TableroMediator = {
     return asignarCircuitoATablero(circuito, tableroId);
   },
 
-  desasignar(circuito) {
-    return asignarCircuitoATablero(circuito, null);
-  },
-
   /** Devuelve el circuito con sus líneas (L1/L2/L3) actualizadas; el hook decide cómo guardarlo. */
   asignarLineas(circuito, lineas) {
     return asignarLineasACircuito(circuito, lineas);
@@ -122,43 +112,6 @@ export const TableroMediator = {
   /** Al borrar un tablero, libera (no borra) los circuitos que le pertenecían. */
   liberarCircuitos(tableroId, circuitos) {
     return liberarCircuitosDeTablero(tableroId, circuitos ?? DataProvider.getCircuitos());
-  },
-
-  /**
-   * Dimensiona el tramo troncal (alimentador) de un tablero, a partir
-   * de la demanda agregada de sus circuitos YA CALCULADOS (lee
-   * DataProvider.getResultados(), no dispara el motor en cadena — mismo
-   * anti-ciclo que ya respeta ValidacionMediator).
-   * PROVISIONAL: ver nota en modules/motor/calcularAlimentador.js.
-   *
-   * Acepta overrides explícitos (circuitos/resultados/normativaId/
-   * tablero), todos opcionales — llamarlo solo con tableroId funciona
-   * exactamente igual que antes (cae al DataProvider). Los overrides
-   * existen porque el snapshot del DataProvider se sincroniza en un
-   * useEffect que corre DESPUÉS del render: si la UI llama a este
-   * método durante el render con datos recién cambiados (tableros/
-   * circuitos/resultados), el DataProvider todavía tiene el snapshot
-   * del render anterior. Pasando los valores frescos se evita ese
-   * desfase de un render.
-   */
-  calcularAlimentador(tableroId, { circuitos, resultados, normativaId, tablero } = {}) {
-    const t = tablero ?? DataProvider.getTablero(tableroId);
-    if (!t) {
-      return { ok: false, error: `Tablero ${tableroId} no existe.` };
-    }
-
-    const circuitosDelTablero = circuitosDeTablero(tableroId, circuitos ?? DataProvider.getCircuitos());
-    const listaResultados = resultados ?? DataProvider.getResultados();
-    const resultadosDelTablero = circuitosDelTablero
-      .map((c) => listaResultados.find((r) => r.id === c.id))
-      .filter(Boolean);
-
-    const normativa = NormativaMediator.obtener(normativaId ?? DataProvider.getNormativaActivaId());
-    if (!normativa) {
-      return { ok: false, error: "Normativa activa no resuelta." };
-    }
-
-    return calcularAlimentador(t, resultadosDelTablero, t.fases, normativa);
   },
 
   /**

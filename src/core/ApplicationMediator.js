@@ -77,25 +77,6 @@ export const ApplicationMediator = {
     DataProvider.setSnapshot(partial);
   },
 
-  /** Recalcula todos los circuitos y devuelve resultados. */
-  calcularProyecto(circuitos, equipos, normativaId) {
-    const resultados = MotorCalculoMediator.calcularTodos(
-      circuitos,
-      equipos,
-      normativaId
-    );
-    DataProvider.setSnapshot({ resultados });
-    return resultados;
-  },
-
-  /** Lista de integridad + resumen en un solo paso. */
-  integridad(proyecto, circuitos, equipos, tableros) {
-    return {
-      lista: ValidacionMediator.listaIntegridad(proyecto, circuitos, equipos, tableros),
-      resumen: ValidacionMediator.resumen(proyecto, circuitos, equipos, tableros),
-    };
-  },
-
   /** Guardar / abrir proyecto. */
   guardarProyecto(estado) {
     return PersistenciaMediator.descargarJson(estado);

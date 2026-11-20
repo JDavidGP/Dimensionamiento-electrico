@@ -12,7 +12,7 @@
  * NO muta el proyecto — solo lectura/transformación, igual criterio
  * que el resto de los mediadores de dominio.
  */
-import { generarResumenCalculos, generarMemoriaTecnica } from "../../modules/documento/index.js";
+import { generarMemoriaTecnica } from "../../modules/documento/index.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
 import { NormativaMediator } from "./NormativaMediator.js";
@@ -31,18 +31,12 @@ function etiquetaOrigen(tablero, tableros, fuentesEnergia, transformadores) {
 }
 
 export const DocumentoMediator = {
-  resumenCalculos(resultados) {
-    const r = resultados ?? DataProvider.getResultados();
-    Logger.debug("DocumentoMediator.resumenCalculos", { n: r.length });
-    return generarResumenCalculos(r);
-  },
-
   /**
    * Arma el modelo de datos de la memoria técnica. Todo lo pesado
    * (alimentadores agregados por tablero, listaIntegridad) debe venir
    * YA CALCULADO en `overrides` — mismo motivo que
-   * TableroMediator.calcularAlimentador documenta: el snapshot de
-   * DataProvider se sincroniza en un useEffect que corre DESPUÉS del
+   * TableroMediator.calcularAlimentadorAgregado documenta: el snapshot
+   * de DataProvider se sincroniza en un useEffect que corre DESPUÉS del
    * render, así que llamarlo con datos recién cambiados sin pasarlos
    * explícitos puede leer un render atrás.
    */
