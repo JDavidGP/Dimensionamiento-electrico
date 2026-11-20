@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { TIPOS_FUENTE_UI } from "./PanelTableros";
+import { ContenidoSvgDiagrama, cajaEnvolvente, PALETA_IMPRESION } from "./DiagramaSvgContenido.jsx";
 
 // Memoria técnica / informe — 5ta pestaña, el lugar que ya estaba
 // anotado como pendiente en App.jsx desde que se armó el layout por
@@ -20,10 +21,19 @@ import { TIPOS_FUENTE_UI } from "./PanelTableros";
 // ALCANCE v1 (acordado con el usuario): encabezado, tabla de
 // circuitos, resumen de tableros/alimentadores, fuentes de
 // energía/transformadores, advertencias de integridad, aviso de
-// responsabilidad. El diagrama unifilar como imagen embebida queda
-// para una próxima ronda — capturar el SVG en vivo es más delicado de
-// hacer bien y el usuario lo dejó fuera a propósito de esta primera
-// versión.
+// responsabilidad.
+//
+// DIAGRAMA UNIFILAR EMBEBIDO (usuario, 2026-11-20): se agregó
+// reutilizando el MISMO contenido SVG del editor interactivo
+// (DiagramaSvgContenido.jsx, extraído de DiagramaUnifilar.jsx para que
+// ninguno de los dos dibuje su propia copia) — no es una captura de
+// pantalla ni una librería nueva, es el SVG real, de solo lectura (sin
+// manejadores de mouse) y con la paleta CLARA (PALETA_IMPRESION) en vez
+// de la oscura del editor, mismo motivo que el resto de esta vista:
+// imprimir fondo oscuro desperdicia tinta y se ve poco profesional. El
+// tamaño del lienzo se calcula en vivo (cajaEnvolvente) a partir de la
+// posición de los nodos, para que nada quede cortado sin importar
+// cuántos haya.
 
 const COLOR_TEXTO = "#1a1a1a";
 const COLOR_TEXTO_DIM = "#555";
@@ -81,6 +91,8 @@ export default function InformeTecnico({
   fuentesEnergia,
   transformadores,
   listaIntegridad,
+  nodosDiagrama = [],
+  conexionesDiagrama = [],
 }) {
   const informe = useMemo(
     () =>
@@ -247,6 +259,30 @@ export default function InformeTecnico({
                 ⚠ {t.nombre}: {t.motivo}
               </div>
             ))}
+        </Seccion>
+
+        <Seccion titulo="Diagrama unifilar">
+          {nodosDiagrama.length === 0 ? (
+            <div style={{ fontSize: 12, color: COLOR_TEXTO_DIM }}>Sin diagrama unifilar cargado todavía.</div>
+          ) : (
+            (() => {
+              const { ancho, alto } = cajaEnvolvente(nodosDiagrama);
+              return (
+                <svg
+                  width="100%"
+                  viewBox={`0 0 ${ancho} ${alto}`}
+                  style={{ background: "#fff", border: `1px solid ${COLOR_BORDE}`, borderRadius: 4, display: "block", maxHeight: 480 }}
+                >
+                  <ContenidoSvgDiagrama
+                    nodosDiagrama={nodosDiagrama}
+                    conexionesDiagrama={conexionesDiagrama}
+                    entidadesPorRef={{ tableros, equipos, fuentesEnergia, transformadores }}
+                    paleta={PALETA_IMPRESION}
+                  />
+                </svg>
+              );
+            })()
+          )}
         </Seccion>
 
         {(informe.fuentesEnergia.length > 0 || informe.transformadores.length > 0) && (

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
-import { colores, fuentes } from "../styles/colores";
+import { colores } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
-import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
+import { ContenidoSvgDiagrama, ANCHO_NODO, ALTO_NODO } from "./DiagramaSvgContenido.jsx";
 
 // Editor mínimo del diagrama unifilar — Fase 3 de la spec del usuario
 // (2026-11-20, segunda ronda: "primero lo mínimo"). Sin cálculos,
@@ -34,23 +34,6 @@ import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
 // OPCIONAL siempre: un nodo sin vínculo sigue siendo válido (se dibuja
 // la topología antes de tener todos los datos reales cargados, mismo
 // criterio ya usado en fuentesEnergia/conmutación).
-
-const ANCHO_NODO = 120;
-const ALTO_NODO = 68;
-const TAMANO_SIMBOLO = 30;
-
-const COLOR_POR_CATEGORIA = {
-  fuente: colores.ok,
-  medicion_proteccion: colores.warn,
-  distribucion: colores.copper,
-  control: colores.copperDim,
-  carga: colores.textDim,
-};
-
-function colorDeNodo(tipo) {
-  const comp = App.diagrama.obtenerComponente(tipo);
-  return COLOR_POR_CATEGORIA[comp?.categoria] ?? colores.border;
-}
 
 export default function DiagramaUnifilar({
   nodosDiagrama,
@@ -97,12 +80,6 @@ export default function DiagramaUnifilar({
       return contexto ? `${entidad.nombre || "Equipo sin nombre"} (${contexto})` : entidad.nombre || "Equipo sin nombre";
     }
     return entidad.nombre || "(sin nombre)";
-  }
-
-  /** Nombre a mostrar en el nodo: el de la entidad vinculada (vivo), o el propio del nodo si no tiene vínculo. */
-  function nombreMostrado(nodo) {
-    const entidad = App.diagrama.resolverEntidad(nodo, entidadesPorRef);
-    return entidad?.nombre?.trim() || nodo.nombre;
   }
 
   function posicionPorDefecto() {
@@ -353,75 +330,16 @@ export default function DiagramaUnifilar({
         onMouseUp={alMouseUpSvg}
         onMouseLeave={alMouseUpSvg}
       >
-        <defs>
-          <marker id="flecha-diagrama" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill={colores.textDim} />
-          </marker>
-        </defs>
-
-        {conexionesDiagrama.map((cx) => {
-          const origen = nodosDiagrama.find((n) => n.id === cx.nodoOrigenId);
-          const destino = nodosDiagrama.find((n) => n.id === cx.nodoDestinoId);
-          if (!origen || !destino) return null; // referencia rota — no debería pasar, pero no explota
-          const p1 = posicionDe(origen);
-          const p2 = posicionDe(destino);
-          const x1 = p1.x + ANCHO_NODO / 2;
-          const y1 = p1.y + ALTO_NODO;
-          const x2 = p2.x + ANCHO_NODO / 2;
-          const y2 = p2.y;
-          return (
-            <line
-              key={cx.id}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke={colores.textDim}
-              strokeWidth={1.5}
-              markerEnd="url(#flecha-diagrama)"
-              onClick={() => modo === "eliminar" && eliminarConexionDiagrama(cx.id)}
-              style={{ cursor: modo === "eliminar" ? "pointer" : "default" }}
-            />
-          );
-        })}
-
-        {nodosDiagrama.map((nodo) => {
-          const pos = posicionDe(nodo);
-          const comp = App.diagrama.obtenerComponente(nodo.tipo);
-          const seleccionado = origenPendiente === nodo.id || nodoVinculando === nodo.id;
-          const entidad = App.diagrama.resolverEntidad(nodo, entidadesPorRef);
-          const nombre = nombreMostrado(nodo);
-          return (
-            <g
-              key={nodo.id}
-              transform={`translate(${pos.x}, ${pos.y})`}
-              onMouseDown={(e) => alMouseDownNodo(e, nodo)}
-              style={{ cursor: modo === "mover" ? "grab" : "pointer" }}
-            >
-              <rect
-                width={ANCHO_NODO}
-                height={ALTO_NODO}
-                rx={4}
-                fill={colores.panel}
-                stroke={seleccionado ? colores.copper : colorDeNodo(nodo.tipo)}
-                strokeWidth={seleccionado ? 3 : 1.5}
-              />
-              <SimboloDiagrama
-                tipo={nodo.tipo}
-                x={(ANCHO_NODO - TAMANO_SIMBOLO) / 2}
-                y={4}
-                size={TAMANO_SIMBOLO}
-                color={seleccionado ? colores.copper : colorDeNodo(nodo.tipo)}
-              />
-              <text x={ANCHO_NODO / 2} y={48} textAnchor="middle" fontSize={11} fontFamily={fuentes.display} fill={colores.textMain}>
-                {nombre.length > 16 ? `${nombre.slice(0, 15)}…` : nombre}
-              </text>
-              <text x={ANCHO_NODO / 2} y={60} textAnchor="middle" fontSize={8.5} fontFamily={fuentes.mono} fill={entidad ? colores.ok : colores.textDim}>
-                {entidad ? `${comp?.nombre ?? nodo.tipo} · vinculado` : comp?.nombre ?? nodo.tipo}
-              </text>
-            </g>
-          );
-        })}
+        <ContenidoSvgDiagrama
+          nodosDiagrama={nodosDiagrama}
+          conexionesDiagrama={conexionesDiagrama}
+          entidadesPorRef={entidadesPorRef}
+          posicionDe={posicionDe}
+          esSeleccionado={(id) => origenPendiente === id || nodoVinculando === id}
+          onMouseDownNodo={alMouseDownNodo}
+          onClickConexion={(cx) => modo === "eliminar" && eliminarConexionDiagrama(cx.id)}
+          cursorDeNodo={() => (modo === "mover" ? "grab" : "pointer")}
+        />
       </svg>
 
       <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, marginTop: 8 }}>

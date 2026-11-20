@@ -420,6 +420,8 @@ export default function App() {
                   fuentesEnergia={fuentesEnergia}
                   transformadores={transformadores}
                   listaIntegridad={listaIntegridad}
+                  nodosDiagrama={nodosDiagrama}
+                  conexionesDiagrama={conexionesDiagrama}
                 />
               </div>
             ),
