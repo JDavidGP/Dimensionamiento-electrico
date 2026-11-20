@@ -93,7 +93,7 @@ function validarEquipo(equipo, circuito, idsVistos) {
   });
 }
 
-function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tableros = [], nodosDiagrama = []) {
+function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tableros = [], nodosDiagrama = [], marcadoresEquipoPlano = []) {
   const problemas = [];
   let estado = ESTADOS.OK;
 
@@ -167,15 +167,44 @@ function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tabl
   // ya muestra los `problemas` del circuito, así que esto se ve sin
   // construir una pantalla nueva. Es ADVERTENCIA, no error: un equipo
   // sin dibujar en el diagrama sigue siendo un dato de cálculo válido.
-  const equiposSinRepresentar = equiposDelCircuito.filter(
-    (eq) => !nodosDiagrama.some((n) => n.entidadId === eq.id)
-  );
-  if (equiposSinRepresentar.length > 0) {
-    const nombres = equiposSinRepresentar.map((e) => e.nombre || e.id).join(", ");
-    entradaCircuito.problemas.push(
-      `${equiposSinRepresentar.length} equipo(s) sin representar en el diagrama unifilar: ${nombres}`
+  //
+  // Gateado por `circuito.representacion` (pedido explícito del
+  // usuario, 2026-11-20 — ver REPRESENTACION_CIRCUITO en shared/
+  // constants/constantes.js): un circuito marcado "plano" o "ninguno"
+  // no necesita (ni debería advertir sobre) un nodo en el diagrama —
+  // PURAMENTE informativo, nunca bloquea vincular/colocar igual si el
+  // usuario quiere. Default "ambos" para no cambiar el comportamiento
+  // de un proyecto guardado antes de que este campo existiera.
+  const representacion = circuito.representacion || "ambos";
+  const quiereDiagrama = representacion === "diagrama" || representacion === "ambos";
+  const quierePlano = representacion === "plano" || representacion === "ambos";
+
+  if (quiereDiagrama) {
+    const equiposSinRepresentarDiagrama = equiposDelCircuito.filter(
+      (eq) => !nodosDiagrama.some((n) => n.entidadId === eq.id)
     );
-    entradaCircuito.estado = peorEstado(entradaCircuito.estado, ESTADOS.ADVERTENCIA);
+    if (equiposSinRepresentarDiagrama.length > 0) {
+      const nombres = equiposSinRepresentarDiagrama.map((e) => e.nombre || e.id).join(", ");
+      entradaCircuito.problemas.push(
+        `${equiposSinRepresentarDiagrama.length} equipo(s) sin representar en el diagrama unifilar: ${nombres}`
+      );
+      entradaCircuito.estado = peorEstado(entradaCircuito.estado, ESTADOS.ADVERTENCIA);
+    }
+  }
+
+  // Mismo caso, simétrico, para el Plano inteligente (marcadores de
+  // equipo con `entidadId` apuntando al equipo — ver modules/plano/index.js).
+  if (quierePlano) {
+    const equiposSinRepresentarPlano = equiposDelCircuito.filter(
+      (eq) => !marcadoresEquipoPlano.some((m) => m.entidadId === eq.id)
+    );
+    if (equiposSinRepresentarPlano.length > 0) {
+      const nombres = equiposSinRepresentarPlano.map((e) => e.nombre || e.id).join(", ");
+      entradaCircuito.problemas.push(
+        `${equiposSinRepresentarPlano.length} equipo(s) sin representar en el plano: ${nombres}`
+      );
+      entradaCircuito.estado = peorEstado(entradaCircuito.estado, ESTADOS.ADVERTENCIA);
+    }
   }
 
   return [entradaCircuito, ...entradasEquipos];
@@ -298,9 +327,10 @@ function validarFuenteEnergia(fuente, idsVistos, proyectoId, nodosDiagrama = [])
  * @param {Array}  fuentesEnergia - array plano de fuentes de energía (Batería/Generador)
  * @param {Array}  nodosDiagrama - array plano de nodos del diagrama unifilar (con entidadId) — caso inverso de la sincronización, ver ARCHITECTURE.md §9
  * @param {Array}  transformadores - array plano de transformadores (ver modules/motor/transformador.js) — origen seleccionable solo en instalaciones industriales
+ * @param {Array}  marcadoresEquipoPlano - marcadores de equipo del plano (con entidadId) — caso inverso simétrico al de nodosDiagrama, ver modules/plano/index.js
  * @returns {Array} lista plana de entradas para la UI
  */
-export function validarIntegridadReferencial(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = [], transformadores = []) {
+export function validarIntegridadReferencial(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = [], transformadores = [], marcadoresEquipoPlano = []) {
   const idsVistos = new Set();
   const entradas = [];
   const proj = proyecto || { id: "proyecto" };
@@ -318,7 +348,7 @@ export function validarIntegridadReferencial(proyecto, circuitos = [], equipos =
 
   circuitos.forEach((c) => {
     const equiposDelCircuito = equipos.filter((e) => e.circuitoId === c.id);
-    entradas.push(...validarCircuito(c, equiposDelCircuito, proj, idsVistos, listaTableros, nodosDiagrama));
+    entradas.push(...validarCircuito(c, equiposDelCircuito, proj, idsVistos, listaTableros, nodosDiagrama, marcadoresEquipoPlano));
   });
 
   // Equipos huérfanos (circuitoId que no existe)

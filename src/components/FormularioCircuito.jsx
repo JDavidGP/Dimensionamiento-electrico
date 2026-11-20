@@ -2,7 +2,7 @@ import React from "react";
 import Campo, { inputStyle } from "./Campo";
 import { colores, fuentes } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
-import { TIPOS_INSTALACION } from "../shared/constants/constantes.js";
+import { TIPOS_INSTALACION, OPCIONES_REPRESENTACION_CIRCUITO } from "../shared/constants/constantes.js";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
@@ -76,6 +76,19 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
           <input style={inputStyle()} value={form.funcion} onChange={(e) => setForm({ ...form, funcion: e.target.value })} placeholder="Ej: Ilumina pasillo principal" />
         </Campo>
       </div>
+
+      <Campo label="Representar en">
+        <select style={inputStyle()} value={form.representacion ?? "ambos"} onChange={(e) => setForm({ ...form, representacion: e.target.value })}>
+          {OPCIONES_REPRESENTACION_CIRCUITO.map((o) => (
+            <option key={o.valor} value={o.valor}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <div style={{ fontSize: 11, color: colores.textDim, marginTop: 6, lineHeight: 1.4 }}>
+          Solo ajusta qué advertencias de integridad aparecen — nunca impide vincular un nodo o un marcador igual si lo necesitás.
+        </div>
+      </Campo>
 
       <Campo label="Tipo de circuito">
         <div style={{ display: "flex", gap: 8 }}>

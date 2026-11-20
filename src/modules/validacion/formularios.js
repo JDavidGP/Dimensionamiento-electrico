@@ -38,6 +38,7 @@ export function formularioACircuito(form, idExistente = null) {
     // corto y función, puramente descriptivos, no son el id interno.
     etiqueta: form.etiqueta || "",
     funcion: form.funcion || "",
+    representacion: form.representacion || "ambos",
     tipo: form.tipo,
     fases: form.fases,
     voltaje: parseFloat(form.voltaje),
@@ -61,6 +62,7 @@ export function circuitoAFormulario(circuito) {
     nombre: circuito.nombre,
     etiqueta: circuito.etiqueta || "",
     funcion: circuito.funcion || "",
+    representacion: circuito.representacion || "ambos",
     tipo: circuito.tipo,
     fases: circuito.fases,
     voltaje: String(circuito.voltaje),

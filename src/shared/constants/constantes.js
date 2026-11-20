@@ -110,6 +110,32 @@ export const OPCIONES_TIPO_INSTALACION = [
   { valor: TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL, label: "Comercial / Industrial" },
 ];
 
+// Preferencia de representación de un circuito — pedido explícito del
+// usuario (2026-11-20): no todo circuito necesita aparecer en los dos
+// lados (Diagrama unifilar = topología eléctrica, Plano = ubicación
+// física) — un circuito "reservado"/sin instalar todavía, por ejemplo,
+// puede no tener sentido en el plano; uno puramente documental puede no
+// necesitar nodo en el diagrama. PURAMENTE INFORMATIVO a propósito: solo
+// ajusta qué advertencias de integridad aparecen (ver
+// modules/validacion/referencial.js) — nunca impide vincular o colocar
+// un nodo/marcador igual si el usuario quiere, mismo criterio de "nunca
+// fuerza" que el resto de la app. Default "ambos" para no cambiar el
+// comportamiento de ningún proyecto ya guardado.
+export const REPRESENTACION_CIRCUITO = {
+  DIAGRAMA: "diagrama",
+  PLANO: "plano",
+  AMBOS: "ambos",
+  NINGUNO: "ninguno",
+};
+export const REPRESENTACION_CIRCUITO_POR_DEFECTO = REPRESENTACION_CIRCUITO.AMBOS;
+
+export const OPCIONES_REPRESENTACION_CIRCUITO = [
+  { valor: REPRESENTACION_CIRCUITO.AMBOS, label: "Diagrama y plano" },
+  { valor: REPRESENTACION_CIRCUITO.DIAGRAMA, label: "Solo diagrama" },
+  { valor: REPRESENTACION_CIRCUITO.PLANO, label: "Solo plano" },
+  { valor: REPRESENTACION_CIRCUITO.NINGUNO, label: "Ninguno" },
+];
+
 // INVESTIGACIÓN — qué distingue a una instalación industrial en NEC y
 // REBT (pedida por el usuario, 2026-11-19, para decidir CON QUÉ
 // CRITERIO el tipo de instalación debería filtrar/agregar equipos y

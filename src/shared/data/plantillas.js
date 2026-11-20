@@ -13,6 +13,10 @@ export const CIRCUITO_VACIO = {
   // pero es editable, nunca forzada.
   etiqueta: "",
   funcion: "",
+  // Dónde conviene representar este circuito — ver REPRESENTACION_CIRCUITO
+  // en shared/constants/constantes.js para el porqué completo. Default
+  // "ambos": no cambia el comportamiento de ningún proyecto existente.
+  representacion: "ambos", // "diagrama" | "plano" | "ambos" | "ninguno"
   tipo: "mixto", // "dedicado" | "mixto"
   fases: "mono", // "mono" | "bi" | "tri"
   voltaje: "120",
