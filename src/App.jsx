@@ -98,6 +98,7 @@ export default function App() {
     crearNodoDiagrama,
     editarNodoDiagrama,
     eliminarNodoDiagrama,
+    autoorganizarDiagrama,
     conexionesDiagrama,
     crearConexionDiagrama,
     eliminarConexionDiagrama,
@@ -345,6 +346,7 @@ export default function App() {
                           crearNodoDiagrama={crearNodoDiagrama}
                           editarNodoDiagrama={editarNodoDiagrama}
                           eliminarNodoDiagrama={eliminarNodoDiagrama}
+                          autoorganizarDiagrama={autoorganizarDiagrama}
                           conexionesDiagrama={conexionesDiagrama}
                           crearConexionDiagrama={crearConexionDiagrama}
                           eliminarConexionDiagrama={eliminarConexionDiagrama}

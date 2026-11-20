@@ -191,3 +191,4 @@ export function validarConexion(conexionPropuesta, nodos = [], conexionesExisten
 }
 
 export { validarReglaElectrica } from "./reglas.js";
+export { autoorganizarNodos } from "./autoorganizar.js";

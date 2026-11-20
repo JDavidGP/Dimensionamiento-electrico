@@ -28,7 +28,12 @@ import { generarId } from "../../shared/utils/id.js";
 import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo } from "../geometria/index.js";
 
 export { calcularEscala, imagenAModelo, modeloAImagen } from "./calibracion.js";
-export { transformVistaInicial, aPantalla, aModelo, aplicarZoom, aplicarPan, ajustarAVentana, ZOOM_MIN, ZOOM_MAX } from "./coordenadas.js";
+// transformVistaInicial/aPantalla/aModelo/aplicarZoom/aplicarPan/
+// ajustarAVentana/ZOOM_MIN/ZOOM_MAX se mudaron a modules/geometria/
+// vistaZoomPan.js (usuario, 2026-11-20, al pedir lo mismo para el
+// Diagrama unifilar) — es matemática de vista genérica, sin nada
+// propio de Plano; PlanoMediator las importa directo de geometria/
+// ahora, este módulo ya no las re-exporta.
 export { pixelBordeMasFuerte, RADIO_BUSQUEDA_BORDE_PX, UMBRAL_MAGNITUD_BORDE } from "./deteccionBordes.js";
 export { calcularHomografia, aplicarHomografia, invertirMatriz3x3 } from "./homografia.js";
 export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.js";

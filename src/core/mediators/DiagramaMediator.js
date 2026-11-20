@@ -3,17 +3,21 @@
  * Responsabilidad: dominio Diagrama — modelo de nodos/conexiones del
  * diagrama unifilar. Fase 1 ("Motor de datos" + cardinalidad) y Fase 2
  * (motor de reglas eléctricas semántico, ver modules/diagrama/reglas.js)
- * de la spec del usuario (2026-11-20) ya están construidas. Motor de
- * dibujo, autoorganización y editor visual quedan para una próxima
- * ronda — ver modules/diagrama/index.js para el detalle completo de
- * alcance.
+ * de la spec del usuario (2026-11-20) ya están construidas. Autoorganización
+ * (modules/diagrama/autoorganizar.js) y zoom/pan (modules/geometria/
+ * vistaZoomPan.js, mismo núcleo compartido que ya usa Plano) agregados
+ * después, mismo día, segundo pedido de una lista: PDF embebido (ya
+ * hecho) → esto → escaneo por cámara/foto → coordenadas por texto en
+ * el plano.
  *
  * Mismo criterio que TableroMediator/OrigenMediator: NO muta el
  * proyecto. Devuelve datos ya calculados/transformados; la escritura
  * real la hace la capa de aplicación (hook).
  *
  * Dependencias permitidas: funciones internas de modules/diagrama,
- * DataProvider. Lo que sigue prohibido: UI, Documento.
+ * modules/geometria/ (núcleo compartido, permitido a nivel mediador —
+ * mismo patrón que PlanoMediator → modules/geometria/, ver
+ * ARCHITECTURE.md §11), DataProvider. Lo que sigue prohibido: UI, Documento.
  */
 import {
   crearNodo,
@@ -24,7 +28,18 @@ import {
   liberarNodosDeEntidad,
   validarConexion,
   validarReglaElectrica,
+  autoorganizarNodos,
 } from "../../modules/diagrama/index.js";
+import {
+  transformVistaInicial,
+  aPantalla,
+  aModelo,
+  aplicarZoom,
+  aplicarPan,
+  ajustarAVentana,
+  ZOOM_MIN,
+  ZOOM_MAX,
+} from "../../modules/geometria/index.js";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
@@ -36,6 +51,22 @@ export const DiagramaMediator = {
   CATEGORIAS_COMPONENTE,
   obtenerComponente,
   componentesPorCategoria,
+  ZOOM_MIN,
+  ZOOM_MAX,
+
+  /** Posiciones nuevas (nodoId -> {x,y}) que acomodan el diagrama en capas según el sentido de las conexiones — el hook decide cómo aplicarlas. */
+  autoorganizar(nodos, conexiones, opciones) {
+    return autoorganizarNodos(nodos ?? [], conexiones ?? [], opciones);
+  },
+
+  // Vista (zoom/pan) — matemática pura de modules/geometria/, mismo
+  // núcleo que ya usa PlanoMediator, nunca efímera/con estado acá.
+  transformVistaInicial,
+  aPantalla,
+  aModelo,
+  aplicarZoom,
+  aplicarPan,
+  ajustarAVentana,
 
   /** Fábrica de un nodo nuevo (no lo guarda — eso lo hace el hook). */
   crearNodo(datos) {

@@ -1,17 +1,27 @@
 import React, { useState, useRef } from "react";
 import { colores } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
-import { ContenidoSvgDiagrama, ANCHO_NODO, ALTO_NODO } from "./DiagramaSvgContenido.jsx";
+import { ContenidoSvgDiagrama } from "./DiagramaSvgContenido.jsx";
 
 // Editor mínimo del diagrama unifilar — Fase 3 de la spec del usuario
-// (2026-11-20, segunda ronda: "primero lo mínimo"). Sin cálculos,
-// sin autoorganización, sin zoom/pan todavía — exactamente lo que
-// pidió: área de dibujo, agregar nodos del catálogo (Fase 1), crear
-// conexiones arrastrando/clickeando (validadas por el motor de reglas
-// de Fase 2). Símbolos dibujados a mano (ver simbolosDiagrama.jsx) tras
-// investigar fuentes externas y no encontrar ninguna que cubriera el
-// catálogo completo con licencia y estilo consistentes — decisión
-// explícita del usuario: "Dibujalo tu mismo".
+// (2026-11-20, segunda ronda: "primero lo mínimo"). Símbolos dibujados
+// a mano (ver simbolosDiagrama.jsx) tras investigar fuentes externas y
+// no encontrar ninguna que cubriera el catálogo completo con licencia
+// y estilo consistentes — decisión explícita del usuario: "Dibujalo tu
+// mismo".
+//
+// ZOOM/PAN Y AUTOORGANIZACIÓN (usuario, 2026-11-20, segundo pedido de
+// su lista para el diagrama): el zoom/pan reusa el MISMO núcleo
+// matemático que ya usa Plano (modules/geometria/vistaZoomPan.js, ver
+// PlanoCanvas.jsx para el patrón original) — rueda del mouse (o los
+// botones +/−) para zoom hacia donde apunta el cursor, arrastrar
+// espacio VACÍO del lienzo en modo "Mover" para desplazar la vista
+// (arrastrar un NODO en ese mismo modo lo mueve a él, no la vista —
+// se distinguen porque el mousedown de un nodo hace stopPropagation
+// antes de llegar acá). La autoorganización (modules/diagrama/
+// autoorganizar.js) acomoda los nodos en capas según el sentido de las
+// conexiones — nunca se dispara sola, es un botón; se puede seguir
+// moviendo nodos a mano después.
 //
 // Reusa el modelo de datos y la validación YA construidos
 // (modules/diagrama/*, DiagramaMediator) — este componente es
@@ -40,6 +50,7 @@ export default function DiagramaUnifilar({
   crearNodoDiagrama,
   editarNodoDiagrama,
   eliminarNodoDiagrama,
+  autoorganizarDiagrama,
   conexionesDiagrama,
   crearConexionDiagrama,
   eliminarConexionDiagrama,
@@ -62,6 +73,8 @@ export default function DiagramaUnifilar({
   const [aviso, setAviso] = useState("");
   const [nodoVinculando, setNodoVinculando] = useState(null); // id del nodo cuyo vínculo se está editando
   const [entidadEdicion, setEntidadEdicion] = useState("");
+  const [transformVista, setTransformVista] = useState(() => App.diagrama.transformVistaInicial());
+  const arrastreVistaRef = useRef(null); // {x,y} último punto de PANTALLA mientras se arrastra la VISTA (pan) — null = no se está arrastrando
 
   const entidadesPorRef = { tableros, equipos, fuentesEnergia, transformadores };
 
@@ -100,13 +113,41 @@ export default function DiagramaUnifilar({
     setEntidadNuevoNodo("");
   }
 
-  function coordenadasSvg(e) {
+  function puntoPantalla(e) {
     const rect = svgRef.current.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
+  /** Punto del evento, YA convertido de pantalla a espacio MODELO (donde viven nodo.posicion) — divide/resta el zoom/pan actual. */
+  function coordenadasSvg(e) {
+    return App.diagrama.aModelo(puntoPantalla(e), transformVista);
+  }
+
   function posicionDe(nodo) {
     return posicionesArrastre[nodo.id] ?? nodo.posicion;
+  }
+
+  /** Click en el LIENZO (no en un nodo — el mousedown de un nodo hace stopPropagation antes de llegar acá) — en modo "Mover", arranca el pan de la vista. */
+  function alMouseDownSvg(e) {
+    if (modo === "mover") {
+      arrastreVistaRef.current = { x: e.clientX, y: e.clientY };
+    }
+  }
+
+  function alWheelSvg(e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    setTransformVista((actual) => App.diagrama.aplicarZoom(actual, factor, puntoPantalla(e)));
+  }
+
+  function zoomBoton(factor) {
+    const rect = svgRef.current?.getBoundingClientRect();
+    const centro = rect ? { x: rect.width / 2, y: rect.height / 2 } : { x: 0, y: 0 };
+    setTransformVista((actual) => App.diagrama.aplicarZoom(actual, factor, centro));
+  }
+
+  function restablecerVista() {
+    setTransformVista(App.diagrama.transformVistaInicial());
   }
 
   function alMouseDownNodo(e, nodo) {
@@ -143,6 +184,13 @@ export default function DiagramaUnifilar({
   }
 
   function alMouseMoveSvg(e) {
+    if (arrastreVistaRef.current) {
+      const dx = e.clientX - arrastreVistaRef.current.x;
+      const dy = e.clientY - arrastreVistaRef.current.y;
+      setTransformVista((actual) => App.diagrama.aplicarPan(actual, { x: dx, y: dy }));
+      arrastreVistaRef.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
     if (!arrastre) return;
     const pos = coordenadasSvg(e);
     setPosicionesArrastre((prev) => ({
@@ -152,6 +200,7 @@ export default function DiagramaUnifilar({
   }
 
   function alMouseUpSvg() {
+    arrastreVistaRef.current = null;
     if (arrastre) {
       const posicionFinal = posicionesArrastre[arrastre.nodoId];
       if (posicionFinal) editarNodoDiagrama(arrastre.nodoId, { posicion: posicionFinal });
@@ -239,6 +288,27 @@ export default function DiagramaUnifilar({
 
         <div style={{ flex: 1 }} />
 
+        {autoorganizarDiagrama && (
+          <button
+            type="button"
+            onClick={autoorganizarDiagrama}
+            disabled={nodosDiagrama.length === 0}
+            title="Acomoda los nodos en capas según el sentido de las conexiones — se puede seguir moviendo a mano después"
+            style={{
+              padding: "5px 10px",
+              borderRadius: 3,
+              border: `1px solid ${colores.border}`,
+              background: "transparent",
+              color: nodosDiagrama.length === 0 ? colores.textDim : colores.copper,
+              fontWeight: 600,
+              fontSize: 11.5,
+              cursor: nodosDiagrama.length === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            ⇅ Autoorganizar
+          </button>
+        )}
+
         {botonModo("mover", "Mover")}
         {botonModo("conectar", "Conectar")}
         {botonModo("vincular", "Vincular")}
@@ -246,7 +316,7 @@ export default function DiagramaUnifilar({
       </div>
 
       <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 6 }}>
-        {modo === "mover" && "Arrastrá un nodo para reposicionarlo."}
+        {modo === "mover" && "Arrastrá un nodo para reposicionarlo, o el lienzo vacío para mover la vista. Rueda del mouse (o los botones +/−) para zoom."}
         {modo === "conectar" &&
           (origenPendiente
             ? "Hacé click en el nodo de destino (o de nuevo en el mismo para cancelar)."
@@ -321,31 +391,60 @@ export default function DiagramaUnifilar({
         </div>
       )}
 
-      <svg
-        ref={svgRef}
-        width="100%"
-        height={420}
-        style={{ background: colores.bg, border: `1px solid ${colores.border}`, borderRadius: 4, display: "block" }}
-        onMouseMove={alMouseMoveSvg}
-        onMouseUp={alMouseUpSvg}
-        onMouseLeave={alMouseUpSvg}
-      >
-        <ContenidoSvgDiagrama
-          nodosDiagrama={nodosDiagrama}
-          conexionesDiagrama={conexionesDiagrama}
-          entidadesPorRef={entidadesPorRef}
-          posicionDe={posicionDe}
-          esSeleccionado={(id) => origenPendiente === id || nodoVinculando === id}
-          onMouseDownNodo={alMouseDownNodo}
-          onClickConexion={(cx) => modo === "eliminar" && eliminarConexionDiagrama(cx.id)}
-          cursorDeNodo={() => (modo === "mover" ? "grab" : "pointer")}
-        />
-      </svg>
+      <div style={{ position: "relative" }}>
+        <svg
+          ref={svgRef}
+          width="100%"
+          height={420}
+          style={{ background: colores.bg, border: `1px solid ${colores.border}`, borderRadius: 4, display: "block", cursor: modo === "mover" ? "grab" : "default" }}
+          onMouseDown={alMouseDownSvg}
+          onMouseMove={alMouseMoveSvg}
+          onMouseUp={alMouseUpSvg}
+          onMouseLeave={alMouseUpSvg}
+          onWheel={alWheelSvg}
+        >
+          <g transform={`translate(${transformVista.panX},${transformVista.panY}) scale(${transformVista.zoom})`}>
+            <ContenidoSvgDiagrama
+              nodosDiagrama={nodosDiagrama}
+              conexionesDiagrama={conexionesDiagrama}
+              entidadesPorRef={entidadesPorRef}
+              posicionDe={posicionDe}
+              esSeleccionado={(id) => origenPendiente === id || nodoVinculando === id}
+              onMouseDownNodo={alMouseDownNodo}
+              onClickConexion={(cx) => modo === "eliminar" && eliminarConexionDiagrama(cx.id)}
+              cursorDeNodo={() => (modo === "mover" ? "grab" : "pointer")}
+            />
+          </g>
+        </svg>
+
+        <div style={{ position: "absolute", bottom: 10, right: 10, display: "flex", gap: 4 }}>
+          <button type="button" onClick={() => zoomBoton(1 / 1.3)} style={botonZoomEstilo} title="Alejar">
+            −
+          </button>
+          <button type="button" onClick={restablecerVista} style={{ ...botonZoomEstilo, width: "auto", padding: "0 10px", fontSize: 10.5 }} title="Restablecer zoom y posición">
+            Restablecer
+          </button>
+          <button type="button" onClick={() => zoomBoton(1.3)} style={botonZoomEstilo} title="Acercar">
+            +
+          </button>
+        </div>
+      </div>
 
       <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, marginTop: 8 }}>
-        Prototipo sin cálculos todavía — solo registra la topología (qué se conecta con qué). El posicionamiento es
-        manual; la autoorganización automática queda para más adelante.
+        Prototipo sin cálculos todavía — solo registra la topología (qué se conecta con qué).
       </div>
     </div>
   );
 }
+
+const botonZoomEstilo = {
+  width: 30,
+  height: 30,
+  borderRadius: 3,
+  border: `1px solid ${colores.border}`,
+  background: colores.panel,
+  color: colores.textMain,
+  fontWeight: 700,
+  fontSize: 15,
+  cursor: "pointer",
+};

@@ -34,15 +34,7 @@ import {
   calcularEscala,
   imagenAModelo,
   modeloAImagen,
-  transformVistaInicial,
-  aPantalla,
-  aModelo,
-  aplicarZoom,
-  aplicarPan,
-  ajustarAVentana,
   RADIO_SNAP_METROS,
-  ZOOM_MIN,
-  ZOOM_MAX,
   pixelBordeMasFuerte,
   RADIO_BUSQUEDA_BORDE_PX,
   UMBRAL_MAGNITUD_BORDE,
@@ -52,7 +44,20 @@ import {
   generarDXF,
   codificarDXFComoBytes,
 } from "../../modules/plano/index.js";
-import { distancia, areaPoligono, perimetroPoligono, puntoDentroDePoligono } from "../../modules/geometria/index.js";
+import {
+  distancia,
+  areaPoligono,
+  perimetroPoligono,
+  puntoDentroDePoligono,
+  transformVistaInicial,
+  aPantalla,
+  aModelo,
+  aplicarZoom,
+  aplicarPan,
+  ajustarAVentana,
+  ZOOM_MIN,
+  ZOOM_MAX,
+} from "../../modules/geometria/index.js";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
 import { OrigenMediator } from "./OrigenMediator.js";
 

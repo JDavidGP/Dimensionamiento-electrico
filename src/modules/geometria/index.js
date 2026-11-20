@@ -102,3 +102,14 @@ export function puntoDentroDePoligono(punto, poligono) {
   }
   return dentro;
 }
+
+export {
+  ZOOM_MIN,
+  ZOOM_MAX,
+  transformVistaInicial,
+  aPantalla,
+  aModelo,
+  aplicarZoom,
+  aplicarPan,
+  ajustarAVentana,
+} from "./vistaZoomPan.js";

@@ -536,6 +536,12 @@ export function useCircuitos() {
     setNodosDiagrama(nodosDiagrama.filter((n) => n.id !== id));
   }
 
+  /** Reacomoda TODOS los nodos en capas según el sentido de las conexiones (usuario, 2026-11-20) — un solo update de estado, no uno por nodo. */
+  function autoorganizarDiagrama() {
+    const posiciones = App.diagrama.autoorganizar(nodosDiagrama, conexionesDiagrama);
+    setNodosDiagrama(nodosDiagrama.map((n) => (posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
+  }
+
   // Validada contra cardinalidad (ver DiagramaMediator.crearConexionValidada)
   // antes de crearla — devuelve {ok:false, motivo} sin tocar el estado si
   // la conexión propuesta no es válida, en vez de crearla igual.
@@ -1009,6 +1015,7 @@ export function useCircuitos() {
     crearNodoDiagrama,
     editarNodoDiagrama,
     eliminarNodoDiagrama,
+    autoorganizarDiagrama,
     conexionesDiagrama,
     crearConexionDiagrama,
     editarConexionDiagrama,
