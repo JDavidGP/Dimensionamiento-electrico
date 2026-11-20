@@ -314,6 +314,21 @@ export function useCircuitos() {
     if (circuitoActivoId === id) setCircuitoActivoId(null);
   }
 
+  // Edición liviana de nombre/etiqueta/función — SOLO esos 3 campos de
+  // presentación (ver modules/etiquetado/index.js: "puede repetirse o
+  // quedar vacía sin romper nada"), a propósito SIN pasar por
+  // guardarCircuito()/validarFormularioEquipo() (esa validación es para
+  // los campos eléctricos). Pensada para Directorio.jsx (árbol plegable
+  // editable, pedido explícito del usuario 2026-11-20) — misma idea que
+  // editarTablero, que ya patcheaba directo.
+  function editarEtiquetaFuncionCircuito(id, { nombre, etiqueta, funcion } = {}) {
+    setCircuitos(
+      circuitos.map((c) =>
+        c.id === id ? { ...c, nombre: nombre ?? c.nombre, etiqueta: etiqueta ?? c.etiqueta, funcion: funcion ?? c.funcion } : c
+      )
+    );
+  }
+
   // --- EQUIPO ---
   // Mismo criterio que formCircuitoVacioConSugerencia, pero un equipo
   // SÍ tiene un circuito conocido en este punto (circuitoActivoId) —
@@ -378,6 +393,15 @@ export function useCircuitos() {
     setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
     setEquipos(equipos.filter((e) => e.id !== id));
     if (editandoEquipoId === id) cancelarEdicionEquipo();
+  }
+
+  // Mismo criterio que editarEtiquetaFuncionCircuito — ver esa nota.
+  function editarEtiquetaFuncionEquipo(id, { nombre, etiqueta, funcion } = {}) {
+    setEquipos(
+      equipos.map((e) =>
+        e.id === id ? { ...e, nombre: nombre ?? e.nombre, etiqueta: etiqueta ?? e.etiqueta, funcion: funcion ?? e.funcion } : e
+      )
+    );
   }
 
   function equiposDe(circuitoId) {
@@ -873,6 +897,7 @@ export function useCircuitos() {
     iniciarEdicionCircuito,
     cancelarEdicionCircuito,
     eliminarCircuito,
+    editarEtiquetaFuncionCircuito,
     formEquipo,
     setFormEquipo,
     errorEquipo,
@@ -881,6 +906,7 @@ export function useCircuitos() {
     iniciarEdicionEquipo,
     cancelarEdicionEquipo,
     eliminarEquipo,
+    editarEtiquetaFuncionEquipo,
     equiposDe,
     tableros,
     crearTablero,

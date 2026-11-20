@@ -60,6 +60,7 @@ export default function App() {
     iniciarEdicionCircuito,
     cancelarEdicionCircuito,
     eliminarCircuito,
+    editarEtiquetaFuncionCircuito,
     formEquipo,
     setFormEquipo,
     errorEquipo,
@@ -68,6 +69,7 @@ export default function App() {
     iniciarEdicionEquipo,
     cancelarEdicionEquipo,
     eliminarEquipo,
+    editarEtiquetaFuncionEquipo,
     equiposDe,
     tableros,
     crearTablero,
@@ -339,7 +341,31 @@ export default function App() {
             label: "Directorio",
             contenido: (
               <div style={{ padding: "20px 24px" }}>
-                <PanelDirectorio tableros={tableros} circuitos={circuitos} equipos={equipos} />
+                <PanelDirectorio
+                  tableros={tableros}
+                  editarTablero={editarTablero}
+                  eliminarTablero={eliminarTablero}
+                  circuitos={circuitos}
+                  editarEtiquetaFuncionCircuito={editarEtiquetaFuncionCircuito}
+                  eliminarCircuito={eliminarCircuito}
+                  equipos={equipos}
+                  editarEtiquetaFuncionEquipo={editarEtiquetaFuncionEquipo}
+                  eliminarEquipo={eliminarEquipo}
+                  nodosDiagrama={nodosDiagrama}
+                  editarNodoDiagrama={editarNodoDiagrama}
+                  eliminarNodoDiagrama={eliminarNodoDiagrama}
+                  habitacionesPlano={habitacionesPlano}
+                  renombrarHabitacionPlano={renombrarHabitacionPlano}
+                  eliminarHabitacionPlano={eliminarHabitacionPlano}
+                  rutasConductorPlano={rutasConductorPlano}
+                  renombrarRutaConductorPlano={renombrarRutaConductorPlano}
+                  eliminarRutaConductorPlano={eliminarRutaConductorPlano}
+                  marcadoresEquipoPlano={marcadoresEquipoPlano}
+                  editarMarcadorEquipoPlano={editarMarcadorEquipoPlano}
+                  eliminarMarcadorEquipoPlano={eliminarMarcadorEquipoPlano}
+                  fuentesEnergia={fuentesEnergia}
+                  transformadores={transformadores}
+                />
               </div>
             ),
           },
