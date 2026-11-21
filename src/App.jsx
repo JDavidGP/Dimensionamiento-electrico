@@ -15,6 +15,7 @@ import DiagramaUnifilar from "./components/DiagramaUnifilar";
 import InformeTecnico from "./components/InformeTecnico";
 import PanelDirectorio from "./components/PanelDirectorio";
 import PlanoInteligente from "./components/PlanoInteligente";
+import VistaCombinadaEsquemas from "./components/VistaCombinadaEsquemas";
 import TabsViewPager from "./components/TabsViewPager";
 import SubTabs from "./components/SubTabs";
 import PiePagina from "./components/PiePagina";
@@ -408,6 +409,30 @@ export default function App() {
                           transformadores={transformadores}
                         />
                       ),
+                    },
+                    {
+                      id: "combinada",
+                      label: "Diagrama sobre plano",
+                      // A diferencia de "diagrama"/"plano" (editores con estado
+                      // propio que vale la pena conservar al cambiar de sub-pestaña,
+                      // ver la nota de SubTabs.jsx), esta vista es de solo lectura y
+                      // puramente derivada — no monta su <PlanoCanvas> (ni su <svg>)
+                      // salvo que esté activa. Evita un <svg> extra siempre presente
+                      // en el DOM que rompía selectores `svg.last()` de pruebas ya
+                      // existentes de "Plano" (que asumían que ESE era el último svg
+                      // de la página, válido mientras solo hubiera 2 sub-pestañas).
+                      contenido: subTabEsquemas === 2 ? (
+                        <VistaCombinadaEsquemas
+                          planoImagen={planoImagen}
+                          planoCalibracion={planoCalibracion}
+                          nodosPlano={nodosPlano}
+                          segmentosPlano={segmentosPlano}
+                          habitacionesPlano={habitacionesPlano}
+                          marcadoresEquipoPlano={marcadoresEquipoPlano}
+                          nodosDiagrama={nodosDiagrama}
+                          conexionesDiagrama={conexionesDiagrama}
+                        />
+                      ) : null,
                     },
                   ]}
                 />

@@ -193,4 +193,39 @@ export const PlanoMediator = {
     if (comp?.entidadVinculada === "transformador") return transformadores.find((t) => t.id === marcador.entidadId) ?? null;
     return null;
   },
+
+  /**
+   * Vista combinada "diagrama sobre plano" — usuario, 2026-11-22,
+   * "continuemos con diagrama unifilar y planos como dos lienzos
+   * separados" + elección explícita "Superponer el diagrama SOBRE el
+   * plano". Los modelos de datos NO se fusionan: esto solo resuelve,
+   * para cada ConexionDiagrama, el punto físico (en espacio del plano)
+   * de sus dos extremos, buscando un MarcadorEquipoPlano que comparta
+   * el mismo entidadId que el NodoDiagrama — el mismo mecanismo de
+   * vínculo ya usado por candidatosEntidadEquipo/resolverEntidadEquipo,
+   * solo que aquí cruza nodos del diagrama con marcadores del plano en
+   * vez de marcadores con entidades reales.
+   */
+  conexionesDiagramaEnPlano({ nodosDiagrama = [], conexionesDiagrama = [], marcadoresEquipoPlano = [] } = {}) {
+    const puntoPorNodoId = new Map();
+    for (const nodo of nodosDiagrama) {
+      if (!nodo.entidadId) continue;
+      const marcador = marcadoresEquipoPlano.find((m) => m.entidadId === nodo.entidadId);
+      if (marcador) puntoPorNodoId.set(nodo.id, marcador.punto);
+    }
+
+    const conexiones = [];
+    let sinResolver = 0;
+    for (const conexion of conexionesDiagrama) {
+      const puntoOrigen = puntoPorNodoId.get(conexion.nodoOrigenId);
+      const puntoDestino = puntoPorNodoId.get(conexion.nodoDestinoId);
+      if (puntoOrigen && puntoDestino) {
+        conexiones.push({ id: conexion.id, puntoOrigen, puntoDestino });
+      } else {
+        sinResolver += 1;
+      }
+    }
+
+    return { conexiones, sinResolver, totalConexiones: conexionesDiagrama.length };
+  },
 };

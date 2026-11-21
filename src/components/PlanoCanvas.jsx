@@ -49,6 +49,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     paredesCandidatas = [],
     puertasCandidatas = [],
     candidatosTriangulacion = [],
+    conexionesDiagrama = [],
     onClickImagen,
     onClickMarcador,
     onArrastrarHabitacion,
@@ -285,8 +286,45 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
             onPointerUp={alPointerUp}
             onPointerLeave={alPointerUp}
           >
+            <defs>
+              {/* Flecha de las conexiones del diagrama superpuestas — ver
+                  nota junto a conexionesDiagrama más abajo. */}
+              <marker id="flecha-plano-diagrama" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill={colores.textDim} />
+              </marker>
+            </defs>
             <g transform={`translate(${transformVista.panX},${transformVista.panY}) scale(${transformVista.zoom})`}>
               <image href={imagen.dataUrl} x={0} y={0} width={imagen.anchoPx} height={imagen.altoPx} />
+
+              {/* Conexiones del diagrama unifilar superpuestas sobre el plano
+                  (usuario, 2026-11-22: "continuemos con diagrama unifilar y
+                  planos como dos lienzos separados" -> "Superponer el diagrama
+                  SOBRE el plano"). Ya vienen resueltas a puntos en espacio
+                  MODELO (metros) por PlanoMediator.conexionesDiagramaEnPlano —
+                  este componente solo las dibuja, igual que cualquier otro
+                  segmento. Es una aproximación en línea recta entre las
+                  posiciones físicas de las dos entidades (NO una ruta trazada
+                  real), por eso un trazo punto-raya distinto de pared (sólido)
+                  y conductor (punteado) — para que no se confunda con ninguno. */}
+              {conexionesDiagrama.map((cx) => {
+                const a = px(cx.puntoOrigen);
+                const b = px(cx.puntoDestino);
+                return (
+                  <line
+                    key={`diag-${cx.id}`}
+                    x1={a.x}
+                    y1={a.y}
+                    x2={b.x}
+                    y2={b.y}
+                    stroke={colores.textDim}
+                    strokeWidth={grosorLinea * 0.6}
+                    strokeDasharray={`${grosorLinea * 2} ${grosorLinea} ${grosorLinea * 0.3} ${grosorLinea}`}
+                    strokeLinecap="round"
+                    markerEnd="url(#flecha-plano-diagrama)"
+                    opacity={0.8}
+                  />
+                );
+              })}
 
               {segmentos.map((seg) => {
                 const nodoA = nodos.find((n) => n.id === seg.nodoAId);
