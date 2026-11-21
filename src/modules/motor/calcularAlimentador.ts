@@ -6,19 +6,55 @@
 //
 // PROVISIONAL: la corriente agregada viene de combinarResultadosCircuitos
 // (suma lineal, sin factor de diversidad de alimentador propio).
-import { calcularCorriente } from "./corriente.js";
-import { seleccionarSeccion } from "./seleccionSeccion.js";
-import { seleccionarBreaker } from "./breaker.js";
-import { combinarResultadosCircuitos } from "./combinarResultadosCircuitos.js";
+import { calcularCorriente } from "./corriente.ts";
+import { seleccionarSeccion } from "./seleccionSeccion.ts";
+import { seleccionarBreaker } from "./breaker.ts";
+import { combinarResultadosCircuitos } from "./combinarResultadosCircuitos.ts";
+import type { Tablero, Fases, ResultadoCircuito } from "./tipos.ts";
+import type { Normativa } from "../normativa/tipos.ts";
+
+export type ResultadoAlimentador =
+  | { ok: false; error: string }
+  | { ok: false; pendiente: true; sinCircuitos: true; motivo: string }
+  | { ok: false; pendiente: true; motivo: string }
+  | {
+      ok: false;
+      potenciaTotalW: number;
+      cosPhiCombinado: number;
+      corrienteDiseno: number;
+      cantidadCircuitos: number;
+      error: string;
+    }
+  | {
+      ok: true;
+      potenciaTotalW: number;
+      cosPhiCombinado: number;
+      corrienteDiseno: number;
+      cantidadCircuitos: number;
+      seccion: string;
+      unidadSeccion: string;
+      areaMm2: number;
+      ampacidadCorregida: number;
+      caidaPct: number;
+      breaker: number | null;
+      advertencias: string[];
+      notaDimensionamiento: string;
+    };
 
 /**
- * @param {object} tablero - { longitudAlimentador, materialAlimentador, tensionAlimentacion }
- * @param {Array} resultadosCircuitos - resultados YA calculados de los circuitos de ese tablero
- * @param {string} fases - "mono" | "bi" | "tri" (el tramo troncal puede ser trifásico aunque los circuitos sean mono)
- * @param {object} normativa - normativa activa ya resuelta
- * @param {number} [temp=30] - temperatura ambiente del tramo troncal
+ * @param tablero - { longitudAlimentador, materialAlimentador, tensionAlimentacion }
+ * @param resultadosCircuitos - resultados YA calculados de los circuitos de ese tablero
+ * @param fases - "mono" | "bi" | "tri" (el tramo troncal puede ser trifásico aunque los circuitos sean mono)
+ * @param normativa - normativa activa ya resuelta
+ * @param temp - temperatura ambiente del tramo troncal
  */
-export function calcularAlimentador(tablero, resultadosCircuitos, fases, normativa, temp = 30) {
+export function calcularAlimentador(
+  tablero: Tablero,
+  resultadosCircuitos: (ResultadoCircuito | null | undefined)[],
+  fases: Fases | string,
+  normativa: Normativa,
+  temp: number = 30
+): ResultadoAlimentador {
   if (!normativa || typeof normativa !== "object") {
     return { ok: false, error: "Normativa no inyectada." };
   }

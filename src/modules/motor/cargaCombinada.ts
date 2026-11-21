@@ -1,11 +1,18 @@
-import { potenciaDesdeCorriente } from "./corriente.js";
+import { potenciaDesdeCorriente } from "./corriente.ts";
+import type { Equipo, Circuito } from "./tipos.ts";
+
+export interface CargaCombinada {
+  potenciaTotal: number;
+  reactivaTotal: number;
+  cosPhiEfectivo: number;
+}
 
 // Resuelve la potencia real de un equipo dentro de un circuito. Si el
 // equipo se ingresó como corriente, necesita el voltaje/fases del
 // CIRCUITO al que pertenece (no los guarda el equipo — un circuito
 // mixto es un solo voltaje físico, no tiene sentido que cada equipo
 // tenga el suyo).
-export function potenciaDeEquipo(equipo, circuito) {
+export function potenciaDeEquipo(equipo: Equipo, circuito: Circuito): number {
   const unitaria =
     equipo.modoEntrada === "corriente"
       ? potenciaDesdeCorriente(equipo.valor, circuito.voltaje, circuito.fases, equipo.cosPhi)
@@ -21,7 +28,7 @@ export function potenciaDeEquipo(equipo, circuito) {
 // P_total = Σ P_i
 // Q_total = Σ P_i · tan(φ_i)
 // cos φ_efectivo = P_total / √(P_total² + Q_total²)
-export function combinarCargas(equipos, circuito) {
+export function combinarCargas(equipos: Equipo[], circuito: Circuito): CargaCombinada {
   let potenciaTotal = 0;
   let reactivaTotal = 0;
 

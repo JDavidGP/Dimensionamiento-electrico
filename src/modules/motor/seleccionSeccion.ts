@@ -3,17 +3,37 @@
 // límite de la normativa activa. Reusada por calcularCircuito (por
 // circuito) y calcularAlimentador (por tramo troncal de tablero) —
 // misma regla física, dos usos.
-import { resistenciaOhmKm } from "./resistencia.js";
-import { calcularCaidaTension } from "./caidaTension.js";
+import { resistenciaOhmKm } from "./resistencia.ts";
+import { calcularCaidaTension } from "./caidaTension.ts";
+import type { Fases } from "./tipos.ts";
+import type { Normativa, Material } from "../normativa/tipos.ts";
 
-/**
- * @returns {{seccion, areaMm2, r, x, caidaPct, ampacidadCorregida} | null}
- *   null si ninguna sección de la normativa cumple ambas condiciones.
- */
-export function seleccionarSeccion({ corrienteA, distanciaM, cosPhi, material, fases, temp, voltajeV, normativa }) {
+export interface ParametrosSeleccionSeccion {
+  corrienteA: number;
+  distanciaM: number;
+  cosPhi: number;
+  material: Material | string;
+  fases: Fases | string;
+  temp: number;
+  voltajeV: number;
+  normativa: Normativa;
+}
+
+export interface SeccionSeleccionada {
+  seccion: string;
+  areaMm2: number;
+  r: number;
+  x: number;
+  caidaPct: number;
+  ampacidadCorregida: number;
+  fTemp: number;
+}
+
+/** null si ninguna sección de la normativa cumple ambas condiciones. */
+export function seleccionarSeccion({ corrienteA, distanciaM, cosPhi, material, fases, temp, voltajeV, normativa }: ParametrosSeleccionSeccion): SeccionSeleccionada | null {
   const fTemp = normativa.factorTemperatura(temp);
-  const ampacidades = normativa.ampacidad[material];
-  const orden = normativa.ordenSecciones[material];
+  const ampacidades = normativa.ampacidad[material as Material];
+  const orden = normativa.ordenSecciones[material as Material];
 
   for (const seccion of orden) {
     const ampacidadCorregida = ampacidades[seccion] * fTemp;

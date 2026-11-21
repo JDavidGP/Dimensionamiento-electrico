@@ -43,46 +43,49 @@
  */
 
 import { FACTOR_CARGA_CONTINUA } from "../../shared/constants/constantes.js";
-import { potenciaDeEquipo } from "./cargaCombinada.js";
+import { potenciaDeEquipo } from "./cargaCombinada.ts";
+import type { Equipo, Circuito, DetalleDemandaTipo } from "./tipos.ts";
+import type { Normativa } from "../normativa/tipos.ts";
 
 /**
  * Potencia de un equipo lista para demanda:
  *   1) potencia real (W o convertida desde A)
  *   2) × 1.25 si esCargaContinua
  */
-function potenciaParaDemanda(equipo, circuito) {
+function potenciaParaDemanda(equipo: Equipo, circuito: Circuito): number {
   const p = potenciaDeEquipo(equipo, circuito);
   return equipo.esCargaContinua ? p * FACTOR_CARGA_CONTINUA : p;
+}
+
+export interface CargasDemanda {
+  cargaConectadaW: number;
+  cargaDemandaNormativaW: number;
+  cargaEstimadaUsoW: number;
+  factorSimultaneidadAplicado: number;
+  detallePorTipo: DetalleDemandaTipo[];
+  advertencias: string[];
 }
 
 /**
  * Calcula las tres cargas del documento para un circuito, bajo la
  * normativa activa.
  *
- * @param {object} normativa - normativa resuelta (de NORMATIVAS[id]),
- *   debe traer reglasDemanda y demandaPorDefecto.
- * @returns {{
- *   cargaConectadaW: number,
- *   cargaDemandaNormativaW: number,
- *   cargaEstimadaUsoW: number,
- *   detallePorTipo: Array<{ tipo: string, conectadaW: number, demandaW: number, cantidad: number }>,
- *   advertencias: string[]
- * }}
+ * @param normativa - normativa resuelta (de NORMATIVAS[id]), debe traer reglasDemanda y demandaPorDefecto.
  */
-export function calcularCargasDemanda(circuito, equipos, normativa) {
-  const advertencias = [];
+export function calcularCargasDemanda(circuito: Circuito, equipos: Equipo[], normativa: Normativa): CargasDemanda {
+  const advertencias: string[] = [];
   const cargaConectadaW = equipos.reduce((s, e) => s + potenciaDeEquipo(e, circuito), 0);
 
   // Agrupar por tipoEquipoNEC
-  const grupos = new Map();
+  const grupos = new Map<string, Equipo[]>();
   for (const e of equipos) {
     const tipo = e.tipoEquipoNEC || "CARGA_GENERAL";
     if (!grupos.has(tipo)) grupos.set(tipo, []);
-    grupos.get(tipo).push(e);
+    grupos.get(tipo)!.push(e);
   }
 
   let cargaDemandaNormativaW = 0;
-  const detallePorTipo = [];
+  const detallePorTipo: DetalleDemandaTipo[] = [];
 
   for (const [tipo, eqs] of grupos) {
     const potenciasConectadas = eqs.map((e) => potenciaDeEquipo(e, circuito));

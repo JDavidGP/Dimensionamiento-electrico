@@ -3,11 +3,13 @@
  * Recibe el objeto normativa ya resuelto (lo inyecta MotorCalculoMediator
  * vía NormativaMediator). Así el motor no conoce el catálogo de normativas.
  */
-import { calcularCorriente } from "./corriente.js";
-import { seleccionarBreaker } from "./breaker.js";
-import { combinarCargas } from "./cargaCombinada.js";
-import { calcularCargasDemanda } from "./factorDemanda.js";
-import { seleccionarSeccion } from "./seleccionSeccion.js";
+import { calcularCorriente } from "./corriente.ts";
+import { seleccionarBreaker } from "./breaker.ts";
+import { combinarCargas } from "./cargaCombinada.ts";
+import { calcularCargasDemanda } from "./factorDemanda.ts";
+import { seleccionarSeccion } from "./seleccionSeccion.ts";
+import type { Circuito, Equipo, ResultadoCircuito } from "./tipos.ts";
+import type { Normativa } from "../normativa/tipos.ts";
 
 /**
  * Dimensionamiento de UN circuito.
@@ -19,7 +21,7 @@ import { seleccionarSeccion } from "./seleccionSeccion.js";
  *   - caída de tensión se evalúa con la corriente de demanda normativa
  *     (diseño), no con la estimada de uso
  */
-export function calcularCircuito(circuito, equipos, normativa) {
+export function calcularCircuito(circuito: Circuito, equipos: Equipo[], normativa: Normativa): ResultadoCircuito {
   if (!normativa || typeof normativa !== "object") {
     return {
       ok: false,
@@ -31,7 +33,7 @@ export function calcularCircuito(circuito, equipos, normativa) {
   const fases = circuito.fases.toLowerCase();
   const material = circuito.material.toLowerCase();
 
-  const advertencias = [];
+  const advertencias: string[] = [];
 
   if (equipos.length === 0) {
     return {

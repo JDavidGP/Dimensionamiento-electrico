@@ -1,3 +1,8 @@
+export interface ResultadoBreaker {
+  breaker: number | null;
+  advertencia: string | null;
+}
+
 // Selecciona el breaker comercial más pequeño que cubre la corriente de
 // diseño, sin exceder la ampacidad corregida del conductor.
 // `breakersComerciales` viene de la normativa activa (NEC, IEC, etc.) —
@@ -9,7 +14,7 @@
 // es decir, podía "aprobar" un breaker que en realidad excedía la
 // ampacidad del conductor. Esta versión distingue explícitamente ese caso
 // y devuelve una advertencia en vez de un valor incorrecto.
-export function seleccionarBreaker(corrienteDiseno, ampacidadCorregida, breakersComerciales) {
+export function seleccionarBreaker(corrienteDiseno: number, ampacidadCorregida: number, breakersComerciales: number[]): ResultadoBreaker {
   const minimoParaLaCarga =
     breakersComerciales.find((b) => b >= corrienteDiseno) ??
     breakersComerciales[breakersComerciales.length - 1];

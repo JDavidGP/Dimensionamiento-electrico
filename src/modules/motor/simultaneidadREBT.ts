@@ -22,7 +22,7 @@
  * n=1..21 tabulado tal cual el documento oficial; n>21 usa su propia
  * fórmula (ver coeficienteSimultaneidad).
  */
-export const TABLA_COEFICIENTE_SIMULTANEIDAD = {
+export const TABLA_COEFICIENTE_SIMULTANEIDAD: Record<number, number> = {
   1: 1, 2: 2, 3: 3, 4: 3.8, 5: 4.6, 6: 5.4, 7: 6.2, 8: 7, 9: 7.8, 10: 8.5,
   11: 9.2, 12: 9.9, 13: 10.6, 14: 11.3, 15: 11.9, 16: 12.5, 17: 13.1,
   18: 13.7, 19: 14.3, 20: 14.8, 21: 15.3,
@@ -32,12 +32,17 @@ export const TABLA_COEFICIENTE_SIMULTANEIDAD = {
  * Coeficiente de simultaneidad para n viviendas. n>21 usa la fórmula
  * del propio documento: 15,3 + (n-21)·0,5 — confirmada en ambas
  * fuentes, no extrapolada por este programa.
- * @returns {number|null} null si n no es un entero ≥1 (dato inválido, no se inventa un valor)
+ * @returns null si n no es un entero ≥1 (dato inválido, no se inventa un valor)
  */
-export function coeficienteSimultaneidad(n) {
+export function coeficienteSimultaneidad(n: number): number | null {
   if (!Number.isInteger(n) || n < 1) return null;
   if (n <= 21) return TABLA_COEFICIENTE_SIMULTANEIDAD[n];
   return 15.3 + (n - 21) * 0.5;
+}
+
+export interface GradoElectrificacion {
+  id: string;
+  potenciaMinimaW: number;
 }
 
 /**
@@ -50,23 +55,26 @@ export function coeficienteSimultaneidad(n) {
  * condiciones automáticamente (no modela superficie/electrodomésticos
  * por vivienda); el usuario elige el grado.
  */
-export const GRADOS_ELECTRIFICACION = {
+export const GRADOS_ELECTRIFICACION: { BASICA: GradoElectrificacion; ELEVADA: GradoElectrificacion } = {
   BASICA: { id: "basica", potenciaMinimaW: 5750 },
   ELEVADA: { id: "elevada", potenciaMinimaW: 9200 },
 };
 
-export function potenciaMinimaGrado(grado) {
+export function potenciaMinimaGrado(grado: string): number {
   return grado === "elevada" ? GRADOS_ELECTRIFICACION.ELEVADA.potenciaMinimaW : GRADOS_ELECTRIFICACION.BASICA.potenciaMinimaW;
 }
+
+export type ResultadoCargaSimultaneaViviendas =
+  | { ok: true; n: number; coeficiente: number; mediaW: number; cargaW: number }
+  | { ok: false; motivo: string };
 
 /**
  * Carga del conjunto de viviendas (ITC-BT-10 §3.1): media aritmética de
  * las potencias máximas previstas por vivienda, × el coeficiente de
  * simultaneidad de la Tabla 1 según n.
- * @param {number[]} potenciasW - potencia prevista (W) de cada vivienda, una entrada por vivienda
- * @returns {{ok:true, n:number, coeficiente:number, mediaW:number, cargaW:number} | {ok:false, motivo:string}}
+ * @param potenciasW - potencia prevista (W) de cada vivienda, una entrada por vivienda
  */
-export function calcularCargaSimultaneaViviendas(potenciasW) {
+export function calcularCargaSimultaneaViviendas(potenciasW: number[]): ResultadoCargaSimultaneaViviendas {
   if (!Array.isArray(potenciasW) || potenciasW.length === 0) {
     return { ok: false, motivo: "Sin viviendas para calcular la carga simultánea." };
   }
@@ -79,18 +87,23 @@ export function calcularCargaSimultaneaViviendas(potenciasW) {
   return { ok: true, n, coeficiente, mediaW, cargaW: mediaW * coeficiente };
 }
 
-export const SIMULTANEIDAD_REBT_VACIA = { activa: false, gradoPorDefecto: GRADOS_ELECTRIFICACION.BASICA.id };
+export interface SimultaneidadREBT {
+  activa: boolean;
+  gradoPorDefecto: string;
+}
+
+export const SIMULTANEIDAD_REBT_VACIA: SimultaneidadREBT = { activa: false, gradoPorDefecto: GRADOS_ELECTRIFICACION.BASICA.id };
 
 /**
  * Normaliza tablero.simultaneidadREBT antes de guardarlo — mismo
  * criterio que normalizarConmutacion (modules/origen/conmutacion.js):
  * defaults seguros, nunca un valor inválido guardado tal cual.
  */
-export function normalizarSimultaneidadREBT(datos = {}) {
+export function normalizarSimultaneidadREBT(datos: Partial<SimultaneidadREBT> = {}): SimultaneidadREBT {
   return {
     activa: Boolean(datos.activa),
     gradoPorDefecto: Object.values(GRADOS_ELECTRIFICACION).some((g) => g.id === datos.gradoPorDefecto)
-      ? datos.gradoPorDefecto
+      ? (datos.gradoPorDefecto as string)
       : GRADOS_ELECTRIFICACION.BASICA.id,
   };
 }

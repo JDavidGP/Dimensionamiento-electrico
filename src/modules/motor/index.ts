@@ -1,0 +1,59 @@
+/**
+ * Módulo Motor — funciones internas de cálculo eléctrico.
+ * Solo se usan entre sí o a través de MotorCalculoMediator.
+ * No importan UI, documentos, diagramas ni el catálogo de normativas.
+ */
+export { calcularCircuito } from "./calcularCircuito.ts";
+export { calcularCorriente, potenciaDesdeCorriente } from "./corriente.ts";
+export { calcularCaidaTension } from "./caidaTension.ts";
+export { evaluarCaidaAcumulada } from "./caidaTensionAcumulada.ts";
+export { seleccionarBreaker } from "./breaker.ts";
+export { resistenciaOhmKm } from "./resistencia.ts";
+export { combinarCargas, potenciaDeEquipo } from "./cargaCombinada.ts";
+export { calcularCargasDemanda } from "./factorDemanda.ts";
+export { calcularLlenadoConducto } from "./canalizacion.ts";
+export {
+  calcularCortocircuitoTrifasico,
+  calcularCortocircuitoMonofasico,
+  verificarCapacidadInterrupcion,
+} from "./cortocircuito.ts";
+export { seleccionarSeccion } from "./seleccionSeccion.ts";
+export { combinarResultadosCircuitos } from "./combinarResultadosCircuitos.ts";
+export { calcularAlimentador } from "./calcularAlimentador.ts";
+export { balanceFases } from "./balanceFases.ts";
+export {
+  TRANSFORMADOR_VACIO,
+  normalizarTransformador,
+  calcularCorrientesNominales,
+  crearTransformador,
+  editarTransformador,
+  liberarTablerosDeTransformador,
+} from "./transformador.ts";
+export {
+  TABLA_COEFICIENTE_SIMULTANEIDAD,
+  coeficienteSimultaneidad,
+  GRADOS_ELECTRIFICACION,
+  potenciaMinimaGrado,
+  calcularCargaSimultaneaViviendas,
+  SIMULTANEIDAD_REBT_VACIA,
+  normalizarSimultaneidadREBT,
+} from "./simultaneidadREBT.ts";
+
+export type { Equipo, Circuito, Tablero, Fases, ResultadoCircuito, ImpedanciaFuente, DetalleDemandaTipo } from "./tipos.ts";
+export type { Transformador, ResultadoCorrientesNominales, TableroConPadre } from "./transformador.ts";
+export type { SimultaneidadREBT, GradoElectrificacion, ResultadoCargaSimultaneaViviendas } from "./simultaneidadREBT.ts";
+export type { ResultadoAlimentador } from "./calcularAlimentador.ts";
+export type { ResultadoCombinado } from "./combinarResultadosCircuitos.ts";
+export type { CargaCombinada } from "./cargaCombinada.ts";
+export type { CargasDemanda } from "./factorDemanda.ts";
+export type { ConductorCanalizacion, ResultadoLlenadoConducto } from "./canalizacion.ts";
+export type { SeccionSeleccionada, ParametrosSeleccionSeccion } from "./seleccionSeccion.ts";
+export type { ParametrosCaidaTension, ResultadoCaidaTension } from "./caidaTension.ts";
+export type { ResultadoBreaker } from "./breaker.ts";
+export type { CaidaAcumulada } from "./caidaTensionAcumulada.ts";
+export type { BalanceFases } from "./balanceFases.ts";
+export type {
+  ResultadoCortocircuitoTrifasico,
+  ResultadoCortocircuitoMonofasico,
+  ResultadoCapacidadInterrupcion,
+} from "./cortocircuito.ts";

@@ -36,7 +36,7 @@ import {
   crearTransformador,
   editarTransformador,
   liberarTablerosDeTransformador,
-} from "../../modules/motor/transformador.js";
+} from "../../modules/motor/transformador.ts";
 
 export const OrigenMediator = {
   // Enums expuestos para la UI — mismo patrón que ValidacionMediator.ESTADOS.

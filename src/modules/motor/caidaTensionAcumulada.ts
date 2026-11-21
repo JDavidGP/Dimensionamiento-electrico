@@ -34,19 +34,24 @@
 // esta función se llama, es porque todos los tramos son válidos.
 import { LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT } from "../../shared/constants/constantes.js";
 
+export interface CaidaAcumulada {
+  aplica: true;
+  deltaVTotal: number;
+  totalPct: number;
+  limitePct: number;
+  excede: boolean;
+  cantidadTramos: number;
+}
+
 /**
- * @param {number[]} deltaVPorTramo - caída en VOLTIOS de cada tramo de
- *   la cadena (circuito + cada alimentador), ya validados por el
- *   llamador. El orden no importa, solo se suman.
- * @param {number} tensionReferenciaV - tensión nominal del punto de
- *   utilización (normalmente circuito.voltaje) — denominador del %
- *   final, se aplica UNA sola vez.
- * @returns {{
- *   aplica: true, deltaVTotal: number, totalPct: number,
- *   limitePct: number, excede: boolean, cantidadTramos: number
- * }}
+ * @param deltaVPorTramo - caída en VOLTIOS de cada tramo de la cadena
+ *   (circuito + cada alimentador), ya validados por el llamador. El
+ *   orden no importa, solo se suman.
+ * @param tensionReferenciaV - tensión nominal del punto de utilización
+ *   (normalmente circuito.voltaje) — denominador del % final, se
+ *   aplica UNA sola vez.
  */
-export function evaluarCaidaAcumulada(deltaVPorTramo, tensionReferenciaV) {
+export function evaluarCaidaAcumulada(deltaVPorTramo: number[], tensionReferenciaV: number): CaidaAcumulada {
   const deltaVTotal = deltaVPorTramo.reduce((s, v) => s + Number(v), 0);
   const totalPct = (deltaVTotal / Number(tensionReferenciaV)) * 100;
 

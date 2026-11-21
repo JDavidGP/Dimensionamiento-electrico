@@ -19,22 +19,26 @@
 // riesgo real, no lo permite en silencio.
 import { UMBRAL_DESBALANCE_FASES_PCT } from "../../shared/constants/constantes.js";
 
+export type BalanceFases = { aplica: false } | {
+  aplica: true;
+  porLinea: Record<string, number>;
+  porcentajeDesbalance: number;
+  limitePct: number;
+  excede: boolean;
+  advertencias: string[];
+};
+
 /**
- * @param {Object<string, number>} aportesPorLinea - corriente en A ya
- *   sumada por línea, ej. { L1: 24.3, L2: 18.1, L3: 30.0 }. Con menos
- *   de 2 líneas no hay nada que comparar — no es un dato faltante, es
- *   matemáticamente inaplicable (por eso `aplica: false`, no un error).
- * @param {number} [umbralPct] - umbral efectivo a usar para `excede`.
- *   Por defecto, el recomendado (UMBRAL_DESBALANCE_FASES_PCT, 10%). Si
- *   se pasa uno mayor, se agrega una advertencia seria — no cambia el
+ * @param aportesPorLinea - corriente en A ya sumada por línea, ej.
+ *   { L1: 24.3, L2: 18.1, L3: 30.0 }. Con menos de 2 líneas no hay nada
+ *   que comparar — no es un dato faltante, es matemáticamente
+ *   inaplicable (por eso `aplica: false`, no un error).
+ * @param umbralPct - umbral efectivo a usar para `excede`. Por
+ *   defecto, el recomendado (UMBRAL_DESBALANCE_FASES_PCT, 10%). Si se
+ *   pasa uno mayor, se agrega una advertencia seria — no cambia el
  *   cálculo del % en sí, solo contra qué se compara y qué se avisa.
- * @returns {{aplica: false} | {
- *   aplica: true, porLinea: Object<string, number>,
- *   porcentajeDesbalance: number, limitePct: number, excede: boolean,
- *   advertencias: string[]
- * }}
  */
-export function balanceFases(aportesPorLinea, umbralPct = UMBRAL_DESBALANCE_FASES_PCT) {
+export function balanceFases(aportesPorLinea: Record<string, number>, umbralPct: number = UMBRAL_DESBALANCE_FASES_PCT): BalanceFases {
   const lineas = Object.keys(aportesPorLinea);
   if (lineas.length < 2) {
     return { aplica: false };
@@ -46,7 +50,7 @@ export function balanceFases(aportesPorLinea, umbralPct = UMBRAL_DESBALANCE_FASE
   const promedio = valores.reduce((s, v) => s + v, 0) / valores.length;
   const porcentajeDesbalance = promedio > 0 ? ((maximo - minimo) / promedio) * 100 : 0;
 
-  const advertencias = [];
+  const advertencias: string[] = [];
   if (umbralPct > UMBRAL_DESBALANCE_FASES_PCT) {
     advertencias.push(
       `⚠ Umbral de desbalance configurado en ${umbralPct}%, por encima del ${UMBRAL_DESBALANCE_FASES_PCT}% recomendado. ` +

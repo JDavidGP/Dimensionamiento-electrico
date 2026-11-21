@@ -26,7 +26,21 @@ import { generarId } from "../../shared/utils/id.js";
  * estrella, ya que un transformador no usa serie/paralelo entre
  * devanados. "" = sin asignar todavía; no se valida aquí a propósito
  * (scaffold — "después vemos los detalles"). */
-export const TRANSFORMADOR_VACIO = {
+export interface Transformador {
+  id?: string;
+  nombre: string;
+  capacidadKVA: number | string;
+  fases: "mono" | "tri";
+  tensionPrimariaV: number | string;
+  tensionSecundariaV: number | string;
+  conexionPrimaria: string;
+  conexionSecundaria: string;
+  /** %Z de placa — pendiente de uso (ver cortocircuito.js) */
+  impedanciaPct: number | string;
+  notas: string;
+}
+
+export const TRANSFORMADOR_VACIO: Omit<Transformador, "id"> = {
   nombre: "",
   capacidadKVA: "",
   fases: "tri", // "mono" | "tri"
@@ -43,18 +57,23 @@ export const TRANSFORMADOR_VACIO = {
  * TRANSFORMADOR_VACIO, sin inventar valores — igual criterio que
  * tablero/index.js normalizar().
  */
-export function normalizarTransformador(datos = {}) {
+export function normalizarTransformador(datos: Partial<Transformador> = {}): Omit<Transformador, "id"> {
   return { ...TRANSFORMADOR_VACIO, ...datos };
 }
 
 /** Fábrica de un transformador nuevo — mismo patrón que crearFuenteEnergia (modules/origen/fuentesEnergia.js). */
-export function crearTransformador(datos) {
+export function crearTransformador(datos: Partial<Transformador>): Transformador {
   return { id: generarId(), ...normalizarTransformador(datos) };
 }
 
 /** Devuelve el transformador con los cambios aplicados — no muta el original. */
-export function editarTransformador(transformador, cambios) {
+export function editarTransformador(transformador: Transformador, cambios: Partial<Transformador>): Transformador {
   return { ...transformador, ...normalizarTransformador({ ...transformador, ...cambios }) };
+}
+
+export interface TableroConPadre {
+  tableroPadreId?: string | null;
+  [clave: string]: unknown;
 }
 
 /**
@@ -62,19 +81,20 @@ export function editarTransformador(transformador, cambios) {
  * `tableroPadreId` quedan sin padre (null = acometida), no apuntando a
  * un ID muerto — mismo criterio que liberarTablerosDeFuente.
  */
-export function liberarTablerosDeTransformador(transformadorId, tableros = []) {
+export function liberarTablerosDeTransformador<T extends TableroConPadre>(transformadorId: string, tableros: T[] = []): T[] {
   return tableros.map((t) => (t.tableroPadreId === transformadorId ? { ...t, tableroPadreId: null } : t));
 }
+
+export type ResultadoCorrientesNominales =
+  | { disponible: false; motivo: string }
+  | { disponible: true; corrientePrimariaA: number; corrienteSecundariaA: number };
 
 /**
  * Corriente nominal de placa en cada devanado, a partir de capacidad y
  * tensión — fórmula directa, no depende de carga real conectada.
  * Nunca devuelve 0 por datos faltantes: si falta algo, lo dice.
- *
- * @param {{capacidadKVA: number|string, fases: "mono"|"tri", tensionPrimariaV: number|string, tensionSecundariaV: number|string}} transformador
- * @returns {{disponible: boolean, motivo?: string, corrientePrimariaA?: number, corrienteSecundariaA?: number}}
  */
-export function calcularCorrientesNominales(transformador) {
+export function calcularCorrientesNominales(transformador: Pick<Transformador, "capacidadKVA" | "fases" | "tensionPrimariaV" | "tensionSecundariaV">): ResultadoCorrientesNominales {
   const kva = Number(transformador.capacidadKVA);
   const vp = Number(transformador.tensionPrimariaV);
   const vs = Number(transformador.tensionSecundariaV);

@@ -47,7 +47,7 @@ import {
   calcularCargaSimultaneaViviendas,
   potenciaMinimaGrado,
   GRADOS_ELECTRIFICACION,
-} from "../../modules/motor/index.js";
+} from "../../modules/motor/index.ts";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { OrigenMediator } from "./OrigenMediator.js";

@@ -1,27 +1,36 @@
-// src/calculations/canalizacion.js
+// src/modules/motor/canalizacion.ts
 //
 // Llenado de conducto: geométrico puro, NO depende de topología/Tablero
 // (a diferencia del factor de agrupamiento, que sí — ver checklist).
 // Recibe la normativa activa y usa su tabla `canalizaciones` — si la
 // normativa no tiene esa tabla todavía (ej. IEC_ES), lo indica
 // explícitamente en vez de fallar en silencio.
+import type { Normativa } from "../normativa/tipos.ts";
 
-/**
- * @param {Array<{awg: number, cantidad: number}>} conductores - ej. [{awg:12, cantidad:3}, {awg:10, cantidad:1}]
- * @param {"EMT"|"PVC_SCH40"} tipoConducto
- * @param {object} normativa - normativa activa (debe tener `canalizaciones`)
- * @returns {{
- *   disponible: boolean,
- *   motivo?: string,
- *   areaTotalConductoresIn2?: number,
- *   cantidadTotalConductores?: number,
- *   porcentajeMaximo?: number,
- *   tamanoMinimo?: string,
- *   areaInternaIn2?: number,
- *   porcentajeLlenadoReal?: number,
- * }}
- */
-export function calcularLlenadoConducto(conductores, tipoConducto, normativa) {
+export interface ConductorCanalizacion {
+  awg: number | string;
+  cantidad: number;
+}
+
+export type ResultadoLlenadoConducto =
+  | {
+      disponible: true;
+      areaTotalConductoresIn2: number;
+      cantidadTotalConductores: number;
+      porcentajeMaximo: number;
+      tamanoMinimo: string;
+      areaInternaIn2: number;
+      porcentajeLlenadoReal: number;
+    }
+  | {
+      disponible: false;
+      motivo: string;
+      areaTotalConductoresIn2?: number;
+      cantidadTotalConductores?: number;
+      porcentajeMaximo?: number;
+    };
+
+export function calcularLlenadoConducto(conductores: ConductorCanalizacion[], tipoConducto: string, normativa: Normativa): ResultadoLlenadoConducto {
   const tabla = normativa.canalizaciones;
   if (!tabla) {
     return { disponible: false, motivo: `La normativa ${normativa.id} todavía no tiene tabla de canalizaciones cargada.` };

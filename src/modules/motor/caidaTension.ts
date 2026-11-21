@@ -1,7 +1,24 @@
+import type { Fases } from "./tipos.ts";
+
+export interface ParametrosCaidaTension {
+  corrienteA: number;
+  distanciaM: number;
+  r: number;
+  x: number;
+  cosPhi: number;
+  voltajeV: number;
+  fases: Fases | string;
+}
+
+export interface ResultadoCaidaTension {
+  deltaV: number;
+  porcentaje: number;
+}
+
 // Caída de tensión, considerando resistencia (r) y reactancia (x) del
 // conductor — fórmula aproximada estándar para cargas con factor de
 // potencia distinto de 1 (motores, cargas inductivas).
-export function calcularCaidaTension({ corrienteA, distanciaM, r, x, cosPhi, voltajeV, fases }) {
+export function calcularCaidaTension({ corrienteA, distanciaM, r, x, cosPhi, voltajeV, fases }: ParametrosCaidaTension): ResultadoCaidaTension {
   const phi = Math.acos(cosPhi);
   const zEfectivo = (r / 1000) * cosPhi + (x / 1000) * Math.sin(phi);
 

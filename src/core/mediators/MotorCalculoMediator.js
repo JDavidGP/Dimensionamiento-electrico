@@ -4,7 +4,7 @@
  * Dependencias permitidas: DataProvider, NormativaMediator, funciones internas del motor.
  * NO depende de: UI, documentos, diagramas.
  */
-import { calcularCircuito as calcInterno } from "../../modules/motor/calcularCircuito.js";
+import { calcularCircuito as calcInterno } from "../../modules/motor/calcularCircuito.ts";
 import {
   calcularCorriente,
   potenciaDesdeCorriente,
@@ -23,7 +23,7 @@ import {
   coeficienteSimultaneidad,
   GRADOS_ELECTRIFICACION,
   calcularCargaSimultaneaViviendas,
-} from "../../modules/motor/index.js";
+} from "../../modules/motor/index.ts";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
