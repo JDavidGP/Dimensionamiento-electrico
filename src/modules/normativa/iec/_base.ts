@@ -1,4 +1,4 @@
-// src/data/normativas/iec/_base.js
+// src/modules/normativa/iec/_base.ts
 //
 // Capa BASE internacional de IEC 60364-5-52 — datos y reglas genuinamente
 // armonizadas a nivel europeo (ampacidad, secciones, reactancia, factor
@@ -15,17 +15,19 @@
 // (Libro Blanco de la Instalación). Valores cruzados y confirmados contra
 // las cifras de referencia ampliamente citadas en la literatura técnica
 // europea (17.5A/24A/32A/41A/57A para 1.5/2.5/4/6/10mm² — coinciden).
-const AMPACIDAD_IEC_MM2 = {
+import type { Normativa } from "../tipos.ts";
+
+const AMPACIDAD_IEC_MM2: Record<string, Record<string, number>> = {
   cobre: { "1.5": 17.5, "2.5": 24, "4": 32, "6": 41, "10": 57, "16": 77, "25": 100, "35": 119 },
   aluminio: { "2.5": 19, "4": 25, "6": 32, "10": 44, "16": 60 },
 };
 
-const ORDEN_MM2_IEC = {
+const ORDEN_MM2_IEC: Record<string, string[]> = {
   cobre: ["1.5", "2.5", "4", "6", "10", "16", "25", "35"],
   aluminio: ["2.5", "4", "6", "10", "16"],
 };
 
-const REACTANCIA_IEC = {
+const REACTANCIA_IEC: Record<string, number> = {
   "1.5": 0.1, "2.5": 0.09, "4": 0.09, "6": 0.08, "10": 0.08, "16": 0.08, "25": 0.07, "35": 0.07,
 };
 
@@ -36,8 +38,8 @@ const REACTANCIA_IEC = {
 //   35°C=0.94  40°C=0.87  45°C=0.79  50°C=0.71  55°C=0.61  60°C=0.50
 // Se divide cada factor entre el valor a 40°C (0.87) para que el nuevo
 // factor valga exactamente 1.0 a 40°C — la condición base de esta tabla.
-function factorTemperatura(tempC) {
-  const tabla30C = [
+function factorTemperatura(tempC: number): number {
+  const tabla30C: [number, number][] = [
     [10, 1.22], [15, 1.17], [20, 1.12], [25, 1.06], [30, 1.0],
     [35, 0.94], [40, 0.87], [45, 0.79], [50, 0.71], [55, 0.61], [60, 0.5],
   ];
@@ -46,11 +48,11 @@ function factorTemperatura(tempC) {
   return punto[1] / FACTOR_A_40C;
 }
 
-export const IEC_BASE = {
+export const IEC_BASE: Partial<Normativa> = {
   unidadSeccion: "mm²",
-  ordenSecciones: ORDEN_MM2_IEC,
+  ordenSecciones: ORDEN_MM2_IEC as Normativa["ordenSecciones"],
   areaMm2PorSeccion: null, // la sección YA es el dato (mm²), no hay que convertir
-  ampacidad: AMPACIDAD_IEC_MM2,
+  ampacidad: AMPACIDAD_IEC_MM2 as Normativa["ampacidad"],
   reactanciaOhmKm: REACTANCIA_IEC,
   factorTemperatura,
   notaValidacion:

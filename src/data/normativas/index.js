@@ -6,4 +6,4 @@ export {
   CATALOGO_NORMATIVAS as NORMATIVAS,
   LISTA_NORMATIVAS,
   obtenerNormativaPorId,
-} from "../../modules/normativa/index.js";
+} from "../../modules/normativa/index.ts";

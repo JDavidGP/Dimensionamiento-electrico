@@ -1,4 +1,4 @@
-// src/data/normativas/cien.js
+// src/modules/normativa/cien.ts
 //
 // CIEN (Nicaragua) es una normativa DERIVADA de NEC: el propio Código de
 // Instalaciones Eléctricas de Nicaragua adopta la misma estructura y
@@ -12,9 +12,10 @@
 // propia identidad. El día que Nicaragua emita una enmienda propia a un
 // artículo específico, ese campo se sobrescribe acá sin tocar NEC.
 
-import { NEC } from "./nec.js";
+import { NEC } from "./nec.ts";
+import type { Normativa } from "./tipos.ts";
 
-export const CIEN = {
+export const CIEN: Normativa = {
   ...NEC,
   id: "CIEN",
   nombre: "CIEN (Nicaragua)",

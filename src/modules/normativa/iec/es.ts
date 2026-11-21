@@ -1,4 +1,4 @@
-// src/data/normativas/iec/es.js
+// src/modules/normativa/iec/es.ts
 //
 // Variante regional: España — deriva de iec/_base.js y aporta lo que la
 // capa internacional no cubre: identidad, breakers comerciales locales,
@@ -20,18 +20,19 @@
 // viviendas" que simultanear — ese dato es de la relación padre↔hijos
 // entre tableros, no de la normativa de un circuito suelto.
 
-import { IEC_BASE } from "./_base.js";
+import { IEC_BASE } from "./_base.ts";
+import type { Normativa, ReglaDemanda } from "../tipos.ts";
 
 // Breakers estándar IEC 60898 (tamaños típicos disponibles comercialmente)
 const BREAKERS_IEC_ES = [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125];
 
 /** Sin diversidad implementada todavía: 100% de la suma. */
-function demanda100(potenciasW) {
+const demanda100: ReglaDemanda = (potenciasW) => {
   return potenciasW.reduce((s, p) => s + p, 0);
-}
+};
 
-export const IEC_ES = {
-  ...IEC_BASE,
+export const IEC_ES: Normativa = {
+  ...(IEC_BASE as Normativa),
   id: "IEC_ES",
   nombre: "IEC 60364-5-52 (España — REBT)",
   familia: "IEC",

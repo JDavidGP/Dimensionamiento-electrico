@@ -1,4 +1,4 @@
-// src/data/normativas/nec.js
+// src/modules/normativa/nec.ts
 //
 // Normativa BASE: NEC (EE.UU.). CIEN (Nicaragua) deriva de este archivo
 // por referencia — ver cien.js. No se duplica ningún dato para CIEN acá;
@@ -11,11 +11,14 @@ import {
   ORDEN_AWG,
 } from "../../shared/data/seccionesConductor.js";
 import {
-  TABLA_220_55_COL_A,
+  TABLA_220_55_COL_A as TABLA_220_55_COL_A_CRUDA,
   NOTA1_220_55_UMBRAL_KW,
   NOTA1_220_55_PCT_POR_KW,
 } from "../../shared/data/tiposEquipoNEC.js";
-import { CANALIZACION_NEC } from "./canalizacionNEC.js";
+
+const TABLA_220_55_COL_A: Record<number, number> = TABLA_220_55_COL_A_CRUDA;
+import { CANALIZACION_NEC } from "./canalizacionNEC.ts";
+import type { Normativa, ReglaDemanda } from "./tipos.ts";
 
 // Breakers estándar NEC 240.6(A) — CONFIRMADO: el propio texto del CIEN
 // (Artículo 240-6) lista exactamente estos mismos valores hasta 200A,
@@ -23,7 +26,7 @@ import { CANALIZACION_NEC } from "./canalizacionNEC.js";
 const BREAKERS_NEC = [15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200];
 
 // --- Factor de corrección por temperatura ambiente (referencia 30°C) ---
-function factorTemperatura(tempC) {
+function factorTemperatura(tempC: number): number {
   if (tempC <= 30) return 1.0;
   if (tempC <= 35) return 0.94;
   if (tempC <= 40) return 0.88;
@@ -41,26 +44,26 @@ function factorTemperatura(tempC) {
 // ---------------------------------------------------------------------------
 
 /** Art. 220.42 — alumbrado general: 100% primeros 3kVA, 35% hasta 120kVA, 25% resto. */
-function demandaIluminacion(potenciasW) {
+const demandaIluminacion: ReglaDemanda = (potenciasW) => {
   const vaTotal = potenciasW.reduce((s, p) => s + p, 0);
   if (vaTotal <= 0) return 0;
   if (vaTotal <= 3000) return vaTotal;
   if (vaTotal <= 120000) return 3000 + (vaTotal - 3000) * 0.35;
   return 3000 + (120000 - 3000) * 0.35 + (vaTotal - 120000) * 0.25;
-}
+};
 
 /** Art. 220.53 — 4 o más equipos fijos de pequeño electrodoméstico: 75%. */
-function demandaPequenoElectrodomestico(potenciasW) {
+const demandaPequenoElectrodomestico: ReglaDemanda = (potenciasW) => {
   const total = potenciasW.reduce((s, p) => s + p, 0);
   return potenciasW.length >= 4 ? total * 0.75 : total;
-}
+};
 
 /**
  * Art. 220.55 — cocinas eléctricas.
  * Columna A base (≤12kW/unidad). Nota 1: si el promedio nominal > 12kW,
  * sumar 5% por cada kW (o fracción) de exceso al valor de tabla.
  */
-function demandaCocinaElectrica(potenciasW) {
+const demandaCocinaElectrica: ReglaDemanda = (potenciasW) => {
   const n = potenciasW.length;
   if (n === 0) return 0;
 
@@ -78,7 +81,7 @@ function demandaCocinaElectrica(potenciasW) {
 
   // La demanda no puede superar la carga conectada total
   return Math.min(demandaTablaKw * 1000, totalKw * 1000);
-}
+};
 
 /**
  * Art. 220.54 — secadoras de ropa.
@@ -86,7 +89,7 @@ function demandaCocinaElectrica(potenciasW) {
  * 5+: 100% de las 4 primeras + 15% de cada adicional (simplificación
  * de la tabla 220.54 Col. A para uso en circuitos derivados).
  */
-function demandaSecadora(potenciasW) {
+const demandaSecadora: ReglaDemanda = (potenciasW) => {
   const n = potenciasW.length;
   if (n === 0) return 0;
   const ajustadas = potenciasW.map((p) => Math.max(p, 5000));
@@ -94,24 +97,24 @@ function demandaSecadora(potenciasW) {
   const primeras4 = ajustadas.slice(0, 4).reduce((s, p) => s + p, 0);
   const resto = ajustadas.slice(4).reduce((s, p) => s + p, 0);
   return primeras4 + resto * 0.15;
-}
+};
 
 /** Art. 430.24 — varios motores: 125% del mayor + 100% del resto. */
-function demandaMotores(potenciasW) {
+const demandaMotores: ReglaDemanda = (potenciasW) => {
   if (potenciasW.length === 0) return 0;
   const [mayor, ...resto] = [...potenciasW].sort((a, b) => b - a);
   return mayor * 1.25 + resto.reduce((s, p) => s + p, 0);
-}
+};
 
 /** Sin tabla de diversidad propia: 100% de la suma. Usada como fallback. */
-function demanda100(potenciasW) {
+const demanda100: ReglaDemanda = (potenciasW) => {
   return potenciasW.reduce((s, p) => s + p, 0);
-}
+};
 
 // Mapa tipoEquipoNEC -> regla de demanda. Cualquier tipo no listado acá
 // (AIRE_ACONDICIONADO, CALEFACCION_AGUA, CARGA_GENERAL, u otro) cae en
 // demandaPorDefecto (ver más abajo).
-const reglasDemanda = {
+const reglasDemanda: Record<string, ReglaDemanda> = {
   ILUMINACION_GENERAL: demandaIluminacion,
   PEQUENO_ELECTRODOMESTICO: demandaPequenoElectrodomestico,
   COCINA_ELECTRICA: demandaCocinaElectrica,
@@ -119,7 +122,7 @@ const reglasDemanda = {
   MOTOR: demandaMotores,
 };
 
-export const NEC = {
+export const NEC: Normativa = {
   id: "NEC",
   nombre: "NEC (EE.UU. — referencia regional Centroamérica)",
   familia: "NEC",

@@ -8,7 +8,7 @@ import {
   CATALOGO_NORMATIVAS,
   LISTA_NORMATIVAS,
   obtenerNormativaPorId,
-} from "../../modules/normativa/index.js";
+} from "../../modules/normativa/index.ts";
 import { Cache } from "../services/Cache.js";
 import { Config } from "../services/Config.js";
 
