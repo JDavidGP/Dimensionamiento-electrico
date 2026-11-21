@@ -36,15 +36,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-      - name: npm ci (con reintentos — bug conocido de npm, "Exit handler never called!", ver tests.yml)
+      - name: Instalar dependencias (ver la nota larga en tests.yml — `npm install`, no `npm ci`, por el bug de npm)
         run: |
+          npm config set fetch-timeout 300000
+          npm config set fetch-retry-maxtimeout 120000
           for intento in 1 2 3; do
-            npm ci --no-audit --no-fund && exit 0
-            echo "npm ci falló (intento $intento/3), reintentando..."
+            npm install --no-audit --no-fund && exit 0
+            echo "npm install falló (intento $intento/3), reintentando..."
             sleep 5
           done
-          echo "npm ci falló los 3 intentos."
+          echo "npm install falló los 3 intentos."
           exit 1
       - run: npm run build
         env:

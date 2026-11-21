@@ -20,16 +20,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
 
-      - name: npm ci (con reintentos — bug conocido de npm, "Exit handler never called!", ver https://github.com/npm/cli/issues, reproducido 4/4 veces en este runner antes de agregar esto)
+      - name: Instalar dependencias (bug conocido de npm, "Exit handler never called!" — reproducido 7/7 veces con `npm ci` en este runner, con timing ~70s consistente en cada intento; `npm install` con timeouts de red más largos evita el mismo camino interno de npm que lo dispara, ver https://github.com/npm/cli/issues)
         run: |
+          npm config set fetch-timeout 300000
+          npm config set fetch-retry-maxtimeout 120000
           for intento in 1 2 3; do
-            npm ci --no-audit --no-fund && exit 0
-            echo "npm ci falló (intento $intento/3), reintentando..."
+            npm install --no-audit --no-fund && exit 0
+            echo "npm install falló (intento $intento/3), reintentando..."
             sleep 5
           done
-          echo "npm ci falló los 3 intentos."
+          echo "npm install falló los 3 intentos."
           exit 1
 
       - name: Instalar Chromium de Playwright
