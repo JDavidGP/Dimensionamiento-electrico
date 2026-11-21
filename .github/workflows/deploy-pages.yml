@@ -1,0 +1,57 @@
+name: Publicar en GitHub Pages
+
+# Usuario, 2026-11-22: "quiero probar personalmente la primera [opción:
+# link público sin listar] cuando vea como trabaja y te pase feedback".
+# Publica el build en GitHub Pages en cada push a esta rama — gratis,
+# HTTPS automático, sin necesidad de ninguna cuenta nueva (usa el mismo
+# GitHub del repo). La URL queda fija:
+# https://jdavidgp.github.io/Dimensionamiento-electrico/
+#
+# Requiere UN paso manual, una sola vez: en GitHub, Settings → Pages →
+# "Build and deployment" → Source: "GitHub Actions" (ver PWA.md).
+#
+# GITHUB_PAGES=true en el build le dice a vite.config.js que sirva
+# desde /Dimensionamiento-electrico/ en vez de la raíz — Pages publica
+# ahí, no en la raíz del dominio *.github.io (eso es solo para un
+# repo que se llame exactamente "jdavidgp.github.io").
+on:
+  push:
+    branches: ["claude/proyecto-dec-setup-zubpxr"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+        env:
+          GITHUB_PAGES: true
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
