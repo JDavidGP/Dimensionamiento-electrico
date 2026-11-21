@@ -1,4 +1,4 @@
-// src/modules/geometria/index.js
+// src/modules/geometria/index.ts
 //
 // Núcleo geométrico COMPARTIDO — ver PLANO_INTELIGENTE_DISENO.md §7.
 // Puramente matemático: recibe puntos en METROS (espacio modelo, ya
@@ -11,9 +11,16 @@
 //
 // Módulo puro — se usa a través de PlanoMediator (y de los mediadores
 // de dominio que se agreguen después).
+//
+// Migrado a TypeScript (usuario, 2026-11-21) — ver la nota en
+// vistaZoomPan.ts.
+
+import type { Punto } from "./tipos.ts";
+
+export type { Punto };
 
 /** Distancia euclidiana entre dos puntos {x,y} en metros. */
-export function distancia(p1, p2) {
+export function distancia(p1: Punto, p2: Punto): number {
   return Math.hypot(p2.x - p1.x, p2.y - p1.y);
 }
 
@@ -23,7 +30,7 @@ export function distancia(p1, p2) {
  * es la lista ORDENADA de vértices (no hace falta repetir el primero al
  * final, el wraparound ya lo hace el módulo). Devuelve m².
  */
-export function areaPoligono(puntos) {
+export function areaPoligono(puntos: Punto[]): number {
   if (!Array.isArray(puntos) || puntos.length < 3) return 0;
   let suma = 0;
   for (let i = 0; i < puntos.length; i++) {
@@ -35,7 +42,7 @@ export function areaPoligono(puntos) {
 }
 
 /** Perímetro de un polígono cerrado (suma de lados, incluyendo el que cierra el último vértice con el primero). Devuelve metros. */
-export function perimetroPoligono(puntos) {
+export function perimetroPoligono(puntos: Punto[]): number {
   if (!Array.isArray(puntos) || puntos.length < 2) return 0;
   let total = 0;
   for (let i = 0; i < puntos.length; i++) {
@@ -51,7 +58,7 @@ export function perimetroPoligono(puntos) {
  * diferencia de perimetroPoligono, NO cierra el último vértice con el
  * primero). Devuelve metros.
  */
-export function longitudPolilinea(puntos) {
+export function longitudPolilinea(puntos: Punto[]): number {
   if (!Array.isArray(puntos) || puntos.length < 2) return 0;
   let total = 0;
   for (let i = 0; i < puntos.length - 1; i++) {
@@ -70,7 +77,7 @@ export function longitudPolilinea(puntos) {
  * aparezca un polígono de ESE tamaño exacto, en vez de tener que
  * trazarlo a mano punto por punto.
  */
-export function puntosRectangulo(centro, anchoM, altoM) {
+export function puntosRectangulo(centro: Punto, anchoM: number, altoM: number): Punto[] {
   const mitadAncho = anchoM / 2;
   const mitadAlto = altoM / 2;
   return [
@@ -88,7 +95,7 @@ export function puntosRectangulo(centro, anchoM, altoM) {
  * ambiente: al hacer click/touch, con qué habitación (si alguna)
  * coincide el punto.
  */
-export function puntoDentroDePoligono(punto, poligono) {
+export function puntoDentroDePoligono(punto: Punto, poligono: Punto[]): boolean {
   if (!Array.isArray(poligono) || poligono.length < 3) return false;
   let dentro = false;
   for (let i = 0, j = poligono.length - 1; i < poligono.length; j = i++) {
@@ -125,7 +132,7 @@ export function puntoDentroDePoligono(punto, poligono) {
  * se fuerza una solución aproximada con datos que no cierran, mismo
  * criterio de "nunca adivinar" del resto de la app.
  */
-export function interseccionCirculos(centroA, radioA, centroB, radioB) {
+export function interseccionCirculos(centroA: Punto, radioA: number, centroB: Punto, radioB: number): Punto[] {
   const d = distancia(centroA, centroB);
   const EPSILON = 1e-9;
   if (d <= EPSILON) return []; // mismo punto de referencia dos veces — no hay cómo triangular
@@ -155,4 +162,5 @@ export {
   aplicarZoom,
   aplicarPan,
   ajustarAVentana,
-} from "./vistaZoomPan.js";
+} from "./vistaZoomPan.ts";
+export type { TransformVista } from "./vistaZoomPan.ts";

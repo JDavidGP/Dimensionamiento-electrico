@@ -61,7 +61,7 @@ import {
   ajustarAVentana,
   ZOOM_MIN,
   ZOOM_MAX,
-} from "../../modules/geometria/index.js";
+} from "../../modules/geometria/index.ts";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
 import { OrigenMediator } from "./OrigenMediator.js";
 

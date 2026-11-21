@@ -1,4 +1,4 @@
-// src/modules/geometria/vistaZoomPan.js
+// src/modules/geometria/vistaZoomPan.ts
 //
 // Transformación de vista (zoom + pan) — matemática pura, un solo
 // espacio "modelo" (coordenadas propias de cada dominio: metros en el
@@ -20,20 +20,34 @@
 //
 // Módulo puro — se usa a través de los mediadores de dominio
 // (PlanoMediator, DiagramaMediator).
+//
+// Primer módulo migrado a TypeScript (usuario, 2026-11-21, "ya después
+// podés TypeScript" — migración incremental, empezando por el núcleo
+// más puro y reutilizado) — ver tsconfig.json para el criterio
+// (allowJs/checkJs: conviven .js sin tipar y .ts estricto mientras
+// dure la migración).
+
+import type { Punto } from "./tipos.ts";
+
+export interface TransformVista {
+  zoom: number;
+  panX: number;
+  panY: number;
+}
 
 export const ZOOM_MIN = 0.1;
 export const ZOOM_MAX = 8;
 
-function clamp(valor, min, max) {
+function clamp(valor: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, valor));
 }
 
-export function transformVistaInicial() {
+export function transformVistaInicial(): TransformVista {
   return { zoom: 1, panX: 0, panY: 0 };
 }
 
 /** Punto en espacio MODELO → punto en espacio PANTALLA (para dibujar). */
-export function aPantalla(puntoModelo, transformVista) {
+export function aPantalla(puntoModelo: Punto, transformVista: TransformVista): Punto {
   return {
     x: puntoModelo.x * transformVista.zoom + transformVista.panX,
     y: puntoModelo.y * transformVista.zoom + transformVista.panY,
@@ -41,7 +55,7 @@ export function aPantalla(puntoModelo, transformVista) {
 }
 
 /** Punto en espacio PANTALLA (ej. un click) → punto en espacio MODELO. */
-export function aModelo(puntoPantalla, transformVista) {
+export function aModelo(puntoPantalla: Punto, transformVista: TransformVista): Punto {
   return {
     x: (puntoPantalla.x - transformVista.panX) / transformVista.zoom,
     y: (puntoPantalla.y - transformVista.panY) / transformVista.zoom,
@@ -55,7 +69,7 @@ export function aModelo(puntoPantalla, transformVista) {
  * cualquier editor (CAD, Google Maps, Figma): hace zoom "hacia donde
  * apunta el usuario", no hacia la esquina superior izquierda.
  */
-export function aplicarZoom(transformVista, factor, pivotePantalla) {
+export function aplicarZoom(transformVista: TransformVista, factor: number, pivotePantalla: Punto): TransformVista {
   const pivoteModeloAntes = aModelo(pivotePantalla, transformVista);
   const nuevoZoom = clamp(transformVista.zoom * factor, ZOOM_MIN, ZOOM_MAX);
   const transformConNuevoZoom = { ...transformVista, zoom: nuevoZoom };
@@ -68,7 +82,7 @@ export function aplicarZoom(transformVista, factor, pivotePantalla) {
 }
 
 /** Desplaza la vista (arrastrar/pan) — `deltaPantalla` en CSS pixels. */
-export function aplicarPan(transformVista, deltaPantalla) {
+export function aplicarPan(transformVista: TransformVista, deltaPantalla: Punto): TransformVista {
   return {
     ...transformVista,
     panX: transformVista.panX + deltaPantalla.x,
@@ -84,7 +98,7 @@ export function aplicarPan(transformVista, deltaPantalla) {
  * se restaura desde el archivo guardado (mismo motivo que en Plano,
  * ver PLANO_INTELIGENTE_DISENO.md §4, tabla de escenarios).
  */
-export function ajustarAVentana(anchoModelo, altoModelo, anchoCanvas, altoCanvas) {
+export function ajustarAVentana(anchoModelo: number, altoModelo: number, anchoCanvas: number, altoCanvas: number): TransformVista {
   if (!(anchoModelo > 0) || !(altoModelo > 0) || !(anchoCanvas > 0) || !(altoCanvas > 0)) {
     return transformVistaInicial();
   }

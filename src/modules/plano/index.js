@@ -25,7 +25,7 @@
 // modules/tablero/index.js con TableroMediator.
 
 import { generarId } from "../../shared/utils/id.js";
-import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo } from "../geometria/index.js";
+import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo } from "../geometria/index.ts";
 
 export { calcularEscala, calcularEscalaPorPerimetro, imagenAModelo, modeloAImagen } from "./calibracion.js";
 // transformVistaInicial/aPantalla/aModelo/aplicarZoom/aplicarPan/

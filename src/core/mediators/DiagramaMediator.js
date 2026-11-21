@@ -39,7 +39,7 @@ import {
   ajustarAVentana,
   ZOOM_MIN,
   ZOOM_MAX,
-} from "../../modules/geometria/index.js";
+} from "../../modules/geometria/index.ts";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
