@@ -1,4 +1,4 @@
-// src/modules/etiquetado/index.js
+// src/modules/etiquetado/index.ts
 //
 // "Sistema de etiquetado" — pedido explícito del usuario (2026-11-20):
 // un código corto y visible (ej. "TD1", "TD1-C3", "TD1-C3-E1") más una
@@ -21,6 +21,10 @@
 // Módulo puro — cero React, cero UI. Se usa a través de
 // EtiquetadoMediator (core/mediators/EtiquetadoMediator.js).
 
+interface ConEtiqueta {
+  etiqueta?: string;
+}
+
 /**
  * Sugiere la próxima etiqueta de TABLERO libre, tipo "TD1", "TD2"... —
  * cuenta cuántos tableros YA tienen una etiqueta con ese prefijo y
@@ -28,7 +32,7 @@
  * existente, aunque el tablero que la tenía se haya borrado y "liberado"
  * el número — más simple y menos sorpresivo que reciclar huecos).
  */
-export function sugerirEtiquetaTablero(tableros = [], prefijo = "TD") {
+export function sugerirEtiquetaTablero(tableros: ConEtiqueta[] = [], prefijo: string = "TD"): string {
   return siguienteLibre(prefijo, tableros.map((t) => t.etiqueta));
 }
 
@@ -37,7 +41,7 @@ export function sugerirEtiquetaTablero(tableros = [], prefijo = "TD") {
  * tipo "TD1-C3" — se basa en la etiqueta del tablero (o, si el tablero
  * todavía no tiene una, en "C{n}" a secas, sin prefijo de tablero).
  */
-export function sugerirEtiquetaCircuito(tableroEtiqueta, circuitosDelTablero = []) {
+export function sugerirEtiquetaCircuito(tableroEtiqueta: string | null | undefined, circuitosDelTablero: ConEtiqueta[] = []): string {
   const prefijo = tableroEtiqueta ? `${tableroEtiqueta}-C` : "C";
   return siguienteLibre(prefijo, circuitosDelTablero.map((c) => c.etiqueta));
 }
@@ -46,13 +50,13 @@ export function sugerirEtiquetaCircuito(tableroEtiqueta, circuitosDelTablero = [
  * Sugiere la próxima etiqueta de EQUIPO libre dentro de un circuito,
  * tipo "TD1-C3-E1" — mismo criterio, basada en la etiqueta del circuito.
  */
-export function sugerirEtiquetaEquipo(circuitoEtiqueta, equiposDelCircuito = []) {
+export function sugerirEtiquetaEquipo(circuitoEtiqueta: string | null | undefined, equiposDelCircuito: ConEtiqueta[] = []): string {
   const prefijo = circuitoEtiqueta ? `${circuitoEtiqueta}-E` : "E";
   return siguienteLibre(prefijo, equiposDelCircuito.map((e) => e.etiqueta));
 }
 
 /** Primer "prefijo{n}" (n arrancando en 1) que no esté ya en `existentes`. */
-function siguienteLibre(prefijo, existentes = []) {
+function siguienteLibre(prefijo: string, existentes: (string | null | undefined)[] = []): string {
   const usadas = new Set(existentes.filter(Boolean));
   let n = 1;
   while (usadas.has(`${prefijo}${n}`)) n++;

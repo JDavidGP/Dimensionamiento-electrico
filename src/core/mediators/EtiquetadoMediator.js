@@ -12,7 +12,7 @@
  * NO muta el proyecto — solo lectura/sugerencia, igual criterio que el
  * resto de los mediadores de dominio.
  */
-import { sugerirEtiquetaTablero, sugerirEtiquetaCircuito, sugerirEtiquetaEquipo } from "../../modules/etiquetado/index.js";
+import { sugerirEtiquetaTablero, sugerirEtiquetaCircuito, sugerirEtiquetaEquipo } from "../../modules/etiquetado/index.ts";
 
 export const EtiquetadoMediator = {
   sugerirTablero(tableros) {
