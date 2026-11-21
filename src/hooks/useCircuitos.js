@@ -812,6 +812,40 @@ export function useCircuitos() {
     setRutasConductorPlano(rutasConductorPlano.map((r) => (r.id === rutaId ? { ...r, nombre: nombre.trim() || "Ruta sin nombre" } : r)));
   }
 
+  // Vínculo de una ruta a un circuito/tablero (usuario, 2026-11-22,
+  // "autocompletar la distancia del circuito/alimentador desde la
+  // longitud ya trazada en el plano") + la acción de copiar esa
+  // longitud al campo real — UNA sola vez por click, no un sincronizado
+  // permanente (el campo sigue siendo la fuente editable de siempre,
+  // igual que antes de vincular nada).
+  function vincularRutaConductorPlano(rutaId, entidadId, entidadTipo) {
+    setRutasConductorPlano(
+      rutasConductorPlano.map((r) => (r.id === rutaId ? App.plano.vincularRutaConductor(r, entidadId, entidadTipo) : r))
+    );
+  }
+
+  function actualizarDistanciaCircuito(id, distanciaM) {
+    setCircuitos(circuitos.map((c) => (c.id === id ? { ...c, distancia: distanciaM } : c)));
+  }
+
+  /** Copia la longitud YA calculada (trazado + cruces de pared, ver cruceParedes.ts) de una ruta vinculada al campo real del circuito/tablero que señala. No hace nada si la ruta no está vinculada. */
+  function aplicarLongitudRutaPlano(rutaId) {
+    const ruta = rutasConductorPlano.find((r) => r.id === rutaId);
+    if (!ruta?.entidadId) return;
+    const segmentosPared = segmentosPlano.filter((s) => s.tipo === "pared");
+    const { longitudTotalM } = App.plano.calcularCrucesPared(ruta, nodosPlano, segmentosPared);
+    // Redondeado a cm (2 decimales) — la precisión de más de la resta
+    // de puntos en metros no aporta nada real (ni la escala calibrada
+    // a mano ni la medida de espesor tienen esa exactitud) y ensucia
+    // el campo si el instalador lo ve/edita después.
+    const distanciaRedondeada = Math.round(longitudTotalM * 100) / 100;
+    if (ruta.entidadTipo === "circuito") {
+      actualizarDistanciaCircuito(ruta.entidadId, distanciaRedondeada);
+    } else if (ruta.entidadTipo === "tablero") {
+      editarTablero(ruta.entidadId, { longitudAlimentador: distanciaRedondeada });
+    }
+  }
+
   // Marcadores de equipo — puntos independientes del grafo de
   // nodos/segmentos (ver nota de arquitectura en modules/plano/index.js).
   function agregarMarcadorEquipoPlano(puntoImagen, tipo, entidadId = null, nombre = "") {
@@ -1093,6 +1127,8 @@ export function useCircuitos() {
     cerrarRutaConductorPlano,
     eliminarRutaConductorPlano,
     renombrarRutaConductorPlano,
+    vincularRutaConductorPlano,
+    aplicarLongitudRutaPlano,
     marcadoresEquipoPlano,
     agregarMarcadorEquipoPlano,
     editarMarcadorEquipoPlano,

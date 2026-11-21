@@ -28,6 +28,7 @@ import {
   moverNodos,
   crearRutaConductor,
   eliminarRutaConductor,
+  vincularRutaConductor,
   crearMarcadorEquipo,
   editarMarcadorEquipo,
   eliminarMarcadorEquipo,
@@ -87,8 +88,32 @@ export const PlanoMediator = {
   moverNodos,
   crearRutaConductor,
   eliminarRutaConductor,
+  vincularRutaConductor,
   calcularCrucesPared,
   ANGULO_MINIMO_CRUCE_GRADOS,
+
+  /**
+   * Circuitos/tableros candidatos para vincular a una ruta de
+   * conductor (autocompletar distancia/alimentador) — usuario,
+   * 2026-11-22. Mismo criterio de exclusión que candidatosEntidadEquipo:
+   * una vez vinculado a UNA ruta, ese circuito/tablero no aparece como
+   * candidato en las demás (una distancia, un dueño).
+   */
+  candidatosEntidadRuta({ circuitos = [], tableros = [], rutas = [], rutaId = null } = {}) {
+    const vinculados = new Set(rutas.filter((r) => r.id !== rutaId && r.entidadId).map((r) => r.entidadId));
+    return {
+      circuitos: circuitos.filter((c) => !vinculados.has(c.id)),
+      tableros: tableros.filter((t) => !vinculados.has(t.id)),
+    };
+  },
+
+  /** La entidad real (circuito o tablero) vinculada a esta ruta, o null si no tiene vínculo o ya no existe. */
+  resolverEntidadRuta(ruta, { circuitos = [], tableros = [] } = {}) {
+    if (!ruta?.entidadId) return null;
+    if (ruta.entidadTipo === "circuito") return circuitos.find((c) => c.id === ruta.entidadId) ?? null;
+    if (ruta.entidadTipo === "tablero") return tableros.find((t) => t.id === ruta.entidadId) ?? null;
+    return null;
+  },
 
   calcularEscala,
   calcularEscalaPorPerimetro,

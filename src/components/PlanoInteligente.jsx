@@ -58,6 +58,8 @@ export default function PlanoInteligente({
   cerrarRutaConductorPlano,
   eliminarRutaConductorPlano,
   renombrarRutaConductorPlano,
+  vincularRutaConductorPlano,
+  aplicarLongitudRutaPlano,
   marcadoresEquipoPlano,
   agregarMarcadorEquipoPlano,
   editarMarcadorEquipoPlano,
@@ -1038,6 +1040,63 @@ export default function PlanoInteligente({
                         ⚠ Cruza {cruces.paredesAnguloIndeterminado.length} pared{cruces.paredesAnguloIndeterminado.length !== 1 ? "es" : ""} en un ángulo demasiado rasante para calcular el extra con confianza.
                       </div>
                     )}
+
+                    {/* Autocompletar distancia (usuario, 2026-11-22: "autocompletar la
+                        distancia del circuito/alimentador desde la longitud ya trazada en
+                        el plano") — vínculo opcional a un circuito o tablero YA existente;
+                        "Usar esta longitud" copia el valor UNA vez al campo real (no un
+                        sincronizado permanente, ver nota de vincularRutaConductorPlano). */}
+                    {(() => {
+                      const candidatos = App.plano.candidatosEntidadRuta({ circuitos, tableros, rutas: rutasConductorPlano, rutaId: r.id });
+                      const entidad = App.plano.resolverEntidadRuta(r, { circuitos, tableros });
+                      return (
+                        <div style={{ marginTop: 6, paddingTop: 6, borderTop: `1px dashed ${colores.border}` }}>
+                          <select
+                            style={{ ...inputStyle(), padding: "4px 6px", fontSize: 11, width: "100%" }}
+                            value={r.entidadId ? `${r.entidadTipo}:${r.entidadId}` : ""}
+                            onChange={(e) => {
+                              if (!e.target.value) return vincularRutaConductorPlano(r.id, null, null);
+                              const [tipo, id] = e.target.value.split(":");
+                              vincularRutaConductorPlano(r.id, id, tipo);
+                            }}
+                          >
+                            <option value="">— Vincular a (opcional) —</option>
+                            {candidatos.circuitos.length > 0 && (
+                              <optgroup label="Circuitos (distancia)">
+                                {candidatos.circuitos.map((c) => (
+                                  <option key={c.id} value={`circuito:${c.id}`}>
+                                    {c.nombre || "(sin nombre)"}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {candidatos.tableros.length > 0 && (
+                              <optgroup label="Tableros (alimentador)">
+                                {candidatos.tableros.map((t) => (
+                                  <option key={t.id} value={`tablero:${t.id}`}>
+                                    {t.nombre}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+                          {entidad && (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginTop: 4, fontSize: 11, color: colores.textDim }}>
+                              <span>
+                                Distancia actual: {Number(r.entidadTipo === "circuito" ? entidad.distancia : entidad.longitudAlimentador || 0).toFixed(2)} m
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => aplicarLongitudRutaPlano(r.id)}
+                                style={{ background: "none", border: "none", color: colores.copper, fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 11 }}
+                              >
+                                Usar esta longitud ({cruces.longitudTotalM.toFixed(2)} m)
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

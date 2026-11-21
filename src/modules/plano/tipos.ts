@@ -39,11 +39,17 @@ export interface HabitacionPlano {
   perimetroM: number;
 }
 
+export type EntidadVinculadaRuta = "circuito" | "tablero";
+
 export interface RutaConductorPlano {
   id: string;
   nodoIds: string[];
   nombre: string;
   longitudM: number;
+  /** Circuito o tablero cuya distancia/alimentador se puede autocompletar desde esta ruta (ver vincularRutaConductor, PlanoMediator.candidatosEntidadRuta). null = sin vincular. */
+  entidadId: string | null;
+  /** "circuito" (distancia del circuito) o "tablero" (longitudAlimentador) — qué campo autocompletar. null si entidadId es null. */
+  entidadTipo: EntidadVinculadaRuta | null;
 }
 
 export interface MarcadorEquipoPlano {

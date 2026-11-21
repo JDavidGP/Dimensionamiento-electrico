@@ -125,6 +125,8 @@ export default function App() {
     cerrarRutaConductorPlano,
     eliminarRutaConductorPlano,
     renombrarRutaConductorPlano,
+    vincularRutaConductorPlano,
+    aplicarLongitudRutaPlano,
     marcadoresEquipoPlano,
     agregarMarcadorEquipoPlano,
     editarMarcadorEquipoPlano,
@@ -391,6 +393,8 @@ export default function App() {
                           cerrarRutaConductorPlano={cerrarRutaConductorPlano}
                           eliminarRutaConductorPlano={eliminarRutaConductorPlano}
                           renombrarRutaConductorPlano={renombrarRutaConductorPlano}
+                          vincularRutaConductorPlano={vincularRutaConductorPlano}
+                          aplicarLongitudRutaPlano={aplicarLongitudRutaPlano}
                           marcadoresEquipoPlano={marcadoresEquipoPlano}
                           agregarMarcadorEquipoPlano={agregarMarcadorEquipoPlano}
                           editarMarcadorEquipoPlano={editarMarcadorEquipoPlano}

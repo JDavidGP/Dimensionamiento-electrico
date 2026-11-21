@@ -26,7 +26,7 @@
 
 import { generarId } from "../../shared/utils/id.js";
 import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo } from "../geometria/index.ts";
-import type { Punto, NodoPlano, SegmentoPlano, TipoSegmento, HabitacionPlano, RutaConductorPlano, MarcadorEquipoPlano } from "./tipos.ts";
+import type { Punto, NodoPlano, SegmentoPlano, TipoSegmento, HabitacionPlano, RutaConductorPlano, MarcadorEquipoPlano, EntidadVinculadaRuta } from "./tipos.ts";
 
 export { calcularEscala, calcularEscalaPorPerimetro, imagenAModelo, modeloAImagen } from "./calibracion.ts";
 // transformVistaInicial/aPantalla/aModelo/aplicarZoom/aplicarPan/
@@ -49,6 +49,7 @@ export type {
   HabitacionPlano,
   RutaConductorPlano,
   MarcadorEquipoPlano,
+  EntidadVinculadaRuta,
   CalibracionPlano,
   CalibracionDosPuntos,
   CalibracionPorPerimetro,
@@ -221,11 +222,25 @@ export function crearRutaConductor(nodoIds: string[], nodos: NodoPlano[] = [], n
     nodoIds,
     nombre: nombre?.trim() || "Ruta sin nombre",
     longitudM: longitudPolilinea(puntos),
+    entidadId: null,
+    entidadTipo: null,
   };
 }
 
 export function eliminarRutaConductor(rutaId: string, rutas: RutaConductorPlano[] = []): RutaConductorPlano[] {
   return rutas.filter((r) => r.id !== rutaId);
+}
+
+/**
+ * Vincula (o desvincula, con `entidadId: null`) una ruta a un circuito
+ * o tablero cuya distancia/alimentador se puede autocompletar desde
+ * ella — usuario, 2026-11-22, "autocompletar la distancia del
+ * circuito/alimentador desde la longitud ya trazada en el plano".
+ * Mismo criterio de vínculo que MarcadorEquipoPlano.entidadId: la ruta
+ * es una VISTA que apunta a la entidad real, nunca duplica su dato.
+ */
+export function vincularRutaConductor(ruta: RutaConductorPlano, entidadId: string | null, entidadTipo: EntidadVinculadaRuta | null = null): RutaConductorPlano {
+  return { ...ruta, entidadId: entidadId || null, entidadTipo: entidadId ? entidadTipo : null };
 }
 
 // --- Equipos ubicados en el plano — Fase 2, 3ra ronda (2026-11-20) ---
