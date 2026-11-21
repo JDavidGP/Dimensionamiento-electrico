@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
 import { BotonPill } from "./PanelTableros";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 
 // Lista propia de Transformadores, con su CRUD completo — mismo patrón
 // de acordeón que PanelFuentesEnergia.jsx antes de su rediseño en dos
@@ -13,12 +14,15 @@ import { BotonPill } from "./PanelTableros";
 // hook (ver modules/motor/transformador.js), solo faltaba conectarlos a
 // una pantalla (usuario, 2026-11-20).
 //
-// Capacidad (kVA), conexión Y/Δ y %Z siguen sin campo acá a propósito
-// — "nos hace falta datos para desarrollar ese apartado" (usuario,
-// 2026-11-19, todavía vigente): el formulario solo cubre los campos que
-// YA tenía el mini-formulario inline (nombre/fases/tensiones) más
-// Notas, igual criterio que el resto de las entidades de la app.
-const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", notas: "" };
+// Capacidad (kVA) agregada después (usuario, 2026-11-21, "resolvamos
+// transformadores" — subió la Tabla 450.3(B) del NEC con datos duros):
+// es el único dato nuevo imprescindible para conectar
+// calcularCorrientesNominales/seleccionarProteccionTransformador (que
+// ya existían en el motor, pero nada los llamaba) a un resultado real.
+// Conexión Y/Δ y %Z siguen SIN campo acá a propósito — fuera de
+// alcance de esta ronda, "nos hace falta datos para desarrollar ese
+// apartado" (usuario, 2026-11-19, todavía vigente para esos 2).
+const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", notas: "" };
 const FASES_TRANSFORMADOR = [
   { valor: "mono", label: "Mono" },
   { valor: "tri", label: "Tri" },
@@ -31,11 +35,22 @@ function colorEstadoDe(entrada) {
   return colores.ok;
 }
 
-export default function PanelTransformadores({ transformadores = [], crearTransformador, editarTransformador, eliminarTransformador, listaIntegridad = [] }) {
+const ESQUEMAS_PROTECCION = [
+  { valor: "primario_y_secundario", label: "Primario + secundario" },
+  { valor: "solo_primario", label: "Solo primario" },
+];
+
+export default function PanelTransformadores({ transformadores = [], crearTransformador, editarTransformador, eliminarTransformador, listaIntegridad = [], normativaActiva }) {
   const [activoId, setActivoId] = useState(null);
   const [formAbierto, setFormAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState(FORM_VACIO);
+  // Esquema de protección — preferencia de herramienta para PREVISUALIZAR
+  // el cálculo (solo primario vs. primario + secundario), no un dato del
+  // transformador: no se persiste, igual criterio que asistenciaBordes en
+  // el Plano. Una sola selección compartida por cualquier transformador
+  // que esté expandido a la vez (alcanza para esta ronda).
+  const [esquemaProteccion, setEsquemaProteccion] = useState("primario_y_secundario");
 
   function abrirCreacion() {
     setForm(FORM_VACIO);
@@ -49,6 +64,7 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
       fases: t.fases,
       tensionPrimariaV: t.tensionPrimariaV ? String(t.tensionPrimariaV) : "",
       tensionSecundariaV: t.tensionSecundariaV ? String(t.tensionSecundariaV) : "",
+      capacidadKVA: t.capacidadKVA ? String(t.capacidadKVA) : "",
       notas: t.notas || "",
     });
     setEditandoId(t.id);
@@ -141,6 +157,16 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
             </Campo>
           </div>
 
+          <Campo label="Capacidad (kVA)">
+            <input
+              type="number"
+              style={inputStyle()}
+              value={form.capacidadKVA}
+              onChange={(e) => setForm({ ...form, capacidadKVA: e.target.value })}
+              placeholder="Ej: 75"
+            />
+          </Campo>
+
           <Campo label="Notas (opcional)">
             <input
               style={inputStyle()}
@@ -151,8 +177,8 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
           </Campo>
 
           <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, margin: "-4px 0 12px" }}>
-            Capacidad (kVA), conexión Y/Δ y %Z todavía no tienen campo acá — se completan más adelante, cuando haya un proyecto
-            industrial real que los necesite.
+            Conexión Y/Δ y %Z todavía no tienen campo acá — se completan más adelante, cuando haya un proyecto industrial real que
+            los necesite.
           </div>
 
           <div style={{ display: "flex", gap: 6 }}>
@@ -217,6 +243,7 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
                     <div style={{ fontFamily: fuentes.mono, fontSize: 11, color: colores.textDim }}>
                       {t.fases}
                       {t.tensionPrimariaV && t.tensionSecundariaV ? ` · ${t.tensionPrimariaV}V→${t.tensionSecundariaV}V` : ""}
+                      {t.capacidadKVA ? ` · ${t.capacidadKVA}kVA` : ""}
                     </div>
                   </div>
                   <button
@@ -259,6 +286,56 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
                       </div>
                     )}
                     {t.notas && <div style={{ fontSize: 12, color: colores.textDim }}>{t.notas}</div>}
+
+                    {/* Corriente nominal + protección de sobrecorriente (usuario,
+                        2026-11-21, "resolvamos transformadores" — subió la Tabla
+                        450.3(B) del NEC con datos duros). Conecta por primera vez
+                        calcularCorrientesNominales/seleccionarProteccionTransformador
+                        (ya existían en el motor, nada los llamaba) a un resultado
+                        real. Alcance NEC/CIEN únicamente — ver proteccionTransformador.ts. */}
+                    {(normativaActiva === "NEC" || normativaActiva === "CIEN") && (() => {
+                      const corrientes = App.origen.calcularCorrientesNominales(t);
+                      if (!corrientes.disponible) {
+                        return (
+                          <div style={{ fontSize: 11, color: colores.textDim, fontStyle: "italic" }}>
+                            Corriente nominal y protección (NEC 450.3(B)) pendientes: {corrientes.motivo}
+                          </div>
+                        );
+                      }
+                      const proteccion = App.origen.seleccionarProteccionTransformador({
+                        corrientePrimariaA: corrientes.corrientePrimariaA,
+                        corrienteSecundariaA: corrientes.corrienteSecundariaA,
+                        esquema: esquemaProteccion,
+                      });
+                      return (
+                        <div style={{ borderTop: `1px dashed ${colores.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                          <div style={{ fontSize: 10.5, color: colores.textDim, fontFamily: fuentes.mono }}>
+                            Corriente nominal — primario: {corrientes.corrientePrimariaA.toFixed(1)}A · secundario:{" "}
+                            {corrientes.corrienteSecundariaA.toFixed(1)}A
+                          </div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            {ESQUEMAS_PROTECCION.map((e) => (
+                              <BotonPill key={e.valor} activo={esquemaProteccion === e.valor} onClick={() => setEsquemaProteccion(e.valor)}>
+                                {e.label}
+                              </BotonPill>
+                            ))}
+                          </div>
+                          {proteccion.ok ? (
+                            <div style={{ fontSize: 11.5, color: colores.textMain }}>
+                              Protección NEC 450.3(B) — primario: <strong>{proteccion.proteccionPrimariaA}A</strong> ({proteccion.porcentajePrimario}%)
+                              {proteccion.proteccionSecundariaA != null && (
+                                <>
+                                  {" "}
+                                  · secundario: <strong>{proteccion.proteccionSecundariaA}A</strong> ({proteccion.porcentajeSecundario}%)
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 11.5, color: colores.warn }}>{proteccion.motivo}</div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

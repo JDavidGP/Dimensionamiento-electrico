@@ -36,7 +36,12 @@ import {
   crearTransformador,
   editarTransformador,
   liberarTablerosDeTransformador,
+  calcularCorrientesNominales,
 } from "../../modules/motor/transformador.ts";
+import {
+  TAMANOS_ESTANDAR_NEC_240_6_A,
+  seleccionarProteccionTransformador,
+} from "../../modules/motor/proteccionTransformador.ts";
 
 export const OrigenMediator = {
   // Enums expuestos para la UI — mismo patrón que ValidacionMediator.ESTADOS.
@@ -45,6 +50,7 @@ export const OrigenMediator = {
   MODOS_CONMUTACION,
   CONMUTACION_VACIA,
   TRANSFORMADOR_VACIO,
+  TAMANOS_ESTANDAR_NEC_240_6_A,
 
   /** Fábrica de una fuente de energía nueva (no la guarda — eso lo hace el hook). */
   crearFuente(datos) {
@@ -79,6 +85,16 @@ export const OrigenMediator = {
   /** Al eliminar un transformador, los tableros que lo tenían como padre quedan libres (null), no rotos. */
   liberarTablerosDeTransformador(transformadorId, tableros) {
     return liberarTablerosDeTransformador(transformadorId, tableros ?? []);
+  },
+
+  /** Corriente nominal de placa en cada devanado — único cálculo que se desprende directamente de la identidad del transformador (kVA + tensiones). */
+  calcularCorrientesNominales(transformador) {
+    return calcularCorrientesNominales(transformador);
+  },
+
+  /** Protección de sobrecorriente del transformador — NEC Tabla 450.3(B), solo NEC/CIEN (ver proteccionTransformador.ts). */
+  seleccionarProteccionTransformador(parametros) {
+    return seleccionarProteccionTransformador(parametros);
   },
 
   /** Resuelve qué es un origenId (tableroPadreId) contra los tres catálogos. */

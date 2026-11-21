@@ -30,6 +30,10 @@ export {
   liberarTablerosDeTransformador,
 } from "./transformador.ts";
 export {
+  TAMANOS_ESTANDAR_NEC_240_6_A,
+  seleccionarProteccionTransformador,
+} from "./proteccionTransformador.ts";
+export {
   TABLA_COEFICIENTE_SIMULTANEIDAD,
   coeficienteSimultaneidad,
   GRADOS_ELECTRIFICACION,
@@ -43,6 +47,11 @@ export type { Equipo, Circuito, Tablero, Fases, ResultadoCircuito, ImpedanciaFue
 export type { Transformador, ResultadoCorrientesNominales, TableroConPadre } from "./transformador.ts";
 export type { SimultaneidadREBT, GradoElectrificacion, ResultadoCargaSimultaneaViviendas } from "./simultaneidadREBT.ts";
 export type { ResultadoAlimentador } from "./calcularAlimentador.ts";
+export type {
+  EsquemaProteccionTransformador,
+  ParametrosProteccionTransformador,
+  ResultadoProteccionTransformador,
+} from "./proteccionTransformador.ts";
 export type { ResultadoCombinado } from "./combinarResultadosCircuitos.ts";
 export type { CargaCombinada } from "./cargaCombinada.ts";
 export type { CargasDemanda } from "./factorDemanda.ts";

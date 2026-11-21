@@ -255,6 +255,7 @@ export default function App() {
                       editarTransformador={editarTransformador}
                       eliminarTransformador={eliminarTransformador}
                       listaIntegridad={listaIntegridad}
+                      normativaActiva={normativaActiva}
                     />
                   </div>
                 )}
