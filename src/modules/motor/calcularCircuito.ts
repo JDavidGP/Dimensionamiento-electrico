@@ -8,8 +8,15 @@ import { seleccionarBreaker } from "./breaker.ts";
 import { combinarCargas } from "./cargaCombinada.ts";
 import { calcularCargasDemanda } from "./factorDemanda.ts";
 import { seleccionarSeccion } from "./seleccionSeccion.ts";
+import { claseCircuitoREBT } from "./claseCircuitoREBT.ts";
 import type { Circuito, Equipo, ResultadoCircuito } from "./tipos.ts";
 import type { Normativa } from "../normativa/tipos.ts";
+
+/** Lo que el llamador (MotorCalculoMediator) sabe del circuito que el motor por sí solo no sabe — contexto de instalación para el límite de caída de tensión de normativas que lo necesitan (REBT); ignorado por NEC/CIEN. */
+export interface ContextoInstalacionCircuito {
+  tipoInstalacion?: string;
+  tieneTransformadorPropio?: boolean;
+}
 
 /**
  * Dimensionamiento de UN circuito.
@@ -21,7 +28,7 @@ import type { Normativa } from "../normativa/tipos.ts";
  *   - caída de tensión se evalúa con la corriente de demanda normativa
  *     (diseño), no con la estimada de uso
  */
-export function calcularCircuito(circuito: Circuito, equipos: Equipo[], normativa: Normativa): ResultadoCircuito {
+export function calcularCircuito(circuito: Circuito, equipos: Equipo[], normativa: Normativa, contextoInstalacion: ContextoInstalacionCircuito = {}): ResultadoCircuito {
   if (!normativa || typeof normativa !== "object") {
     return {
       ok: false,
@@ -34,6 +41,22 @@ export function calcularCircuito(circuito: Circuito, equipos: Equipo[], normativ
   const material = circuito.material.toLowerCase();
 
   const advertencias: string[] = [];
+
+  // Límite de caída de tensión del TRAMO propio de este circuito — un
+  // número fijo para NEC/CIEN, pero dependiente del contexto para REBT
+  // (ITC-BT-19 §2.2.2: tipo de instalación, alumbrado/otros usos,
+  // transformador propio — ver normativa.limiteCaidaTensionTramoPct en
+  // iec/es.ts). Si la normativa no define ese override, se usa el
+  // limiteCaidaTensionPct de siempre — CERO cambio para NEC/CIEN.
+  const claseCircuito = claseCircuitoREBT(equipos);
+  const limiteCaidaTensionPct = normativa.limiteCaidaTensionTramoPct
+    ? normativa.limiteCaidaTensionTramoPct({
+        tipoInstalacion: contextoInstalacion.tipoInstalacion ?? "",
+        claseCircuito,
+        tieneTransformadorPropio: contextoInstalacion.tieneTransformadorPropio ?? false,
+      })
+    : normativa.limiteCaidaTensionPct;
+  const normativaEfectiva: Normativa = limiteCaidaTensionPct === normativa.limiteCaidaTensionPct ? normativa : { ...normativa, limiteCaidaTensionPct };
 
   if (equipos.length === 0) {
     return {
@@ -103,7 +126,7 @@ export function calcularCircuito(circuito: Circuito, equipos: Equipo[], normativ
     fases,
     temp: circuito.temp,
     voltajeV: circuito.voltaje,
-    normativa,
+    normativa: normativaEfectiva,
   });
 
   if (seleccion) {
@@ -139,6 +162,7 @@ export function calcularCircuito(circuito: Circuito, equipos: Equipo[], normativ
       ampacidadCorregida,
       caidaPct,
       breaker,
+      claseCircuitoREBT: claseCircuito,
       advertencias,
       notaDimensionamiento: `Conductor y breaker calculados sobre carga de demanda ${normativa.id}, no sobre estimada de uso.`,
     };
@@ -153,7 +177,7 @@ export function calcularCircuito(circuito: Circuito, equipos: Equipo[], normativ
     cargaConectadaW: cargas.cargaConectadaW,
     cargaDemandaNormativaW: cargas.cargaDemandaNormativaW,
     cargaEstimadaUsoW: cargas.cargaEstimadaUsoW,
-    error: `Ningún calibre de ${material} cumple ampacidad y caída de tensión (≤${normativa.limiteCaidaTensionPct}%) para ${corrienteDiseno.toFixed(
+    error: `Ningún calibre de ${material} cumple ampacidad y caída de tensión (≤${normativaEfectiva.limiteCaidaTensionPct}%) para ${corrienteDiseno.toFixed(
       2
     )}A a ${circuito.distancia}m bajo ${normativa.nombre}. Reduzca distancia, use trifásico, o conductor más grueso.`,
   };

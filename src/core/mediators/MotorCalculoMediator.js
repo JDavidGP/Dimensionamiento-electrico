@@ -32,12 +32,20 @@ export const MotorCalculoMediator = {
   /**
    * Dimensiona un circuito. Resuelve la normativa vía NormativaMediator
    * e inyecta el objeto al motor puro.
+   *
+   * `contextoInstalacion` (usuario, 2026-11-21, REBT ITC-BT-19 §2.2.2):
+   * { tipoInstalacion, tieneTransformadorPropio } — lo que el motor
+   * puro necesita para el límite de caída de tensión de REBT, opcional
+   * y pasado tal cual a calcInterno (que ya lo ignora por su cuenta si
+   * la normativa no lo usa). El llamador (hook) lo arma por circuito
+   * vía TableroMediator.tieneTransformadorPropio — este mediador no
+   * conoce tableros, solo reenvía lo que le dan.
    */
-  calcularCircuito(circuito, equipos, normativaId) {
+  calcularCircuito(circuito, equipos, normativaId, contextoInstalacion) {
     const id = normativaId ?? DataProvider.getNormativaActivaId();
     const normativa = NormativaMediator.obtener(id);
     try {
-      return calcInterno(circuito, equipos, normativa);
+      return calcInterno(circuito, equipos, normativa, contextoInstalacion);
     } catch (err) {
       Logger.error("MotorCalculoMediator.calcularCircuito", err);
       return {
@@ -49,14 +57,19 @@ export const MotorCalculoMediator = {
     }
   },
 
-  /** Recalcula todos los circuitos del snapshot actual. */
-  calcularTodos(circuitos, equipos, normativaId) {
+  /**
+   * Recalcula todos los circuitos del snapshot actual.
+   * `contextoPorCircuitoId`: Record<circuitoId, ContextoInstalacionCircuito>
+   * opcional — ver calcularCircuito. Sin este parámetro, comportamiento
+   * idéntico a siempre (cada circuito usa `{}` por defecto en el motor).
+   */
+  calcularTodos(circuitos, equipos, normativaId, contextoPorCircuitoId) {
     const id = normativaId ?? DataProvider.getNormativaActivaId();
     return (circuitos || DataProvider.getCircuitos()).map((c) => {
       const eqs = (equipos || DataProvider.getEquipos()).filter(
         (e) => e.circuitoId === c.id
       );
-      return this.calcularCircuito(c, eqs, id);
+      return this.calcularCircuito(c, eqs, id, contextoPorCircuitoId?.[c.id]);
     });
   },
 

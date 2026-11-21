@@ -11,6 +11,7 @@ export { seleccionarBreaker } from "./breaker.ts";
 export { resistenciaOhmKm } from "./resistencia.ts";
 export { combinarCargas, potenciaDeEquipo } from "./cargaCombinada.ts";
 export { calcularCargasDemanda } from "./factorDemanda.ts";
+export { claseCircuitoREBT } from "./claseCircuitoREBT.ts";
 export { calcularLlenadoConducto } from "./canalizacion.ts";
 export {
   calcularCortocircuitoTrifasico,
@@ -43,7 +44,8 @@ export {
   normalizarSimultaneidadREBT,
 } from "./simultaneidadREBT.ts";
 
-export type { Equipo, Circuito, Tablero, Fases, ResultadoCircuito, ImpedanciaFuente, DetalleDemandaTipo } from "./tipos.ts";
+export type { Equipo, Circuito, Tablero, Fases, ClaseCircuitoREBT, ResultadoCircuito, ImpedanciaFuente, DetalleDemandaTipo } from "./tipos.ts";
+export type { ContextoInstalacionCircuito } from "./calcularCircuito.ts";
 export type { Transformador, ResultadoCorrientesNominales, TableroConPadre } from "./transformador.ts";
 export type { SimultaneidadREBT, GradoElectrificacion, ResultadoCargaSimultaneaViviendas } from "./simultaneidadREBT.ts";
 export type { ResultadoAlimentador } from "./calcularAlimentador.ts";

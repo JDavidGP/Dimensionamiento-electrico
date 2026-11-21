@@ -23,6 +23,26 @@ export interface TablaCanalizaciones {
   notaValidacion: string;
 }
 
+/** "alumbrado" si el circuito tiene AL MENOS un equipo de iluminación (REBT lo clasifica así incluso en un circuito mixto — el límite más restrictivo), "otros_usos" solo si NINGÚN equipo es de iluminación. Ver claseCircuitoREBT en modules/motor/. */
+export type ClaseCircuitoREBT = "alumbrado" | "otros_usos";
+
+/**
+ * Contexto que una normativa puede necesitar para decidir el límite de
+ * caída de tensión de ESTE circuito en particular — usuario, 2026-11-21,
+ * citas ITC-BT-19 §2.2.2 (RD 842/2002): el límite de REBT depende del
+ * tipo de instalación (vivienda vs. otras), de si el circuito es
+ * alumbrado u otros usos, y de si la instalación tiene un transformador
+ * de distribución propio AT/BT (el origen de referencia se corre a la
+ * salida del transformador, con un límite más laxo). NEC/CIEN no
+ * necesitan este contexto — su `limiteCaidaTensionPct` sigue siendo un
+ * número fijo, sin esta complejidad.
+ */
+export interface ContextoCaidaTensionREBT {
+  tipoInstalacion: string;
+  claseCircuito: ClaseCircuitoREBT;
+  tieneTransformadorPropio: boolean;
+}
+
 export interface Normativa {
   id: string;
   nombre: string;
@@ -43,6 +63,23 @@ export interface Normativa {
   canalizaciones?: TablaCanalizaciones;
   /** Placeholder de IEC_ES, pendiente de nivel Tablero (REBT ITC-BT-10) — ver simultaneidadREBT.js. */
   factorDiversidad?: null;
+  /**
+   * Override de `limiteCaidaTensionPct` para ESTE circuito en particular
+   * (ITC-BT-19 §2.2.2) — si la normativa no lo define (NEC/CIEN), el
+   * llamador sigue usando el `limiteCaidaTensionPct` fijo de siempre.
+   * Representa la caída del tramo PROPIO del circuito — igual criterio
+   * conservador que ya tenían NEC/CIEN (un chequeo por segmento,
+   * adicional al acumulado de abajo).
+   */
+  limiteCaidaTensionTramoPct?: (contexto: ContextoCaidaTensionREBT) => number;
+  /**
+   * Override del límite ACUMULADO (origen→punto de utilización) para
+   * este circuito — en REBT, este es el número que describe
+   * literalmente el texto de ITC-BT-19 (3/5% sin transformador propio,
+   * 4,5/6,5% con uno). Si la normativa no lo define (NEC/CIEN), el
+   * llamador sigue usando LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT.
+   */
+  limiteCaidaTensionAcumuladaPct?: (contexto: ContextoCaidaTensionREBT) => number;
   validado: boolean;
   notaValidacion: string;
 }

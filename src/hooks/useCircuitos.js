@@ -83,10 +83,29 @@ export function useCircuitos() {
   const [errorEquipo, setErrorEquipo] = useState("");
   const [editandoEquipoId, setEditandoEquipoId] = useState(null);
 
+  // Usuario, 2026-11-21 (REBT ITC-BT-19 §2.2.2): contexto de
+  // instalación por circuito — tipoInstalacion + si la cadena de
+  // tableros de ese circuito termina en un transformador propio (ver
+  // TableroMediator.tieneTransformadorPropio). Solo lo usa IEC_ES para
+  // el límite de caída de tensión; NEC/CIEN lo ignoran por su cuenta
+  // (ver Normativa.limiteCaidaTensionTramoPct, undefined para ellas).
+  const contextoPorCircuitoId = useMemo(() => {
+    const mapa = {};
+    circuitos.forEach((c) => {
+      mapa[c.id] = {
+        tipoInstalacion,
+        tieneTransformadorPropio: c.tableroId
+          ? App.tablero.tieneTransformadorPropio(c.tableroId, { tableros, fuentesEnergia, transformadores })
+          : false,
+      };
+    });
+    return mapa;
+  }, [circuitos, tableros, fuentesEnergia, transformadores, tipoInstalacion]);
+
   // Cálculo vía MotorCalculoMediator
   const resultados = useMemo(
-    () => App.motor.calcularTodos(circuitos, equipos, normativaActiva),
-    [circuitos, equipos, normativaActiva]
+    () => App.motor.calcularTodos(circuitos, equipos, normativaActiva, contextoPorCircuitoId),
+    [circuitos, equipos, normativaActiva, contextoPorCircuitoId]
   );
 
   // Mantener DataProvider sincronizado (para mediadores que lean snapshot)
@@ -172,6 +191,10 @@ export function useCircuitos() {
         resultados,
         normativaId: normativaActiva,
         resultadoCircuito: r,
+        equipos,
+        fuentesEnergia,
+        transformadores,
+        tipoInstalacion,
       });
 
       if (!acumulada.aplica || acumulada.noDeterminado) return r;
@@ -196,7 +219,7 @@ export function useCircuitos() {
         ],
       };
     });
-  }, [resultados, circuitos, tableros, normativaActiva]);
+  }, [resultados, circuitos, tableros, normativaActiva, equipos, fuentesEnergia, transformadores, tipoInstalacion]);
 
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(

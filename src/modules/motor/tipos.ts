@@ -9,8 +9,8 @@
 // (tipado estructural), de sobra para lo que cada función de motor/
 // realmente usa.
 
-import type { Fases } from "../normativa/tipos.ts";
-export type { Fases };
+import type { Fases, ClaseCircuitoREBT } from "../normativa/tipos.ts";
+export type { Fases, ClaseCircuitoREBT };
 
 export interface Equipo {
   nombre: string;
@@ -78,6 +78,8 @@ export interface ResultadoCircuitoOk {
   ampacidadCorregida: number;
   caidaPct: number;
   breaker: number | null;
+  /** "alumbrado" si tiene algún equipo de iluminación (REBT lo clasifica así incluso mezclado con otros usos), "otros_usos" si ninguno — ver claseCircuitoREBT.ts. NEC/CIEN lo calculan igual pero no lo usan para nada. */
+  claseCircuitoREBT: ClaseCircuitoREBT;
   advertencias: string[];
   notaDimensionamiento: string;
 }

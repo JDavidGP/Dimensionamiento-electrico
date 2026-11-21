@@ -50,17 +50,24 @@ export interface CaidaAcumulada {
  * @param tensionReferenciaV - tensión nominal del punto de utilización
  *   (normalmente circuito.voltaje) — denominador del % final, se
  *   aplica UNA sola vez.
+ * @param limitePctOverride - usuario, 2026-11-21: REBT (ITC-BT-19
+ *   §2.2.2) define SU PROPIO límite acumulado (3/5/4,5/6,5% según tipo
+ *   de instalación, alumbrado/otros usos y transformador propio — ver
+ *   normativa.limiteCaidaTensionAcumuladaPct en iec/es.ts), distinto
+ *   del 5% provisional de NEC. Si el llamador no pasa un override, se
+ *   sigue usando el 5% de siempre — CERO cambio para NEC/CIEN.
  */
-export function evaluarCaidaAcumulada(deltaVPorTramo: number[], tensionReferenciaV: number): CaidaAcumulada {
+export function evaluarCaidaAcumulada(deltaVPorTramo: number[], tensionReferenciaV: number, limitePctOverride?: number): CaidaAcumulada {
   const deltaVTotal = deltaVPorTramo.reduce((s, v) => s + Number(v), 0);
   const totalPct = (deltaVTotal / Number(tensionReferenciaV)) * 100;
+  const limitePct = limitePctOverride ?? LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT;
 
   return {
     aplica: true,
     deltaVTotal,
     totalPct,
-    limitePct: LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT,
-    excede: totalPct > LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT,
+    limitePct,
+    excede: totalPct > limitePct,
     cantidadTramos: deltaVPorTramo.length,
   };
 }

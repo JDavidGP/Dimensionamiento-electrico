@@ -47,6 +47,7 @@ import {
   calcularCargaSimultaneaViviendas,
   potenciaMinimaGrado,
   GRADOS_ELECTRIFICACION,
+  claseCircuitoREBT,
 } from "../../modules/motor/index.ts";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
@@ -135,6 +136,37 @@ export const TableroMediator = {
   },
 
   /**
+   * Usuario, 2026-11-21 (REBT ITC-BT-19 §2.2.2): "instalación industrial
+   * que se alimenta directamente en alta tensión mediante un
+   * transformador de distribución propio" — ¿la cadena ascendente de
+   * `tableroId` termina en un transformador propio? Resuelve toda la
+   * cadena (tablero → padre → ...) y mira de qué es origen el ÚLTIMO
+   * tablero de esa cadena (el que ya no tiene padre-tablero): la
+   * cadena YA termina ahí sola, porque los transformadores viven en su
+   * propio array (`transformadores`), no en `tableros` —
+   * obtenerCadenaAscendente nunca los atraviesa, no hace falta ninguna
+   * lógica nueva de recorrido.
+   *
+   * Ciclo o cadena vacía (tableroId roto) -> false (el dato más
+   * conservador: usa el límite SIN transformador propio, más estricto,
+   * nunca el más permisivo por falta de información).
+   */
+  tieneTransformadorPropio(tableroId, { tableros, fuentesEnergia, transformadores } = {}) {
+    const listaTableros = tableros ?? DataProvider.getTableros();
+    const { cadena, ciclo } = obtenerCadenaAscendente(tableroId, listaTableros);
+    if (ciclo || cadena.length === 0) return false;
+
+    const ultimo = cadena[cadena.length - 1];
+    const origen = OrigenMediator.resolver(
+      ultimo.tableroPadreId,
+      listaTableros,
+      fuentesEnergia ?? DataProvider.getFuentesEnergia(),
+      transformadores ?? DataProvider.getTransformadores()
+    );
+    return origen?.tipo === "transformador";
+  },
+
+  /**
    * Caída de tensión ACUMULADA de un circuito, recorriendo la cadena de
    * tableros hacia arriba (su propio tablero → tableroPadreId → el
    * padre del padre → ... hasta la acometida). Suma VOLTIOS (no
@@ -160,7 +192,7 @@ export const TableroMediator = {
    * fases). Esta función asume una sola tensión de referencia válida
    * para toda la cadena.
    */
-  caidaAcumuladaDesdeCircuito(circuito, { tableros, circuitos, resultados, normativaId, resultadoCircuito } = {}) {
+  caidaAcumuladaDesdeCircuito(circuito, { tableros, circuitos, resultados, normativaId, resultadoCircuito, equipos, fuentesEnergia, transformadores, tipoInstalacion } = {}) {
     if (!circuito?.tableroId) {
       return { aplica: false };
     }
@@ -226,7 +258,29 @@ export const TableroMediator = {
       deltaVPorTramo.push(Number(tablero.tensionAlimentacion) * (alim.caidaPct / 100));
     }
 
-    const evaluacion = evaluarCaidaAcumulada(deltaVPorTramo, Number(circuito.voltaje));
+    // Usuario, 2026-11-21 (REBT ITC-BT-19 §2.2.2): límite ACUMULADO
+    // propio por normativa (ver Normativa.limiteCaidaTensionAcumuladaPct
+    // en iec/es.ts) — si la normativa activa no define ese override
+    // (NEC/CIEN), se sigue usando el 5% provisional de siempre, CERO
+    // cambio. La clase (alumbrado/otros usos) del circuito ORIGEN de la
+    // cadena es la que manda para el % acumulado total, igual que para
+    // su propio tramo.
+    const normativa = NormativaMediator.obtener(normativaId ?? DataProvider.getNormativaActivaId());
+    let limitePctOverride;
+    if (normativa?.limiteCaidaTensionAcumuladaPct) {
+      const equiposDelCircuito = (equipos ?? DataProvider.getEquipos()).filter((e) => e.circuitoId === circuito.id);
+      limitePctOverride = normativa.limiteCaidaTensionAcumuladaPct({
+        tipoInstalacion: tipoInstalacion ?? DataProvider.getTipoInstalacion() ?? "",
+        claseCircuito: claseCircuitoREBT(equiposDelCircuito),
+        tieneTransformadorPropio: this.tieneTransformadorPropio(circuito.tableroId, {
+          tableros: listaTableros,
+          fuentesEnergia,
+          transformadores,
+        }),
+      });
+    }
+
+    const evaluacion = evaluarCaidaAcumulada(deltaVPorTramo, Number(circuito.voltaje), limitePctOverride);
 
     return {
       aplica: true,
