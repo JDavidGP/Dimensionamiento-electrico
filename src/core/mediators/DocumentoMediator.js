@@ -12,7 +12,7 @@
  * NO muta el proyecto — solo lectura/transformación, igual criterio
  * que el resto de los mediadores de dominio.
  */
-import { generarMemoriaTecnica } from "../../modules/documento/index.js";
+import { generarMemoriaTecnica } from "../../modules/documento/index.ts";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
 import { NormativaMediator } from "./NormativaMediator.js";

@@ -14,8 +14,20 @@
 // cruzar hacia otro dominio (esa regla sí es del mediador, no de este
 // módulo).
 
+import type {
+  Circuito,
+  Equipo,
+  Tablero,
+  ResultadoCircuito,
+  AlimentadorResultado,
+  DatosMemoriaTecnica,
+  FilaCircuito,
+  FilaTablero,
+  MemoriaTecnica,
+} from "./tipos.ts";
+
 /** Una fila de la tabla de circuitos del informe. */
-function filaCircuito(circuito, equipos, resultados) {
+function filaCircuito(circuito: Circuito, equipos: Equipo[], resultados: ResultadoCircuito[]): FilaCircuito {
   const r = resultados.find((res) => res.id === circuito.id) ?? null;
   return {
     id: circuito.id,
@@ -38,40 +50,31 @@ function filaCircuito(circuito, equipos, resultados) {
 }
 
 /** Una fila de la tabla de tableros del informe. */
-function filaTablero(tablero, alimentadores, origenPorTablero) {
-  const alim = alimentadores[tablero.id];
+function filaTablero(tablero: Tablero, alimentadores: Record<string, AlimentadorResultado>, origenPorTablero: Record<string, string>): FilaTablero {
+  const alim = tablero.id ? alimentadores[tablero.id] : undefined;
   return {
     id: tablero.id,
     nombre: tablero.nombre?.trim() || "(sin nombre)",
     tensionAlimentacion: tablero.tensionAlimentacion,
     fases: tablero.fases,
-    origen: origenPorTablero[tablero.id] ?? "Red eléctrica local (acometida / poste)",
+    origen: (tablero.id && origenPorTablero[tablero.id]) ?? "Red eléctrica local (acometida / poste)",
     ok: alim?.ok ?? false,
-    potenciaW: alim?.ok ? alim.potenciaTotalW : null,
-    corrienteA: alim?.ok ? alim.corrienteDiseno : null,
-    seccion: alim?.ok ? alim.seccion : null,
-    unidadSeccion: alim?.ok ? alim.unidadSeccion : null,
-    breaker: alim?.ok ? alim.breaker : null,
-    caidaPct: alim?.ok ? alim.caidaPct : null,
+    potenciaW: alim?.ok ? alim.potenciaTotalW ?? null : null,
+    corrienteA: alim?.ok ? alim.corrienteDiseno ?? null : null,
+    seccion: alim?.ok ? alim.seccion ?? null : null,
+    unidadSeccion: alim?.ok ? alim.unidadSeccion ?? null : null,
+    breaker: alim?.ok ? alim.breaker ?? null : null,
+    caidaPct: alim?.ok ? alim.caidaPct ?? null : null,
     simultaneidadREBT: alim?.ok ? alim.simultaneidadREBT ?? null : null,
     motivo: alim && !alim.ok ? alim.motivo ?? alim.error ?? "Alimentador sin calcular." : null,
   };
 }
 
 /**
- * @param {object} datos
- * @param {object} datos.proyecto
- * @param {{id:string, nombre:string}} datos.normativa - ya resuelta
- * @param {{id:string, label:string}} [datos.tipoInstalacion] - ya resuelto, puede faltar en proyectos viejos
- * @param {object[]} datos.circuitos
- * @param {object[]} datos.equipos
- * @param {object[]} datos.resultados
- * @param {object[]} datos.tableros
- * @param {object} datos.alimentadores - mapa tableroId -> resultado de calcularAlimentadorAgregado (YA calculado)
- * @param {object} datos.origenPorTablero - mapa tableroId -> etiqueta legible de su origen (YA resuelta)
- * @param {object[]} [datos.fuentesEnergia]
- * @param {object[]} [datos.transformadores]
- * @param {object[]} [datos.listaIntegridad]
+ * @param datos.normativa - ya resuelta
+ * @param datos.tipoInstalacion - ya resuelto, puede faltar en proyectos viejos
+ * @param datos.alimentadores - mapa tableroId -> resultado de calcularAlimentadorAgregado (YA calculado)
+ * @param datos.origenPorTablero - mapa tableroId -> etiqueta legible de su origen (YA resuelta)
  */
 export function generarMemoriaTecnica({
   proyecto,
@@ -86,7 +89,7 @@ export function generarMemoriaTecnica({
   fuentesEnergia = [],
   transformadores = [],
   listaIntegridad = [],
-}) {
+}: DatosMemoriaTecnica): MemoriaTecnica {
   const filasCircuitos = circuitos.map((c) => filaCircuito(c, equipos, resultados));
   const filasTableros = tableros.map((t) => filaTablero(t, alimentadores, origenPorTablero));
 
@@ -102,8 +105,8 @@ export function generarMemoriaTecnica({
     { potenciaTotalW: 0, corrienteTotalA: 0, circuitosOk: 0, circuitosTotal: filasCircuitos.length }
   );
 
-  const entradasConProblemas = listaIntegridad.filter((e) => e.problemas?.length > 0);
-  const resumenIntegridad = listaIntegridad.reduce(
+  const entradasConProblemas = listaIntegridad.filter((e) => e.problemas && e.problemas.length > 0);
+  const resumenIntegridad = listaIntegridad.reduce<Record<string, number>>(
     (acc, e) => {
       acc[e.estado] = (acc[e.estado] ?? 0) + 1;
       return acc;
