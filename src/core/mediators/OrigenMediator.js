@@ -48,6 +48,7 @@ import {
   calcularImpedanciaTransformadorOhm,
   calcularCortocircuitoTrifasico,
   calcularCortocircuitoMonofasico,
+  obtenerXRTransformador,
 } from "../../modules/motor/cortocircuito.ts";
 
 export const OrigenMediator = {
@@ -110,9 +111,14 @@ export const OrigenMediator = {
     return seleccionarProteccionTransformadorREBT(parametros);
   },
 
-  /** %Z de placa → impedancia en Ω (trifásico únicamente) — ver cortocircuito.ts. */
+  /** %Z de placa (+ X/R opcional) → impedancia en Ω — ver cortocircuito.ts. */
   calcularImpedanciaTransformadorOhm(parametros) {
     return calcularImpedanciaTransformadorOhm(parametros);
+  },
+
+  /** X/R por tamaño/refrigeración del transformador (tabla citada, interpolada) — ver cortocircuito.ts. */
+  obtenerXRTransformador(parametros) {
+    return obtenerXRTransformador(parametros);
   },
 
   /** Cortocircuito trifásico — expuesto acá (no solo en MotorCalculoMediator) para componer con calcularImpedanciaTransformadorOhm sin saltar de mediador a mitad de un cálculo del mismo dominio (Origen/Transformador). */

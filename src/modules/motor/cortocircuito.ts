@@ -141,14 +141,14 @@ export type ResultadoImpedanciaTransformador = { disponible: false; motivo: stri
  * Verificado: 400kVA, 400V, %Z=4% → Z=0,016Ω → Icc = 400/(√3×0,016) =
  * 14 434A, exacto contra el ejemplo del documento.
  *
- * Reparto R/X: el documento NO da X/R de placa (dato que normalmente
- * viene de una tabla de fabricante aparte, no de %Z solo) — se trata
- * TODA la impedancia como reactancia pura (r=0, x=Z). Esto no cambia
- * el Icc en los BORNES del transformador (zTotal=√(r²+x²)=Z de
- * cualquier forma que se reparta) — pero si algún día se suma la
- * impedancia de un conductor aguas abajo, un reparto R/X real de placa
- * sí cambiaría el resultado y éste deja de ser válido: no inventar esa
- * repartición sin dato de fabricante.
+ * Reparto R/X: con `xr` (ver obtenerXRTransformador, tabla citada por
+ * tamaño/refrigeración) se reparte R y X de verdad — necesario en
+ * cuanto se suma la impedancia de un conductor aguas abajo (ahí sí
+ * importa el reparto, no solo la magnitud). Sin `xr` (parámetro
+ * opcional, compatibilidad hacia atrás), se trata TODA la impedancia
+ * como reactancia pura (r=0, x=Z) — válido SOLO para cortocircuito EN
+ * LOS BORNES (zTotal=√(r²+x²)=Z de cualquier forma que se reparta),
+ * inválido en cuanto se suma un conductor en serie sin el reparto real.
  *
  * Monofásico (usuario, 2026-11-21, documento "transformador
  * monofásico", fórmula verificada contra su ejemplo numérico: 50kVA/
@@ -166,10 +166,13 @@ export function calcularImpedanciaTransformadorOhm({
   capacidadKVA,
   tensionSecundariaV,
   impedanciaPct,
+  xr,
 }: {
   capacidadKVA: number | string;
   tensionSecundariaV: number | string;
   impedanciaPct: number | string;
+  /** X/R opcional (ver obtenerXRTransformador) — sin esto, reparto degenerado r=0/x=Z (ver nota de la función). */
+  xr?: number | null;
 }): ResultadoImpedanciaTransformador {
   const kva = Number(capacidadKVA);
   const v = Number(tensionSecundariaV);
@@ -181,5 +184,98 @@ export function calcularImpedanciaTransformadorOhm({
     return { disponible: false, motivo: "Falta el %Z de placa del transformador." };
   }
   const zOhm = (z / 100) * (v * v) / (kva * 1000);
+  if (xr != null && xr > 0) {
+    // Z = √(R²+X²), X/R = xr  =>  R = Z/√(1+xr²), X = R×xr
+    const r = zOhm / Math.sqrt(1 + xr * xr);
+    const x = r * xr;
+    return { disponible: true, impedancia: { r, x } };
+  }
   return { disponible: true, impedancia: { r: 0, x: zOhm } };
+}
+
+export type TipoRefrigeracionTransformador = "aceite" | "seco";
+
+/**
+ * X/R por tamaño de transformador de DISTRIBUCIÓN (≤1MVA) — usuario,
+ * 2026-11-21, documento "tabla completa X/R aceite/seco" (fuente
+ * citada: GE/ABB standard design, vía Industrial Monitor Direct).
+ * Determina la decadencia del offset DC del cortocircuito (IEEE 141
+ * Fig.4A / IEEE 399 Fig.153) — necesario para repartir |Z| (ya
+ * conocida del %Z, ver calcularImpedanciaTransformadorOhm) en R y X
+ * por separado cuando se SUMA la impedancia de un conductor aguas
+ * abajo (en los bornes solos el reparto no cambia el resultado).
+ *
+ * Discrepancia encontrada entre los 2 documentos del usuario, 750kVA
+ * aceite: el documento "tabla de X/R por tamaño de transformador"
+ * (el primero) da X/R=6.0; el documento "tabla completa X/R
+ * aceite/seco" (el segundo, más explícito en separar ambos tipos) da
+ * X/R=5.5. Se usa 5.5 acá — PENDIENTE de que el usuario confirme cuál
+ * es la correcta si llega a importar en un proyecto real con un
+ * transformador de 750kVA.
+ *
+ * Fuera de rango (<75 o >1000 kVA): no disponible a propósito — la
+ * tabla de transformadores de POTENCIA (>1MVA) del mismo documento da
+ * rangos, no valores puntuales, y usa 2 fuentes que no coinciden entre
+ * sí (IEEE 141 vs ANSI/IEEE C37.010) — no se aplica acá.
+ */
+const TABLA_XR_DISTRIBUCION: Record<TipoRefrigeracionTransformador, Array<{ kva: number; xr: number }>> = {
+  aceite: [
+    { kva: 75, xr: 3.2 },
+    { kva: 150, xr: 3.8 },
+    { kva: 300, xr: 4.5 },
+    { kva: 500, xr: 5.2 },
+    { kva: 750, xr: 5.5 },
+    { kva: 1000, xr: 6.5 },
+  ],
+  seco: [
+    { kva: 75, xr: 2.8 },
+    { kva: 150, xr: 3.2 },
+    { kva: 300, xr: 3.8 },
+    { kva: 500, xr: 4.3 },
+    { kva: 750, xr: 4.8 },
+    { kva: 1000, xr: 5.5 },
+  ],
+};
+
+export type ResultadoXRTransformador = { disponible: false; motivo: string } | { disponible: true; xr: number; interpolado: boolean };
+
+/**
+ * X/R para un transformador de distribución dado — valor EXACTO de la
+ * tabla si el kVA coincide, interpolación LINEAL entre los 2 puntos
+ * citados más cercanos si no (nunca extrapolación fuera del rango
+ * citado — eso devuelve `disponible:false`).
+ */
+export function obtenerXRTransformador({
+  capacidadKVA,
+  tipoRefrigeracion,
+}: {
+  capacidadKVA: number | string;
+  tipoRefrigeracion: string;
+}): ResultadoXRTransformador {
+  const kva = Number(capacidadKVA);
+  if (!(kva > 0)) {
+    return { disponible: false, motivo: "Falta capacidad (kVA) del transformador." };
+  }
+  if (tipoRefrigeracion !== "aceite" && tipoRefrigeracion !== "seco") {
+    return { disponible: false, motivo: "Falta el tipo de refrigeración (aceite/seco) del transformador." };
+  }
+  const tabla = TABLA_XR_DISTRIBUCION[tipoRefrigeracion];
+  if (kva < tabla[0].kva || kva > tabla[tabla.length - 1].kva) {
+    return { disponible: false, motivo: `Capacidad fuera del rango de la tabla X/R citada (${tabla[0].kva}-${tabla[tabla.length - 1].kva} kVA).` };
+  }
+  const exacto = tabla.find((fila) => fila.kva === kva);
+  if (exacto) {
+    return { disponible: true, xr: exacto.xr, interpolado: false };
+  }
+  let inferior = tabla[0];
+  let superior = tabla[tabla.length - 1];
+  for (let i = 0; i < tabla.length - 1; i++) {
+    if (kva >= tabla[i].kva && kva <= tabla[i + 1].kva) {
+      inferior = tabla[i];
+      superior = tabla[i + 1];
+      break;
+    }
+  }
+  const fraccion = (kva - inferior.kva) / (superior.kva - inferior.kva);
+  return { disponible: true, xr: inferior.xr + fraccion * (superior.xr - inferior.xr), interpolado: true };
 }

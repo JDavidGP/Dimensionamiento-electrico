@@ -132,6 +132,37 @@ function BloqueAlimentador({ resultado }) {
   );
 }
 
+// Cortocircuito en los bornes de un tablero (TableroMediator.cortocircuitoDesdeTablero)
+// — usuario, 2026-11-21, documento "tabla completa X/R aceite/seco":
+// solo APLICA cuando la cadena ascendente de este tablero termina en
+// un transformador propio (el único origen con impedancia de fuente
+// conocida hoy) — para cualquier otro origen (acometida, batería,
+// generador) no se inventa un dato, el bloque simplemente no aparece.
+function BloqueCortocircuito({ resultado }) {
+  if (!resultado || !resultado.aplica) return null;
+
+  if (!resultado.ok) {
+    return (
+      <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.4 }}>
+        Cortocircuito (transformador propio) pendiente: {resultado.motivo}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontSize: 11.5, color: colores.textMain, lineHeight: 1.4 }}>
+      Icc en este tablero (vía transformador propio): <strong>{(resultado.iccA / 1000).toFixed(1)} kA</strong> — verificar que el
+      interruptor de este tablero tenga Icu ≥ ese valor.
+      {resultado.xrDisponible === false && (
+        <div style={{ color: colores.warn }}>
+          ⚠ Sin X/R de placa del transformador (falta tipo de refrigeración y/o capacidad fuera de la tabla citada) — este valor usa un
+          reparto R/X simplificado, menos preciso que con X/R real.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Asignación de línea(s) del alimentador de un SUBtablero respecto a
 // las líneas de su tablero PADRE (mismo concepto que circuito.lineas,
 // un nivel más arriba) — para que balance de fases pueda agregar la
@@ -569,6 +600,8 @@ function BloqueBalanceFases({ balance }) {
 // de qué tablero depende, sin construir el árbol completo.
 export default function PanelTableros({
   tableros,
+  circuitos = [],
+  resultados = [],
   circuitosDeTablero,
   circuitosSinTablero,
   alimentadores,
@@ -1325,6 +1358,10 @@ export default function PanelTableros({
                     {padre?.simultaneidadREBT?.activa && <SelectorGradoVivienda tablero={t} onEditarTablero={editarTablero} />}
 
                     <BloqueAlimentador resultado={alimentadores?.[t.id]} />
+
+                    <BloqueCortocircuito
+                      resultado={App.tablero.cortocircuitoDesdeTablero(t.id, { tableros, circuitos, resultados, normativaId: normativaActiva, fuentesEnergia, transformadores })}
+                    />
 
                     {padre && padre.fases !== "mono" && (
                       <SelectorLineasAlimentador tablero={t} padre={padre} onEditarTablero={editarTablero} />

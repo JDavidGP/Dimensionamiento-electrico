@@ -217,6 +217,8 @@ export default function App() {
               <div style={{ padding: "20px 24px", maxWidth: 640 }}>
                 <PanelTableros
                   tableros={tableros}
+                  circuitos={circuitos}
+                  resultados={resultadosParaTabla}
                   circuitosDeTablero={circuitosDeTablero}
                   circuitosSinTablero={circuitosSinTablero}
                   alimentadores={alimentadores}

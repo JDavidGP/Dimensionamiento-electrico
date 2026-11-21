@@ -18,6 +18,7 @@ export {
   calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
   calcularImpedanciaTransformadorOhm,
+  obtenerXRTransformador,
 } from "./cortocircuito.ts";
 export { seleccionarSeccion } from "./seleccionSeccion.ts";
 export { combinarResultadosCircuitos } from "./combinarResultadosCircuitos.ts";
@@ -73,4 +74,6 @@ export type {
   ResultadoCortocircuitoMonofasico,
   ResultadoCapacidadInterrupcion,
   ResultadoImpedanciaTransformador,
+  TipoRefrigeracionTransformador,
+  ResultadoXRTransformador,
 } from "./cortocircuito.ts";

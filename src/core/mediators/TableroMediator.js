@@ -48,6 +48,11 @@ import {
   potenciaMinimaGrado,
   GRADOS_ELECTRIFICACION,
   claseCircuitoREBT,
+  resistenciaOhmKm,
+  calcularImpedanciaTransformadorOhm,
+  obtenerXRTransformador,
+  calcularCortocircuitoTrifasico,
+  calcularCortocircuitoMonofasico,
 } from "../../modules/motor/index.ts";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
@@ -287,6 +292,110 @@ export const TableroMediator = {
       ok: true,
       ...evaluacion,
       cantidadTableros: cadena.length,
+    };
+  },
+
+  /**
+   * Cortocircuito (trifásico o monofásico, según el transformador) EN
+   * LOS BORNES de `tableroId`, recorriendo la misma cadena ascendente
+   * que caidaAcumuladaDesdeCircuito hasta encontrar un transformador
+   * propio — acumula la impedancia (R+jX) de CADA alimentador de la
+   * cadena (incluido el del propio tableroId) sumada a la del
+   * transformador mismo (%Z + X/R si está disponible, ver
+   * cortocircuito.ts), y calcula la Icc resultante.
+   *
+   * Usuario, 2026-11-21 ("necesito la tabla de X/R para seguir el
+   * cortocircuito más allá de los bornes del transformador" + tabla
+   * citada aportada): cierra parcialmente el "FUERA DE ALCANCE" de
+   * calcularAlimentadorAgregado/caidaTensionAcumulada.js — SOLO para
+   * el caso donde la cadena ascendente termina en un transformador
+   * propio (el único origen con impedancia de fuente conocida hoy).
+   * Acometida o fuente (batería/generador) siguen `aplica:false`, sin
+   * dato real de impedancia — mismo criterio que siempre, no se
+   * inventa una.
+   *
+   * Si el transformador no tiene %Z y/o X/R cargados, igual intenta:
+   * calcularImpedanciaTransformadorOhm cae a su reparto degenerado
+   * (r=0, x=Z) sin X/R — válido en los bornes, pero YA NO exacto en
+   * cuanto se suma la impedancia de un conductor (que es justo lo que
+   * hace esta función) — por eso el resultado trae `xrDisponible` para
+   * que el llamador avise de esa limitación en vez de mostrar un
+   * número con falsa precisión.
+   *
+   * Contrato de retorno:
+   *   { aplica: false }                                   — tableroId no existe,
+   *                                                           ciclo, o la cadena NO
+   *                                                           termina en un
+   *                                                           transformador propio
+   *   { aplica: true, ok: false, pendiente: true, motivo } — falta un tramo de la cadena
+   *   { aplica: true, ok: false, motivo }                  — falta dato de placa del
+   *                                                           transformador (capacidad,
+   *                                                           %Z, tensión)
+   *   { aplica: true, ok: true, iccA, xrDisponible,
+   *     xrInterpolado, cantidadTramos }
+   */
+  cortocircuitoDesdeTablero(tableroId, { tableros, circuitos, resultados, normativaId, fuentesEnergia, transformadores } = {}) {
+    const listaTableros = tableros ?? DataProvider.getTableros();
+    const listaFuentesEnergia = fuentesEnergia ?? DataProvider.getFuentesEnergia();
+    const listaTransformadores = transformadores ?? DataProvider.getTransformadores();
+
+    const { cadena, ciclo } = obtenerCadenaAscendente(tableroId, listaTableros);
+    if (ciclo || cadena.length === 0) {
+      return { aplica: false };
+    }
+
+    const ultimo = cadena[cadena.length - 1];
+    const origen = OrigenMediator.resolver(ultimo.tableroPadreId, listaTableros, listaFuentesEnergia, listaTransformadores);
+    if (origen?.tipo !== "transformador") {
+      return { aplica: false };
+    }
+    const transformador = origen.transformador;
+
+    const xrResultado = obtenerXRTransformador({ capacidadKVA: transformador.capacidadKVA, tipoRefrigeracion: transformador.tipoRefrigeracion });
+    const impedanciaTrafo = calcularImpedanciaTransformadorOhm({
+      capacidadKVA: transformador.capacidadKVA,
+      tensionSecundariaV: transformador.tensionSecundariaV,
+      impedanciaPct: transformador.impedanciaPct,
+      xr: xrResultado.disponible ? xrResultado.xr : null,
+    });
+    if (!impedanciaTrafo.disponible) {
+      return { aplica: true, ok: false, motivo: impedanciaTrafo.motivo };
+    }
+
+    const normativa = NormativaMediator.obtener(normativaId ?? DataProvider.getNormativaActivaId());
+    if (!normativa) {
+      return { aplica: true, ok: false, motivo: "Normativa activa no resuelta." };
+    }
+
+    let rConductor = 0;
+    let xConductor = 0;
+    for (const tablero of cadena) {
+      const alim = this.calcularAlimentadorAgregado(tablero.id, { tableros: listaTableros, circuitos, resultados, normativaId });
+      if (!alim.ok) {
+        if (alim.pendiente) {
+          return { aplica: true, ok: false, pendiente: true, motivo: `Tablero "${tablero.nombre}": ${alim.motivo}` };
+        }
+        return { aplica: true, ok: false, motivo: `Tablero "${tablero.nombre}" ya no cumple su propio límite de tramo: ${alim.error}` };
+      }
+      const longitudM = Number(tablero.longitudAlimentador);
+      const material = (tablero.materialAlimentador || "cobre").toLowerCase();
+      rConductor += resistenciaOhmKm(material, alim.areaMm2) * (longitudM / 1000);
+      xConductor += (normativa.reactanciaOhmKm[alim.seccion] ?? 0) * (longitudM / 1000);
+    }
+
+    const vSecundaria = Number(transformador.tensionSecundariaV);
+    const resultado =
+      transformador.fases === "tri"
+        ? calcularCortocircuitoTrifasico(vSecundaria, impedanciaTrafo.impedancia, rConductor, xConductor)
+        : calcularCortocircuitoMonofasico(vSecundaria, impedanciaTrafo.impedancia, rConductor, xConductor);
+
+    return {
+      aplica: true,
+      ok: true,
+      iccA: resultado.iccA,
+      xrDisponible: xrResultado.disponible,
+      xrInterpolado: xrResultado.disponible ? xrResultado.interpolado : null,
+      cantidadTramos: cadena.length,
     };
   },
 

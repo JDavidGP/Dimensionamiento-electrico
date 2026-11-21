@@ -28,10 +28,20 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // — ver proteccionTransformador.ts). Conexión Y/Δ sigue SIN campo acá
 // a propósito — ninguno de los cálculos conectados hasta ahora la
 // necesita.
-const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", impedanciaPct: "", notas: "" };
+// Tipo de refrigeración agregada después (usuario, 2026-11-21, docs "tabla de
+// X/R" + "tabla completa X/R aceite/seco"): habilita el reparto R/X real
+// de la impedancia del transformador (en vez del degenerado r=0/x=Z), que
+// hace falta para seguir el cortocircuito más allá de sus bornes (ver
+// TableroMediator.cortocircuitoDesdeTablero) — opcional, sin esto el
+// cortocircuito en bornes sigue funcionando igual que siempre.
+const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", impedanciaPct: "", tipoRefrigeracion: "", notas: "" };
 const FASES_TRANSFORMADOR = [
   { valor: "mono", label: "Mono" },
   { valor: "tri", label: "Tri" },
+];
+const TIPOS_REFRIGERACION = [
+  { valor: "aceite", label: "Aceite" },
+  { valor: "seco", label: "Seco" },
 ];
 
 function colorEstadoDe(entrada) {
@@ -72,6 +82,7 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
       tensionSecundariaV: t.tensionSecundariaV ? String(t.tensionSecundariaV) : "",
       capacidadKVA: t.capacidadKVA ? String(t.capacidadKVA) : "",
       impedanciaPct: t.impedanciaPct ? String(t.impedanciaPct) : "",
+      tipoRefrigeracion: t.tipoRefrigeracion || "",
       notas: t.notas || "",
     });
     setEditandoId(t.id);
@@ -185,6 +196,16 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
             </Campo>
           </div>
 
+          <Campo label="Tipo de refrigeración (opcional, para X/R)">
+            <div style={{ display: "flex", gap: 6 }}>
+              {TIPOS_REFRIGERACION.map((r) => (
+                <BotonPill key={r.valor} activo={form.tipoRefrigeracion === r.valor} onClick={() => setForm({ ...form, tipoRefrigeracion: r.valor === form.tipoRefrigeracion ? "" : r.valor })}>
+                  {r.label}
+                </BotonPill>
+              ))}
+            </div>
+          </Campo>
+
           <Campo label="Notas (opcional)">
             <input
               style={inputStyle()}
@@ -195,8 +216,10 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
           </Campo>
 
           <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, margin: "-4px 0 12px" }}>
-            Conexión Y/Δ todavía no tiene campo acá — ningún cálculo conectado hasta ahora la necesita. %Z solo habilita el cortocircuito
-            en los bornes para transformador trifásico (ver abajo).
+            Conexión Y/Δ todavía no tiene campo acá — ningún cálculo conectado hasta ahora la necesita. %Z habilita el cortocircuito en
+            los bornes (mono o tri). Tipo de refrigeración es opcional: sin él, igual se calcula el cortocircuito (reparto R/X
+            simplificado); con él, el cortocircuito más allá de los bornes (en un tablero alimentado por este transformador) usa el
+            reparto R/X real de la tabla citada, válido para 75–1000 kVA.
           </div>
 
           <div style={{ display: "flex", gap: 6 }}>

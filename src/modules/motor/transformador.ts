@@ -35,8 +35,10 @@ export interface Transformador {
   tensionSecundariaV: number | string;
   conexionPrimaria: string;
   conexionSecundaria: string;
-  /** %Z de placa — pendiente de uso (ver cortocircuito.js) */
+  /** %Z de placa — usado en cortocircuito.ts (calcularImpedanciaTransformadorOhm) */
   impedanciaPct: number | string;
+  /** "aceite" | "seco" | "" — para buscar X/R en la tabla de cortocircuito.ts (obtenerXRTransformador). "" = sin asignar, el cortocircuito en bornes sigue funcionando igual (ver nota de esa función). */
+  tipoRefrigeracion: "aceite" | "seco" | "";
   notas: string;
 }
 
@@ -48,7 +50,8 @@ export const TRANSFORMADOR_VACIO: Omit<Transformador, "id"> = {
   tensionSecundariaV: "",
   conexionPrimaria: "",
   conexionSecundaria: "",
-  impedanciaPct: "", // %Z de placa — pendiente de uso (ver cortocircuito.js)
+  impedanciaPct: "", // %Z de placa
+  tipoRefrigeracion: "", // "aceite" | "seco" | "" — ver obtenerXRTransformador en cortocircuito.ts
   notas: "",
 };
 
