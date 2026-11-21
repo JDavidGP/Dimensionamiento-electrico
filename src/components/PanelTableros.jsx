@@ -83,7 +83,7 @@ export function BotonPill({ activo, onClick, children, flex = 1 }) {
         borderRadius: 3,
         border: `1px solid ${activo ? colores.copper : colores.border}`,
         background: activo ? colores.copper : "transparent",
-        color: activo ? "#171512" : colores.textDim,
+        color: activo ? colores.textSobreAcento : colores.textDim,
         fontWeight: 600,
         fontSize: 12,
         cursor: "pointer",
@@ -216,7 +216,7 @@ function SelectorLineasAlimentador({ tablero, padre, onEditarTablero }) {
               borderRadius: 3,
               border: `1px solid ${seleccionada ? colores.copper : colores.border}`,
               background: seleccionada ? colores.copper : "transparent",
-              color: seleccionada ? "#171512" : alcanzoMaximoSinEstaSeleccionada ? colores.border : colores.textDim,
+              color: seleccionada ? colores.textSobreAcento : alcanzoMaximoSinEstaSeleccionada ? colores.border : colores.textDim,
               fontWeight: 600,
               fontSize: 11,
               cursor: alcanzoMaximoSinEstaSeleccionada ? "not-allowed" : "pointer",
@@ -482,7 +482,7 @@ function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }) {
         <button
           type="button"
           onClick={guardar}
-          style={{ flex: 1, padding: "6px 0", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+          style={{ flex: 1, padding: "6px 0", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
         >
           Guardar
         </button>
@@ -584,8 +584,8 @@ function BloqueBalanceFases({ balance }) {
           style={{
             fontSize: 11,
             color: colores.textDim,
-            background: `${colores.error}14`,
-            border: `1px solid ${colores.error}44`,
+            background: colores.errorFondo,
+            border: `1px solid ${colores.errorBorde}`,
             borderRadius: 4,
             padding: 8,
             marginTop: 4,
@@ -839,7 +839,7 @@ export default function PanelTableros({
         {!formAbierto && (
           <button
             onClick={abrirCreacion}
-            style={{ padding: "4px 10px", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+            style={{ padding: "4px 10px", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
           >
             + Nuevo tablero
           </button>
@@ -1015,7 +1015,7 @@ export default function PanelTableros({
                             borderRadius: 3,
                             border: "none",
                             background: formFuente.nombre.trim() ? colores.copper : colores.border,
-                            color: formFuente.nombre.trim() ? "#171512" : colores.textDim,
+                            color: formFuente.nombre.trim() ? colores.textSobreAcento : colores.textDim,
                             fontWeight: 700,
                             fontSize: 11.5,
                             cursor: formFuente.nombre.trim() ? "pointer" : "not-allowed",
@@ -1100,7 +1100,7 @@ export default function PanelTableros({
                             borderRadius: 3,
                             border: "none",
                             background: formTransformador.nombre.trim() ? colores.copper : colores.border,
-                            color: formTransformador.nombre.trim() ? "#171512" : colores.textDim,
+                            color: formTransformador.nombre.trim() ? colores.textSobreAcento : colores.textDim,
                             fontWeight: 700,
                             fontSize: 11.5,
                             cursor: formTransformador.nombre.trim() ? "pointer" : "not-allowed",
@@ -1249,7 +1249,7 @@ export default function PanelTableros({
                 borderRadius: 3,
                 border: "none",
                 background: form.nombre.trim() ? colores.copper : colores.border,
-                color: form.nombre.trim() ? "#171512" : colores.textDim,
+                color: form.nombre.trim() ? colores.textSobreAcento : colores.textDim,
                 fontWeight: 700,
                 fontSize: 13,
                 cursor: form.nombre.trim() ? "pointer" : "not-allowed",
@@ -1319,7 +1319,7 @@ export default function PanelTableros({
                     alignItems: "center",
                     gap: 10,
                     cursor: "pointer",
-                    background: activo ? `${colores.copper}14` : "transparent",
+                    background: activo ? colores.copperFondo : "transparent",
                   }}
                 >
                   <span style={{ color: colores.textDim, fontSize: 11, width: 12, textAlign: "center" }}>{activo ? "▾" : "▸"}</span>

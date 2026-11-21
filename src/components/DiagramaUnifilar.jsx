@@ -221,7 +221,7 @@ export default function DiagramaUnifilar({
         borderRadius: 3,
         border: `1px solid ${modo === valor ? colores.copper : colores.border}`,
         background: modo === valor ? colores.copper : "transparent",
-        color: modo === valor ? "#171512" : colores.textDim,
+        color: modo === valor ? colores.textSobreAcento : colores.textDim,
         fontWeight: 600,
         fontSize: 11.5,
         cursor: "pointer",
@@ -281,7 +281,7 @@ export default function DiagramaUnifilar({
         <button
           type="button"
           onClick={agregarNodo}
-          style={{ padding: "6px 10px", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 12, cursor: "pointer" }}
+          style={{ padding: "6px 10px", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 12, cursor: "pointer" }}
         >
           + Agregar
         </button>
@@ -370,7 +370,7 @@ export default function DiagramaUnifilar({
                   editarNodoDiagrama(nodo.id, { entidadId: entidadEdicion || null });
                   setNodoVinculando(null);
                 }}
-                style={{ padding: "5px 10px", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+                style={{ padding: "5px 10px", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
               >
                 Guardar
               </button>
@@ -386,7 +386,7 @@ export default function DiagramaUnifilar({
         })()}
 
       {aviso && (
-        <div style={{ fontSize: 11.5, color: colores.error, background: `${colores.error}14`, border: `1px solid ${colores.error}44`, borderRadius: 3, padding: "6px 8px", marginBottom: 8 }}>
+        <div style={{ fontSize: 11.5, color: colores.error, background: colores.errorFondo, border: `1px solid ${colores.errorBorde}`, borderRadius: 3, padding: "6px 8px", marginBottom: 8 }}>
           ⚠ {aviso}
         </div>
       )}

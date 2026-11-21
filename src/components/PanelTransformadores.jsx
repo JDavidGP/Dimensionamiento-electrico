@@ -122,7 +122,7 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
         {!formAbierto && (
           <button
             onClick={abrirCreacion}
-            style={{ padding: "4px 10px", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+            style={{ padding: "4px 10px", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
           >
             + Nuevo transformador
           </button>
@@ -232,7 +232,7 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
                 borderRadius: 3,
                 border: "none",
                 background: form.nombre.trim() ? colores.copper : colores.border,
-                color: form.nombre.trim() ? "#171512" : colores.textDim,
+                color: form.nombre.trim() ? colores.textSobreAcento : colores.textDim,
                 fontWeight: 700,
                 fontSize: 12.5,
                 cursor: form.nombre.trim() ? "pointer" : "not-allowed",
@@ -274,7 +274,7 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
                     alignItems: "center",
                     gap: 10,
                     cursor: "pointer",
-                    background: activo ? `${colores.copper}14` : "transparent",
+                    background: activo ? colores.copperFondo : "transparent",
                   }}
                 >
                   <span style={{ color: colores.textDim, fontSize: 11, width: 12, textAlign: "center" }}>{activo ? "▾" : "▸"}</span>

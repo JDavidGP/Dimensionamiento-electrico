@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { colores } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { TIPOS_FUENTE_UI } from "./PanelTableros";
 import { ContenidoSvgDiagrama, cajaEnvolvente, PALETA_IMPRESION } from "./DiagramaSvgContenido.jsx";
@@ -123,7 +124,7 @@ export default function InformeTecnico({
         <button
           type="button"
           onClick={() => window.print()}
-          style={{ padding: "8px 16px", borderRadius: 3, border: "none", background: "#C9793D", color: "#171512", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+          style={{ padding: "8px 16px", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
         >
           🖨 Imprimir / Guardar como PDF
         </button>

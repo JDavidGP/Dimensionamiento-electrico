@@ -697,7 +697,7 @@ export default function PlanoInteligente({
                     borderRadius: 3,
                     border: "none",
                     background: distancia1TriangulacionInput && distancia2TriangulacionInput ? colores.copper : colores.border,
-                    color: "#171512",
+                    color: distancia1TriangulacionInput && distancia2TriangulacionInput ? colores.textSobreAcento : colores.textDim,
                     fontWeight: 700,
                     fontSize: 12.5,
                     cursor: distancia1TriangulacionInput && distancia2TriangulacionInput ? "pointer" : "not-allowed",
@@ -836,7 +836,7 @@ export default function PlanoInteligente({
                 borderRadius: 3,
                 border: "none",
                 background: anchoRealInput && altoRealInput && !corrigiendoPerspectiva ? colores.copper : colores.border,
-                color: "#171512",
+                color: anchoRealInput && altoRealInput && !corrigiendoPerspectiva ? colores.textSobreAcento : colores.textDim,
                 fontWeight: 700,
                 fontSize: 12.5,
                 cursor: anchoRealInput && altoRealInput && !corrigiendoPerspectiva ? "pointer" : "not-allowed",
@@ -871,7 +871,7 @@ export default function PlanoInteligente({
             <button
               type="submit"
               disabled={!distanciaRealInput}
-              style={{ padding: "8px 16px", borderRadius: 3, border: "none", background: distanciaRealInput ? colores.copper : colores.border, color: "#171512", fontWeight: 700, fontSize: 12.5, cursor: distanciaRealInput ? "pointer" : "not-allowed" }}
+              style={{ padding: "8px 16px", borderRadius: 3, border: "none", background: distanciaRealInput ? colores.copper : colores.border, color: distanciaRealInput ? colores.textSobreAcento : colores.textDim, fontWeight: 700, fontSize: 12.5, cursor: distanciaRealInput ? "pointer" : "not-allowed" }}
             >
               Calibrar
             </button>
@@ -908,7 +908,7 @@ export default function PlanoInteligente({
                 <button
                   type="submit"
                   disabled={!perimetroRealInput}
-                  style={{ padding: "8px 16px", borderRadius: 3, border: "none", background: perimetroRealInput ? colores.copper : colores.border, color: "#171512", fontWeight: 700, fontSize: 12.5, cursor: perimetroRealInput ? "pointer" : "not-allowed" }}
+                  style={{ padding: "8px 16px", borderRadius: 3, border: "none", background: perimetroRealInput ? colores.copper : colores.border, color: perimetroRealInput ? colores.textSobreAcento : colores.textDim, fontWeight: 700, fontSize: 12.5, cursor: perimetroRealInput ? "pointer" : "not-allowed" }}
                 >
                   Calibrar
                 </button>

@@ -14,7 +14,7 @@ export default function BarraProyecto({ proyecto, setProyecto, avisoArchivo, onG
       <button
         onClick={onGuardar}
         title="Guarda una ficha en PDF con los datos completos del proyecto incrustados — abrila de vuelta en 'Abrir' para seguir trabajando."
-        style={{ padding: "8px 14px", background: colores.copper, color: "#171512", border: "none", borderRadius: 3, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+        style={{ padding: "8px 14px", background: colores.copper, color: colores.textSobreAcento, border: "none", borderRadius: 3, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
       >
         ↓ Guardar (.pdf)
       </button>

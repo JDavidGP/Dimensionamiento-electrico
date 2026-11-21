@@ -113,16 +113,16 @@ assert(matchTotal, `Se encuentra la longitud total en el texto (real: '${textoRu
 await page.screenshot({ path: DIR + "tmp/plano_cruce_paredes.png", fullPage: true });
 
 // --- 6. Toggle de capas: ocultar "Paredes" quita la línea verde de la pared del lienzo, sin afectar la del conductor ---
-const lineasParedAntes = await svgPlano.locator('line[stroke="#7FA66B"]').count();
-assert(lineasParedAntes >= 1, `Antes de ocultar, la línea de la pared (verde, #7FA66B) está en el lienzo (real: ${lineasParedAntes})`);
-const lineasConductorAntes = await svgPlano.locator('line[stroke="#C9793D"]').count();
-assert(lineasConductorAntes >= 1, `La línea del conductor (cobre, #C9793D) también está (real: ${lineasConductorAntes})`);
+const lineasParedAntes = await svgPlano.locator('line[stroke="var(--ok)"]').count();
+assert(lineasParedAntes >= 1, `Antes de ocultar, la línea de la pared (verde, var(--ok)) está en el lienzo (real: ${lineasParedAntes})`);
+const lineasConductorAntes = await svgPlano.locator('line[stroke="var(--copper)"]').count();
+assert(lineasConductorAntes >= 1, `La línea del conductor (cobre, var(--copper)) también está (real: ${lineasConductorAntes})`);
 
 await panelPlano.locator("label", { hasText: "Paredes" }).locator('input[type="checkbox"]').uncheck();
 await page.waitForTimeout(150);
-const lineasParedDespues = await svgPlano.locator('line[stroke="#7FA66B"]').count();
+const lineasParedDespues = await svgPlano.locator('line[stroke="var(--ok)"]').count();
 assert(lineasParedDespues === 0, `Al desmarcar "Paredes", la línea verde desaparece del lienzo (real: ${lineasParedDespues})`);
-const lineasConductorDespues = await svgPlano.locator('line[stroke="#C9793D"]').count();
+const lineasConductorDespues = await svgPlano.locator('line[stroke="var(--copper)"]').count();
 assert(lineasConductorDespues === lineasConductorAntes, "El conductor sigue visible — el toggle de paredes no lo afecta");
 
 await page.screenshot({ path: DIR + "tmp/plano_capas_ocultas.png", fullPage: true });

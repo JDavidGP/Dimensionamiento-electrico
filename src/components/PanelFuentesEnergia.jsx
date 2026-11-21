@@ -148,7 +148,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
               borderRadius: 3,
               border: "none",
               background: formCrear.nombre.trim() ? colores.copper : colores.border,
-              color: formCrear.nombre.trim() ? "#171512" : colores.textDim,
+              color: formCrear.nombre.trim() ? colores.textSobreAcento : colores.textDim,
               fontWeight: 700,
               fontSize: 12.5,
               cursor: formCrear.nombre.trim() ? "pointer" : "not-allowed",
@@ -187,7 +187,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
                       alignItems: "center",
                       gap: 10,
                       cursor: "pointer",
-                      background: activa ? `${colores.copper}14` : "transparent",
+                      background: activa ? colores.copperFondo : "transparent",
                     }}
                   >
                     <span style={{ color: colores.textDim, fontSize: 11, width: 12, textAlign: "center" }}>{activa ? "▾" : "▸"}</span>
@@ -341,7 +341,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
 
                       <button
                         type="submit"
-                        style={{ padding: "8px 0", borderRadius: 3, border: "none", background: colores.copper, color: "#171512", fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}
+                        style={{ padding: "8px 0", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}
                       >
                         Guardar cambios
                       </button>

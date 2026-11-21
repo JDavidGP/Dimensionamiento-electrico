@@ -31,7 +31,7 @@ export default function SubTabs({ paneles, activo, onCambiar }) {
               borderRadius: 3,
               border: `1px solid ${i === activo ? colores.copper : colores.border}`,
               background: i === activo ? colores.copper : "transparent",
-              color: i === activo ? "#171512" : colores.textDim,
+              color: i === activo ? colores.textSobreAcento : colores.textDim,
               fontWeight: 700,
               fontSize: 12.5,
               cursor: "pointer",

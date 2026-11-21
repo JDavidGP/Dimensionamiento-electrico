@@ -94,7 +94,7 @@ export default function ImportarEquiposTexto({ onPrevisualizar, onConfirmar }) {
                 borderRadius: 3,
                 border: "none",
                 background: texto.trim() ? colores.copper : colores.border,
-                color: texto.trim() ? "#171512" : colores.textDim,
+                color: texto.trim() ? colores.textSobreAcento : colores.textDim,
                 fontWeight: 700,
                 fontSize: 12,
                 cursor: texto.trim() ? "pointer" : "not-allowed",
@@ -134,7 +134,7 @@ export default function ImportarEquiposTexto({ onPrevisualizar, onConfirmar }) {
                     fontSize: 11.5,
                     padding: "4px 8px",
                     borderRadius: 3,
-                    background: f.ok ? `${colores.ok}14` : `${colores.error}14`,
+                    background: f.ok ? colores.okFondo : colores.errorFondo,
                     border: `1px solid ${f.ok ? colores.ok : colores.error}44`,
                   }}
                 >

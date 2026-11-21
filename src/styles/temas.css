@@ -1,0 +1,90 @@
+/* Temas de color — usuario, 2026-11-20 ("quiero experimentar con lo
+ * visual") + 2026-11-22 ("cambia el tema a los que yo sugerí"): las 2
+ * paletas que propuso, antes guardadas como "ideas futuras" (ver
+ * README), ahora implementadas como los 2 temas reales de la app
+ * (reemplazan la paleta copper/oscuro de siempre) con el mismo
+ * mecanismo ya probado en el artifact de vista previa que armé para
+ * mostrárselas: data-tema="claro"|"musgo" en <html>, con el sistema
+ * (prefers-color-scheme) como default si nunca se tocó el selector —
+ * ver ToggleTema.jsx para el control y la persistencia.
+ *
+ * `colores.js` (src/styles/colores.js) exporta REFERENCIAS a estas
+ * variables (`"var(--bg)"`, etc.), no valores fijos — así cambiar de
+ * tema repinta toda la app al instante, sin que ningún componente
+ * necesite saber que el tema cambió. Confirmado que `var(--x)`
+ * resuelve bien incluso como atributo SVG plano (`fill="var(--ok)"`),
+ * no solo en `style={{}}` — los símbolos del diagrama/plano usan ESE
+ * patrón en casi todos lados.
+ *
+ * `--copper-dim` y los 4 tonos "-a14"/"-a44" (fondos/bordes
+ * semitransparentes de aviso, antes `${colores.error}14` armado a
+ * mano en JS concatenando un sufijo de alpha en hex) no vinieron en
+ * la propuesta original del usuario — son los únicos valores
+ * derivados por mí, nunca inventados a partir de normativa ni nada
+ * medible, así que no hace falta cita: son elección visual.
+ *
+ * Nota pendiente de resolver si surge feedback real (ya señalada
+ * antes de implementar, el usuario vio la vista previa y aprobó igual):
+ * el acento `#6c4b6c` es débil como color de TEXTO chico, sobre todo
+ * en "musgo" (acento apagado sobre fondo apagado) — anotado en el
+ * README, no se le tocó el valor sin que el usuario lo pida.
+ */
+
+:root,
+:root[data-tema="musgo"] {
+  --bg: #222a3f;
+  --panel: #2d3741;
+  --border: #46515c;
+  --copper: #6c4b6c;
+  --copper-dim: #4a3a4d;
+  --text-main: #eff6f2;
+  --text-dim: #bfc7c3;
+  --ok: #5bba2c;
+  --warn: #ba572c;
+  --error: #b5303b;
+  --copper-a14: #6c4b6c24;
+  --error-a14: #b5303b24;
+  --error-a44: #b5303b70;
+  --ok-a14: #5bba2c24;
+}
+
+:root[data-tema="claro"] {
+  --bg: #eff6f2;
+  --panel: #ffffff;
+  --border: #cbd5d8;
+  --copper: #6c4b6c;
+  --copper-dim: #9b86a0;
+  --text-main: #2d3741;
+  --text-dim: #64717a;
+  --ok: #5bba2c;
+  --warn: #ba572c;
+  --error: #b5303b;
+  --copper-a14: #6c4b6c24;
+  --error-a14: #b5303b24;
+  --error-a44: #b5303b70;
+  --ok-a14: #5bba2c24;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema]) {
+    --bg: #eff6f2;
+    --panel: #ffffff;
+    --border: #cbd5d8;
+    --copper: #6c4b6c;
+    --copper-dim: #9b86a0;
+    --text-main: #2d3741;
+    --text-dim: #64717a;
+    --ok: #5bba2c;
+    --warn: #ba572c;
+    --error: #b5303b;
+    --copper-a14: #6c4b6c24;
+    --error-a14: #b5303b24;
+    --error-a44: #b5303b70;
+    --ok-a14: #5bba2c24;
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-main);
+}

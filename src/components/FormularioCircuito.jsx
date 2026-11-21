@@ -20,7 +20,7 @@ function BotonPill({ activo, onClick, children, flex = 1 }) {
         borderRadius: 3,
         border: `1px solid ${activo ? colores.copper : colores.border}`,
         background: activo ? colores.copper : "transparent",
-        color: activo ? "#171512" : colores.textDim,
+        color: activo ? colores.textSobreAcento : colores.textDim,
         fontWeight: 600,
         fontSize: 13,
         cursor: "pointer",
@@ -167,7 +167,7 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
       <div style={{ display: "flex", gap: 8 }}>
         <button
           onClick={onGuardar}
-          style={{ flex: 1, padding: "10px 0", background: colores.copper, color: "#171512", border: "none", borderRadius: 3, fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+          style={{ flex: 1, padding: "10px 0", background: colores.copper, color: colores.textSobreAcento, border: "none", borderRadius: 3, fontWeight: 700, fontSize: 14, cursor: "pointer" }}
         >
           {editando ? "Guardar cambios" : "+ Crear circuito"}
         </button>

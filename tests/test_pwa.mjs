@@ -35,7 +35,7 @@ for (const icono of manifest.icons) {
 
 // --- 3. theme-color presente (barra de estado del celular con el color de la app) ---
 const themeColor = await page.locator('meta[name="theme-color"]').getAttribute("content");
-assert(themeColor === "#171512", `meta theme-color coincide con el fondo de la app (real: ${themeColor})`);
+assert(themeColor === "#222a3f", `meta theme-color coincide con el fondo del tema oscuro por defecto (real: ${themeColor})`);
 
 // --- 4. Service worker se registra y queda "ready" ---
 const swListo = await page.evaluate(async () => {

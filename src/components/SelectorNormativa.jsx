@@ -26,7 +26,7 @@ const estiloBotonPrincipal = (activo) => ({
   borderRadius: 3,
   border: `1px solid ${activo ? colores.copper : colores.border}`,
   background: activo ? colores.copper : "transparent",
-  color: activo ? "#171512" : colores.textMain,
+  color: activo ? colores.textSobreAcento : colores.textMain,
   fontWeight: 700,
   fontSize: 12,
   cursor: "pointer",
@@ -206,7 +206,7 @@ export default function SelectorNormativa({ normativaActiva, setNormativaActiva,
             flex: "0 0 90px",
             textAlign: "center",
             background: hayCambioPendiente ? colores.warn : colores.border,
-            color: hayCambioPendiente ? "#171512" : colores.textDim,
+            color: hayCambioPendiente ? colores.textSobreAcento : colores.textDim,
             border: `1px solid ${hayCambioPendiente ? colores.warn : colores.border}`,
             cursor: hayCambioPendiente ? "pointer" : "default",
           }}
@@ -264,7 +264,7 @@ export default function SelectorNormativa({ normativaActiva, setNormativaActiva,
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button
-              style={{ flex: 1, padding: "6px 0", borderRadius: 3, border: "none", background: colores.warn, color: "#171512", fontWeight: 700, fontSize: 12, cursor: "pointer" }}
+              style={{ flex: 1, padding: "6px 0", borderRadius: 3, border: "none", background: colores.warn, color: colores.textSobreAcento, fontWeight: 700, fontSize: 12, cursor: "pointer" }}
               onClick={confirmarCambio}
             >
               Continuar y recalcular

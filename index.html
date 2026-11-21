@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#171512" />
+    <meta name="theme-color" content="#222a3f" />
+    <script>
+      // Aplica el tema guardado ANTES de que se pinte nada, para no
+      // mostrar un parpadeo del tema equivocado — ver ToggleTema.jsx
+      // (guarda/lee la misma clave). Sin preferencia guardada, no se
+      // toca nada acá: cae al prefers-color-scheme del sistema vía CSS
+      // (src/styles/temas.css).
+      try {
+        var t = localStorage.getItem("dec-tema");
+        if (t === "claro" || t === "musgo") document.documentElement.setAttribute("data-tema", t);
+      } catch (e) {}
+    </script>
     <meta name="description" content="Calculadora de dimensionamiento eléctrico — circuitos, tableros, diagrama unifilar y plano, bajo NEC/CIEN/REBT." />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -11,7 +22,7 @@
     <meta name="apple-mobile-web-app-title" content="DEC" />
     <title>Dimensionamiento Eléctrico Completo (DEC)</title>
   </head>
-  <body style="margin:0;background:#171512;">
+  <body style="margin:0;background:#222a3f;">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

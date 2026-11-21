@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
+import ToggleTema from "./ToggleTema";
 
 /**
  * Menú de 3 puntos (⋮) en la esquina superior: Ajustes, Ayuda, y acceso
@@ -147,6 +148,8 @@ function PanelAjustes({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct })
   const parrafo = { color: colores.textDim, fontSize: 12.5, lineHeight: 1.5, margin: "0 0 12px 0" };
   return (
     <div>
+      <ToggleTema />
+      <div style={{ borderTop: `1px solid ${colores.border}`, margin: "4px 0 16px 0" }} />
       <label style={{ display: "block", fontSize: 13, color: colores.textMain, marginBottom: 6 }}>
         Umbral de desbalance de fases (%)
       </label>

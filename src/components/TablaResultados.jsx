@@ -73,7 +73,7 @@ function SelectorLineasCircuito({ circuito, tablero, onAsignarLineas }) {
               borderRadius: 3,
               border: `1px solid ${seleccionada ? colores.copper : colores.border}`,
               background: seleccionada ? colores.copper : "transparent",
-              color: seleccionada ? "#171512" : alcanzoMaximoSinEstaSeleccionada ? colores.border : colores.textDim,
+              color: seleccionada ? colores.textSobreAcento : alcanzoMaximoSinEstaSeleccionada ? colores.border : colores.textDim,
               fontWeight: 600,
               fontSize: 11,
               cursor: alcanzoMaximoSinEstaSeleccionada ? "not-allowed" : "pointer",
@@ -136,7 +136,7 @@ export default function TablaResultados({
             {/* Encabezado del circuito */}
             <div
               onClick={() => onSeleccionarCircuito(activo ? null : circuito.id)}
-              style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: activo ? `${colores.copper}14` : "transparent" }}
+              style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: activo ? colores.copperFondo : "transparent" }}
             >
               <span style={{ color: colores.textDim, fontSize: 11, width: 12, flexShrink: 0, textAlign: "center" }}>{activo ? "▾" : "▸"}</span>
               <div
