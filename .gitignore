@@ -29,3 +29,7 @@ pnpm-debug.log*
 
 # Local project save files (if your calculator exports test JSON projects locally)
 *.local.json
+
+# Salida generada por las pruebas (screenshots/descargas de tests/run-all.mjs)
+tests/tmp/*
+!tests/tmp/.gitkeep
