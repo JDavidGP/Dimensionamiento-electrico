@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+  <!-- IEC 60617: el fusible es un RECTÁNGULO simple — se corrigió acá
+       la versión anterior (rect con esquinas muy redondeadas, casi
+       una cápsula) que se parecía más a otra cosa. -->
+  <line x1="2" y1="16" x2="9" y2="16"/>
+  <rect x="9" y="9" width="14" height="14"/>
+  <line x1="23" y1="16" x2="30" y2="16"/>
+</svg>

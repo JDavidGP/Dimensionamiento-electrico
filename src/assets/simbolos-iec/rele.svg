@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+  <!-- IEC 60617: la bobina de un relé/contactor es un RECTÁNGULO
+       simple — se corrigió acá la versión anterior (zigzag dentro de
+       un rectángulo), que es la convención ANSI de un RESISTOR, no la
+       de una bobina en IEC. -->
+  <line x1="16" y1="2" x2="16" y2="8"/>
+  <rect x="7" y="8" width="18" height="16"/>
+  <line x1="16" y1="24" x2="16" y2="30"/>
+</svg>
