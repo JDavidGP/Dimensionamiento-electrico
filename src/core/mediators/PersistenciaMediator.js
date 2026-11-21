@@ -8,7 +8,7 @@ import {
   serializarProyecto,
   deserializarProyecto,
   nombreArchivo,
-} from "../../modules/persistencia/index.js";
+} from "../../modules/persistencia/index.ts";
 import { Logger } from "../services/Logger.js";
 import { Config } from "../services/Config.js";
 

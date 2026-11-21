@@ -8,4 +8,6 @@ export {
   serializarProyecto,
   deserializarProyecto,
   nombreArchivo,
-} from "./proyecto.js";
+} from "./proyecto.ts";
+
+export type { ProyectoMeta, PlanoProyecto, DatosSerializarProyecto, ProyectoSerializado } from "./tipos.ts";
