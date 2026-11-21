@@ -37,7 +37,15 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-      - run: npm ci
+      - name: npm ci (con reintentos — bug conocido de npm, "Exit handler never called!", ver tests.yml)
+        run: |
+          for intento in 1 2 3; do
+            npm ci --no-audit --no-fund && exit 0
+            echo "npm ci falló (intento $intento/3), reintentando..."
+            sleep 5
+          done
+          echo "npm ci falló los 3 intentos."
+          exit 1
       - run: npm run build
         env:
           GITHUB_PAGES: true

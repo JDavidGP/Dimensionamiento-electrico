@@ -22,7 +22,15 @@ jobs:
           node-version: "22"
           cache: "npm"
 
-      - run: npm ci
+      - name: npm ci (con reintentos — bug conocido de npm, "Exit handler never called!", ver https://github.com/npm/cli/issues, reproducido 4/4 veces en este runner antes de agregar esto)
+        run: |
+          for intento in 1 2 3; do
+            npm ci --no-audit --no-fund && exit 0
+            echo "npm ci falló (intento $intento/3), reintentando..."
+            sleep 5
+          done
+          echo "npm ci falló los 3 intentos."
+          exit 1
 
       - name: Instalar Chromium de Playwright
         run: npx playwright install --with-deps chromium
