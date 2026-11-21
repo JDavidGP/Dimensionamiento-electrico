@@ -30,7 +30,7 @@ import {
   MODOS_CONMUTACION,
   CONMUTACION_VACIA,
   normalizarConmutacion,
-} from "../../modules/origen/index.js";
+} from "../../modules/origen/index.ts";
 import {
   TRANSFORMADOR_VACIO,
   crearTransformador,

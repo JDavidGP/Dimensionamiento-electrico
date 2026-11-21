@@ -1,4 +1,4 @@
-// src/modules/origen/conmutacion.js
+// src/modules/origen/conmutacion.ts
 //
 // Esquema de conmutación entre fuentes de energía de UN tablero —
 // pedido explícito del usuario, confirmando las 3 fuentes ya
@@ -20,11 +20,10 @@
 //
 // Módulo puro — se usa a través de OrigenMediator.
 
-export const MODOS_CONMUTACION = {
-  FALLA_AUTOMATICA: "falla_automatica", // ej. generador diesel que arranca solo ante un corte de red
-  HORARIO: "horario", // ej. red de día, batería de noche (o al revés)
-  MANUAL: "manual", // alguien mueve un interruptor/transferencia a mano
-};
+import { MODOS_CONMUTACION } from "./tipos.ts";
+import type { Conmutacion, DatosConmutacion } from "./tipos.ts";
+
+export { MODOS_CONMUTACION };
 
 // "" en fuenteSecundariaId/fuenteAuxiliarId = no aplica (esquema de 1
 // o 2 fuentes, no 3). fuentePrincipalId SIEMPRE tiene un valor — por
@@ -33,7 +32,7 @@ export const MODOS_CONMUTACION = {
 // es la fuente de partida. Un id real (UUID) en cualquiera de los tres
 // campos referencia una fuente de shared/data... modules/origen/
 // fuentesEnergia.js (Batería/Generador).
-export const CONMUTACION_VACIA = {
+export const CONMUTACION_VACIA: Conmutacion = {
   activa: false,
   modo: MODOS_CONMUTACION.FALLA_AUTOMATICA,
   fuentePrincipalId: "acometida",
@@ -49,10 +48,10 @@ export const CONMUTACION_VACIA = {
  * normalizar() en modules/tablero/index.js: no inventa valores,
  * rellena defaults seguros ante datos faltantes o inválidos.
  */
-export function normalizarConmutacion(datos = {}) {
+export function normalizarConmutacion(datos: DatosConmutacion = {}): Conmutacion {
   return {
     activa: !!datos.activa,
-    modo: Object.values(MODOS_CONMUTACION).includes(datos.modo) ? datos.modo : MODOS_CONMUTACION.FALLA_AUTOMATICA,
+    modo: (Object.values(MODOS_CONMUTACION) as string[]).includes(datos.modo as string) ? (datos.modo as Conmutacion["modo"]) : MODOS_CONMUTACION.FALLA_AUTOMATICA,
     fuentePrincipalId: datos.fuentePrincipalId || "acometida",
     fuenteSecundariaId: datos.fuenteSecundariaId || "",
     fuenteAuxiliarId: datos.fuenteAuxiliarId || "",

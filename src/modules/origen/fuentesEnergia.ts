@@ -1,4 +1,4 @@
-// src/modules/origen/fuentesEnergia.js
+// src/modules/origen/fuentesEnergia.ts
 //
 // Fuente de energía — Batería (banco de baterías) o Generador (ej.
 // diesel) — como origen alternativo de un tablero, además de otro
@@ -71,20 +71,12 @@
 // modules/tablero/index.js con TableroMediator.
 
 import { generarId } from "../../shared/utils/id.js";
+import { TIPOS_FUENTE_ENERGIA, ROLES_FUENTE } from "./tipos.ts";
+import type { FuenteEnergia, DatosFuenteEnergia, TableroConPadre } from "./tipos.ts";
 
-export const TIPOS_FUENTE_ENERGIA = {
-  RED_LOCAL: "red_local",
-  BATERIA: "bateria",
-  GENERADOR: "generador",
-};
+export { TIPOS_FUENTE_ENERGIA, ROLES_FUENTE };
 
-export const ROLES_FUENTE = {
-  PRINCIPAL: "principal",
-  SECUNDARIA: "secundaria",
-  AUXILIAR: "auxiliar",
-};
-
-export const FUENTE_ENERGIA_VACIA = {
+export const FUENTE_ENERGIA_VACIA: Omit<FuenteEnergia, "id"> = {
   nombre: "",
   tipo: TIPOS_FUENTE_ENERGIA.RED_LOCAL,
   rol: "",
@@ -96,11 +88,11 @@ export const FUENTE_ENERGIA_VACIA = {
   notas: "",
 };
 
-function normalizar(datos = {}) {
+function normalizar(datos: DatosFuenteEnergia = {}): Omit<FuenteEnergia, "id"> {
   return {
     nombre: datos.nombre?.trim() || "Fuente sin nombre",
-    tipo: Object.values(TIPOS_FUENTE_ENERGIA).includes(datos.tipo) ? datos.tipo : TIPOS_FUENTE_ENERGIA.BATERIA,
-    rol: Object.values(ROLES_FUENTE).includes(datos.rol) ? datos.rol : "",
+    tipo: (Object.values(TIPOS_FUENTE_ENERGIA) as string[]).includes(datos.tipo as string) ? (datos.tipo as FuenteEnergia["tipo"]) : TIPOS_FUENTE_ENERGIA.BATERIA,
+    rol: (Object.values(ROLES_FUENTE) as string[]).includes(datos.rol as string) ? (datos.rol as FuenteEnergia["rol"]) : "",
     capacidadKW: datos.capacidadKW === "" || datos.capacidadKW == null ? "" : Number(datos.capacidadKW) || 0,
     distanciaM: datos.distanciaM === "" || datos.distanciaM == null ? "" : Number(datos.distanciaM) || 0,
     materialConductor: datos.materialConductor === "aluminio" ? "aluminio" : "cobre",
@@ -110,13 +102,13 @@ function normalizar(datos = {}) {
   };
 }
 
-export function crearFuenteEnergia(datos) {
+export function crearFuenteEnergia(datos: DatosFuenteEnergia): FuenteEnergia {
   return { id: generarId(), ...normalizar(datos) };
 }
 
 /** Devuelve la fuente con los cambios aplicados — no muta la original
  * (mismo criterio que editarTablero). */
-export function editarFuenteEnergia(fuente, cambios) {
+export function editarFuenteEnergia(fuente: FuenteEnergia, cambios: DatosFuenteEnergia): FuenteEnergia {
   return { ...fuente, ...normalizar({ ...fuente, ...cambios }) };
 }
 
@@ -126,7 +118,7 @@ export function editarFuenteEnergia(fuente, cambios) {
  * un ID muerto — mismo criterio que liberarCircuitosDeTablero en
  * modules/tablero/index.js.
  */
-export function liberarTablerosDeFuente(fuenteId, tableros = []) {
+export function liberarTablerosDeFuente<T extends TableroConPadre>(fuenteId: string, tableros: T[] = []): T[] {
   return tableros.map((t) => (t.tableroPadreId === fuenteId ? { ...t, tableroPadreId: null } : t));
 }
 
@@ -136,7 +128,7 @@ export function liberarTablerosDeFuente(fuenteId, tableros = []) {
  * fuente que ya lo tuviera (nunca quedan dos "principal" a la vez).
  * `rol` vacío no hace nada (no tiene sentido "liberar" un no-rol).
  */
-export function limpiarRolDuplicado(fuentes = [], fuenteId, rol) {
+export function limpiarRolDuplicado(fuentes: FuenteEnergia[] = [], fuenteId: string, rol: string): FuenteEnergia[] {
   if (!rol) return fuentes;
   return fuentes.map((f) => (f.id !== fuenteId && f.rol === rol ? { ...f, rol: "" } : f));
 }

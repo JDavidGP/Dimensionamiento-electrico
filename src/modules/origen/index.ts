@@ -1,4 +1,4 @@
-// src/modules/origen/index.js
+// src/modules/origen/index.ts
 //
 // Módulo Origen — resuelve de dónde viene la alimentación de un
 // tablero, como una capa de INTERPRETACIÓN sobre el campo
@@ -11,6 +11,8 @@
 //
 // CERO gráfico, cero UI. Módulo puro — se usa a través de
 // OrigenMediator (core/mediators/OrigenMediator.js).
+
+import type { Tablero, FuenteEnergia, Transformador } from "./tipos.ts";
 
 /**
  * Tipos de origen posibles. Declarados como constantes para que nadie
@@ -25,7 +27,14 @@ export const TIPOS_ORIGEN = {
   ACOMETIDA: "acometida",
   TRANSFORMADOR: "transformador",
   DESCONOCIDO: "desconocido",
-};
+} as const;
+
+export type ResultadoOrigen =
+  | { tipo: "acometida" }
+  | { tipo: "tablero"; tablero: Tablero }
+  | { tipo: FuenteEnergia["tipo"]; fuente: FuenteEnergia }
+  | { tipo: "transformador"; transformador: Transformador }
+  | { tipo: "desconocido"; origenId: string };
 
 /**
  * Resuelve qué es un `origenId` — hoy, el valor que trae
@@ -88,20 +97,13 @@ export const TIPOS_ORIGEN = {
  *     aplicación "más limpia" — o sea, estos son candidatos a opciones
  *     AVANZADAS/opcionales, no a ensanchar el flujo principal
  *     (normativa → tablero → circuito → equipo) para todo el mundo.
- *
- * @param {string|null|undefined} origenId
- * @param {object[]} tableros
- * @param {object[]} [fuentesEnergia] — ver modules/origen/fuentesEnergia.js
- * @param {object[]} [transformadores] — ver modules/motor/transformador.js
- * @returns {
- *   { tipo: "acometida" } |
- *   { tipo: "tablero", tablero: object } |
- *   { tipo: "bateria"|"generador", fuente: object } |
- *   { tipo: "transformador", transformador: object } |
- *   { tipo: "desconocido", origenId: string }
- * }
  */
-export function resolverOrigen(origenId, tableros = [], fuentesEnergia = [], transformadores = []) {
+export function resolverOrigen(
+  origenId: string | null | undefined,
+  tableros: Tablero[] = [],
+  fuentesEnergia: FuenteEnergia[] = [],
+  transformadores: Transformador[] = []
+): ResultadoOrigen {
   if (origenId == null) {
     return { tipo: TIPOS_ORIGEN.ACOMETIDA };
   }
@@ -132,10 +134,12 @@ export {
   editarFuenteEnergia,
   liberarTablerosDeFuente,
   limpiarRolDuplicado,
-} from "./fuentesEnergia.js";
+} from "./fuentesEnergia.ts";
 
 export {
   MODOS_CONMUTACION,
   CONMUTACION_VACIA,
   normalizarConmutacion,
-} from "./conmutacion.js";
+} from "./conmutacion.ts";
+
+export type { FuenteEnergia, DatosFuenteEnergia, Conmutacion, DatosConmutacion, TipoFuenteEnergia, RolFuente, ModoConmutacion } from "./tipos.ts";
