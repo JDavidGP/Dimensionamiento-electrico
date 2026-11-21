@@ -150,26 +150,27 @@ export type ResultadoImpedanciaTransformador = { disponible: false; motivo: stri
  * sí cambiaría el resultado y éste deja de ser válido: no inventar esa
  * repartición sin dato de fabricante.
  *
- * Alcance trifásico únicamente — el documento no cubre el caso
- * monofásico (que necesitaría su propia derivación para el lazo de
- * calcularCortocircuitoMonofasico, no solo la magnitud); un
- * transformador fases:"mono" devuelve `disponible:false` en vez de
- * inventar una fórmula no verificada.
+ * Monofásico (usuario, 2026-11-21, documento "transformador
+ * monofásico", fórmula verificada contra su ejemplo numérico: 50kVA/
+ * 240V/uk=4% → Z=0,04608Ω → Icc=5208,33A, y contra IEC 60076-1 §5.4.2
+ * "Isc = S_N/(U_r×u_k)"): la fórmula de Z_trafo es la MISMA (Z = %Z/100
+ * × V²/S_N, sin diferencia de forma entre mono y tri — cada documento
+ * la verifica por separado con su propio ejemplo). Lo que cambia es
+ * cómo se pasa de Z a Icc, que decide el LLAMADOR según fases:
+ *   - "tri": calcularCortocircuitoTrifasico(V, {r:0,x:Z}, 0, 0) → V/(√3×Z)
+ *   - "mono": calcularCortocircuitoMonofasico(V, {r:0,x:Z}, 0, 0) → V/Z
+ *     (el "lazo" en los bornes es puramente la impedancia del
+ *     transformador — sin conductor que duplicar todavía).
  */
 export function calcularImpedanciaTransformadorOhm({
   capacidadKVA,
   tensionSecundariaV,
   impedanciaPct,
-  fases,
 }: {
   capacidadKVA: number | string;
   tensionSecundariaV: number | string;
   impedanciaPct: number | string;
-  fases: "mono" | "tri";
 }): ResultadoImpedanciaTransformador {
-  if (fases !== "tri") {
-    return { disponible: false, motivo: "Cortocircuito por %Z solo verificado para transformador trifásico (ver nota de la función)." };
-  }
   const kva = Number(capacidadKVA);
   const v = Number(tensionSecundariaV);
   const z = Number(impedanciaPct);

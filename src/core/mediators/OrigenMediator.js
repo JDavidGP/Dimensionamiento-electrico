@@ -47,6 +47,7 @@ import {
 import {
   calcularImpedanciaTransformadorOhm,
   calcularCortocircuitoTrifasico,
+  calcularCortocircuitoMonofasico,
 } from "../../modules/motor/cortocircuito.ts";
 
 export const OrigenMediator = {
@@ -117,6 +118,11 @@ export const OrigenMediator = {
   /** Cortocircuito trifásico — expuesto acá (no solo en MotorCalculoMediator) para componer con calcularImpedanciaTransformadorOhm sin saltar de mediador a mitad de un cálculo del mismo dominio (Origen/Transformador). */
   calcularCortocircuitoTrifasico(...args) {
     return calcularCortocircuitoTrifasico(...args);
+  },
+
+  /** Cortocircuito monofásico — mismo motivo que calcularCortocircuitoTrifasico arriba, para transformador fases:"mono". */
+  calcularCortocircuitoMonofasico(...args) {
+    return calcularCortocircuitoMonofasico(...args);
   },
 
   /** Resuelve qué es un origenId (tableroPadreId) contra los tres catálogos. */

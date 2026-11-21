@@ -373,7 +373,9 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
                       const proteccion = App.origen.seleccionarProteccionTransformadorREBT({ corrienteSecundariaA: corrientes.corrienteSecundariaA });
                       const impedancia = App.origen.calcularImpedanciaTransformadorOhm(t);
                       const corto = impedancia.disponible
-                        ? App.origen.calcularCortocircuitoTrifasico(Number(t.tensionSecundariaV), impedancia.impedancia, 0, 0)
+                        ? t.fases === "tri"
+                          ? App.origen.calcularCortocircuitoTrifasico(Number(t.tensionSecundariaV), impedancia.impedancia, 0, 0)
+                          : App.origen.calcularCortocircuitoMonofasico(Number(t.tensionSecundariaV), impedancia.impedancia, 0, 0)
                         : null;
                       return (
                         <div style={{ borderTop: `1px dashed ${colores.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
