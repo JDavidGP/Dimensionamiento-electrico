@@ -1,4 +1,4 @@
-// src/modules/plano/index.js
+// src/modules/plano/index.ts
 //
 // Dominio Plano — grafo de nodos/segmentos (paredes) en espacio MODELO
 // (metros reales, ya calibrados — ver calibracion.js) + habitaciones
@@ -26,18 +26,37 @@
 
 import { generarId } from "../../shared/utils/id.js";
 import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo } from "../geometria/index.ts";
+import type { Punto, NodoPlano, SegmentoPlano, TipoSegmento, HabitacionPlano, RutaConductorPlano, MarcadorEquipoPlano } from "./tipos.ts";
 
-export { calcularEscala, calcularEscalaPorPerimetro, imagenAModelo, modeloAImagen } from "./calibracion.js";
+export { calcularEscala, calcularEscalaPorPerimetro, imagenAModelo, modeloAImagen } from "./calibracion.ts";
 // transformVistaInicial/aPantalla/aModelo/aplicarZoom/aplicarPan/
 // ajustarAVentana/ZOOM_MIN/ZOOM_MAX se mudaron a modules/geometria/
 // vistaZoomPan.js (usuario, 2026-11-20, al pedir lo mismo para el
 // Diagrama unifilar) — es matemática de vista genérica, sin nada
 // propio de Plano; PlanoMediator las importa directo de geometria/
 // ahora, este módulo ya no las re-exporta.
-export { pixelBordeMasFuerte, RADIO_BUSQUEDA_BORDE_PX, UMBRAL_MAGNITUD_BORDE } from "./deteccionBordes.js";
-export { detectarParedesCandidatas } from "./deteccionLineas.js";
-export { calcularHomografia, aplicarHomografia, invertirMatriz3x3 } from "./homografia.js";
-export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.js";
+export { pixelBordeMasFuerte, RADIO_BUSQUEDA_BORDE_PX, UMBRAL_MAGNITUD_BORDE } from "./deteccionBordes.ts";
+export { detectarParedesCandidatas } from "./deteccionLineas.ts";
+export { calcularHomografia, aplicarHomografia, invertirMatriz3x3 } from "./homografia.ts";
+export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.ts";
+
+export type {
+  Punto,
+  NodoPlano,
+  SegmentoPlano,
+  TipoSegmento,
+  HabitacionPlano,
+  RutaConductorPlano,
+  MarcadorEquipoPlano,
+  CalibracionPlano,
+  CalibracionDosPuntos,
+  CalibracionPorPerimetro,
+  ResultadoCalibracion,
+  LineaCandidata,
+  OrientacionLinea,
+  ResultadoDeteccionParedes,
+  DatosExportarDXF,
+} from "./tipos.ts";
 
 // Radio de "pegado" al trazar — un click a menos de 30cm (en el mundo
 // real, no en píxeles de pantalla: así es independiente del zoom) de
@@ -47,13 +66,13 @@ export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.js";
 // criterio que circuito.tableroId en el resto de la app).
 export const RADIO_SNAP_METROS = 0.3;
 
-export function crearNodo(puntoModelo) {
+export function crearNodo(puntoModelo: Punto): NodoPlano {
   return { id: generarId(), punto: puntoModelo };
 }
 
-/** Nodo existente más cercano a `puntoModelo`, dentro de `radio` metros — o null si ninguno califica. */
-export function nodoCercano(puntoModelo, nodos = [], radio = RADIO_SNAP_METROS) {
-  let masCercano = null;
+/** Nodo existente más cercano a `puntoModelo`, dentro de `radio` metros — o null si ninguno califica. Genérico: también sirve para buscar el equipo/marcador más cercano (cualquier cosa con `.punto`), ver "triangulación por recorrido" en PlanoInteligente.jsx. */
+export function nodoCercano<N extends { punto: Punto }>(puntoModelo: Punto, nodos: N[] = [], radio: number = RADIO_SNAP_METROS): N | null {
+  let masCercano: N | null = null;
   let menorDistancia = Infinity;
   for (const nodo of nodos) {
     const d = distancia(puntoModelo, nodo.punto);
@@ -65,7 +84,7 @@ export function nodoCercano(puntoModelo, nodos = [], radio = RADIO_SNAP_METROS) 
   return masCercano;
 }
 
-export function crearSegmento(nodoAId, nodoBId, tipo = "pared") {
+export function crearSegmento(nodoAId: string, nodoBId: string, tipo: TipoSegmento = "pared"): SegmentoPlano {
   // espesorM: "" = no medido todavía — solo tiene sentido para tipo
   // "pared" (un conductor no tiene "espesor"). Se mide APARTE, después
   // de trazar la pared (usuario, 2026-11-20: "medir el ancho visible
@@ -74,8 +93,15 @@ export function crearSegmento(nodoAId, nodoBId, tipo = "pared") {
 }
 
 /** Devuelve el segmento con los cambios aplicados — no muta el original (mismo criterio que editarTablero). */
-export function editarSegmento(segmento, cambios) {
+export function editarSegmento(segmento: SegmentoPlano, cambios: Partial<SegmentoPlano>): SegmentoPlano {
   return { ...segmento, ...cambios };
+}
+
+export interface ResultadoEliminarNodo {
+  nodos: NodoPlano[];
+  segmentos: SegmentoPlano[];
+  habitaciones: HabitacionPlano[];
+  rutasConductor: RutaConductorPlano[];
 }
 
 /**
@@ -84,7 +110,13 @@ export function editarSegmento(segmento, cambios) {
  * lo usaban (no quedan apuntando a un id muerto) — mismo criterio que
  * liberarCircuitosDeTablero.
  */
-export function eliminarNodo(nodoId, nodos = [], segmentos = [], habitaciones = [], rutasConductor = []) {
+export function eliminarNodo(
+  nodoId: string,
+  nodos: NodoPlano[] = [],
+  segmentos: SegmentoPlano[] = [],
+  habitaciones: HabitacionPlano[] = [],
+  rutasConductor: RutaConductorPlano[] = []
+): ResultadoEliminarNodo {
   return {
     nodos: nodos.filter((n) => n.id !== nodoId),
     segmentos: segmentos.filter((s) => s.nodoAId !== nodoId && s.nodoBId !== nodoId),
@@ -93,7 +125,7 @@ export function eliminarNodo(nodoId, nodos = [], segmentos = [], habitaciones = 
   };
 }
 
-export function eliminarSegmento(segmentoId, segmentos = []) {
+export function eliminarSegmento(segmentoId: string, segmentos: SegmentoPlano[] = []): SegmentoPlano[] {
   return segmentos.filter((s) => s.id !== segmentoId);
 }
 
@@ -106,7 +138,7 @@ export function eliminarSegmento(segmentoId, segmentos = []) {
  * cuáles (hoy: los nodoIds de una habitación; en el futuro, podría
  * servir para arrastrar una ruta de conductor completa igual).
  */
-export function moverNodos(nodoIds, deltaM, nodos = []) {
+export function moverNodos(nodoIds: string[], deltaM: Punto, nodos: NodoPlano[] = []): NodoPlano[] {
   const idsAMover = new Set(nodoIds);
   return nodos.map((n) =>
     idsAMover.has(n.id) ? { ...n, punto: { x: n.punto.x + deltaM.x, y: n.punto.y + deltaM.y } } : n
@@ -120,8 +152,8 @@ export function moverNodos(nodoIds, deltaM, nodos = []) {
  * tocar a mano después (mismo criterio anti-doble-escritura que el
  * resto de la app: son datos DERIVADOS del grafo, no una segunda copia).
  */
-export function crearHabitacion(nodoIds, nodos = [], nombre = "") {
-  const puntos = nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter(Boolean);
+export function crearHabitacion(nodoIds: string[], nodos: NodoPlano[] = [], nombre: string = ""): HabitacionPlano | null {
+  const puntos = nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter((p): p is Punto => Boolean(p));
   if (puntos.length < 3) return null;
   return {
     id: generarId(),
@@ -149,7 +181,13 @@ export function crearHabitacion(nodoIds, nodos = [], nombre = "") {
 // segunda fábrica paralela) — el resultado es indistinguible de una
 // habitación trazada a mano: se puede seguir editando con las mismas
 // herramientas (borrar un nodo, agregar una pared, etc.).
-export function crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre = "") {
+export interface ResultadoHabitacionRectangular {
+  nodos: NodoPlano[];
+  segmentos: SegmentoPlano[];
+  habitacion: HabitacionPlano | null;
+}
+
+export function crearHabitacionRectangular(centroModelo: Punto, anchoM: number, altoM: number, nombre: string = ""): ResultadoHabitacionRectangular | null {
   if (!(anchoM > 0) || !(altoM > 0)) return null;
   const puntos = puntosRectangulo(centroModelo, anchoM, altoM);
   const nodos = puntos.map((p) => crearNodo(p));
@@ -173,8 +211,8 @@ export function crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre =
 // — derivada, nunca una segunda copia editable a mano.
 
 /** Registra una ruta de conductor a partir de una cadena de nodos (abierta, >= 2). */
-export function crearRutaConductor(nodoIds, nodos = [], nombre = "") {
-  const puntos = nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter(Boolean);
+export function crearRutaConductor(nodoIds: string[], nodos: NodoPlano[] = [], nombre: string = ""): RutaConductorPlano | null {
+  const puntos = nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter((p): p is Punto => Boolean(p));
   if (puntos.length < 2) return null;
   return {
     id: generarId(),
@@ -184,7 +222,7 @@ export function crearRutaConductor(nodoIds, nodos = [], nombre = "") {
   };
 }
 
-export function eliminarRutaConductor(rutaId, rutas = []) {
+export function eliminarRutaConductor(rutaId: string, rutas: RutaConductorPlano[] = []): RutaConductorPlano[] {
   return rutas.filter((r) => r.id !== rutaId);
 }
 
@@ -209,19 +247,19 @@ export function eliminarRutaConductor(rutaId, rutas = []) {
 // UBICACIÓN física — no es el mismo recurso "usado dos veces", son
 // dos aspectos distintos del mismo dato.
 
-export function crearMarcadorEquipo(puntoModelo, tipo, entidadId = null, nombre = "") {
+export function crearMarcadorEquipo(puntoModelo: Punto, tipo: string, entidadId: string | null = null, nombre: string = ""): MarcadorEquipoPlano {
   return { id: generarId(), punto: puntoModelo, tipo, entidadId: entidadId || null, nombre: nombre?.trim() || "" };
 }
 
-export function editarMarcadorEquipo(marcador, cambios) {
+export function editarMarcadorEquipo(marcador: MarcadorEquipoPlano, cambios: Partial<MarcadorEquipoPlano>): MarcadorEquipoPlano {
   return { ...marcador, ...cambios };
 }
 
-export function eliminarMarcadorEquipo(marcadorId, marcadores = []) {
+export function eliminarMarcadorEquipo(marcadorId: string, marcadores: MarcadorEquipoPlano[] = []): MarcadorEquipoPlano[] {
   return marcadores.filter((m) => m.id !== marcadorId);
 }
 
 /** Marcadores que apuntaban a una entidad eliminada quedan desvinculados (entidadId -> null), nunca borrados ni apuntando a un id muerto. */
-export function liberarMarcadoresDeEntidad(entidadId, marcadores = []) {
+export function liberarMarcadoresDeEntidad(entidadId: string, marcadores: MarcadorEquipoPlano[] = []): MarcadorEquipoPlano[] {
   return marcadores.map((m) => (m.entidadId === entidadId ? { ...m, entidadId: null } : m));
 }

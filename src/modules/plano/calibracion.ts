@@ -1,4 +1,4 @@
-// src/modules/plano/calibracion.js
+// src/modules/plano/calibracion.ts
 //
 // Escala del proyecto — ver PLANO_INTELIGENTE_DISENO.md §4. El usuario
 // marca 2 puntos sobre la imagen (YA convertidos a espacio imagen, en
@@ -10,13 +10,9 @@
 //
 // Módulo puro — se usa a través de PlanoMediator.
 
-/**
- * @param {{x:number,y:number}} puntoImagenA
- * @param {{x:number,y:number}} puntoImagenB
- * @param {number} distanciaRealM
- * @returns {{ok:true, calibracion:object} | {ok:false, motivo:string}}
- */
-export function calcularEscala(puntoImagenA, puntoImagenB, distanciaRealM) {
+import type { Punto, ResultadoCalibracion } from "./tipos.ts";
+
+export function calcularEscala(puntoImagenA: Punto, puntoImagenB: Punto, distanciaRealM: number): ResultadoCalibracion {
   const dx = puntoImagenB.x - puntoImagenA.x;
   const dy = puntoImagenB.y - puntoImagenA.y;
   const distanciaPixeles = Math.hypot(dx, dy);
@@ -51,11 +47,9 @@ export function calcularEscala(puntoImagenA, puntoImagenB, distanciaRealM) {
  * píxeles de imagen (cierra el último punto con el primero, igual
  * criterio que perimetroPoligono en modules/geometria/).
  *
- * @param {{x:number,y:number}[]} puntosImagen - contorno trazado, en orden (no hace falta repetir el primero al final)
- * @param {number} perimetroRealM
- * @returns {{ok:true, calibracion:object} | {ok:false, motivo:string}}
+ * @param puntosImagen - contorno trazado, en orden (no hace falta repetir el primero al final)
  */
-export function calcularEscalaPorPerimetro(puntosImagen, perimetroRealM) {
+export function calcularEscalaPorPerimetro(puntosImagen: Punto[], perimetroRealM: number): ResultadoCalibracion {
   if (!Array.isArray(puntosImagen) || puntosImagen.length < 3) {
     return { ok: false, motivo: "Hacen falta al menos 3 puntos para trazar un contorno cerrado." };
   }
@@ -85,11 +79,11 @@ export function calcularEscalaPorPerimetro(puntosImagen, perimetroRealM) {
 }
 
 /** Punto en espacio IMAGEN (píxeles) → punto en espacio MODELO (metros reales). */
-export function imagenAModelo(puntoImagen, escalaMetrosPorPixel) {
+export function imagenAModelo(puntoImagen: Punto, escalaMetrosPorPixel: number): Punto {
   return { x: puntoImagen.x * escalaMetrosPorPixel, y: puntoImagen.y * escalaMetrosPorPixel };
 }
 
 /** Inversa — para dibujar (el fondo es una imagen en píxeles, los trazos se guardan en metros). */
-export function modeloAImagen(puntoModelo, escalaMetrosPorPixel) {
+export function modeloAImagen(puntoModelo: Punto, escalaMetrosPorPixel: number): Punto {
   return { x: puntoModelo.x / escalaMetrosPorPixel, y: puntoModelo.y / escalaMetrosPorPixel };
 }

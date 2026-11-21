@@ -1,4 +1,4 @@
-// src/modules/plano/exportarDXF.js
+// src/modules/plano/exportarDXF.ts
 //
 // Exportación CAD — Fase 2, segunda ronda (2026-11-20). Ver
 // PLANO_INTELIGENTE_DISENO.md §7: porque el modelo ya es geometría
@@ -25,22 +25,20 @@
 //
 // Módulo puro — se usa a través de PlanoMediator.
 
-function filasGrupo(pares) {
-  const lineas = [];
+import type { DatosExportarDXF } from "./tipos.ts";
+
+type ParGrupo = [number, string | number];
+
+function filasGrupo(pares: ParGrupo[]): string[] {
+  const lineas: string[] = [];
   for (const [codigo, valor] of pares) {
     lineas.push(String(codigo), String(valor));
   }
   return lineas;
 }
 
-/**
- * @param {object} datos
- * @param {object[]} datos.nodos - [{id, punto:{x,y}}] en metros (espacio modelo)
- * @param {object[]} datos.segmentos - [{id, nodoAId, nodoBId, tipo}]
- * @param {object[]} datos.habitaciones - [{id, nodoIds, nombre, areaM2, perimetroM}]
- * @returns {string} contenido del archivo .dxf (texto, codificación ASCII)
- */
-export function generarDXF({ nodos = [], segmentos = [], habitaciones = [] } = {}) {
+/** @returns contenido del archivo .dxf (texto, codificación ASCII) */
+export function generarDXF({ nodos = [], segmentos = [], habitaciones = [] }: DatosExportarDXF = {}): string {
   const lineas = [...filasGrupo([[0, "SECTION"], [2, "ENTITIES"]])];
 
   for (const seg of segmentos) {
@@ -62,7 +60,7 @@ export function generarDXF({ nodos = [], segmentos = [], habitaciones = [] } = {
   }
 
   for (const hab of habitaciones) {
-    const puntos = hab.nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter(Boolean);
+    const puntos = hab.nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter((p): p is NonNullable<typeof p> => Boolean(p));
     if (puntos.length === 0) continue;
     const centroX = puntos.reduce((s, p) => s + p.x, 0) / puntos.length;
     const centroY = puntos.reduce((s, p) => s + p.y, 0) / puntos.length;
@@ -97,13 +95,13 @@ export function generarDXF({ nodos = [], segmentos = [], habitaciones = [] } = {
 // que cp1252 espera). Convierte el texto YA generado a los bytes
 // crudos de Windows-1252, para pasárselos al Blob directo (ver
 // useCircuitos.js, exportarDXFPlano) — nunca al string sin convertir.
-const MAPA_CP1252_PUNTUACION_UNICODE = {
+const MAPA_CP1252_PUNTUACION_UNICODE: Record<number, number> = {
   0x2013: 0x96, // en-dash –
   0x2014: 0x97, // em-dash —
-  0x2018: 0x91, // comilla simple izquierda ‘
-  0x2019: 0x92, // comilla simple derecha ’
-  0x201c: 0x93, // comilla doble izquierda “
-  0x201d: 0x94, // comilla doble derecha ”
+  0x2018: 0x91, // comilla simple izquierda '
+  0x2019: 0x92, // comilla simple derecha '
+  0x201c: 0x93, // comilla doble izquierda "
+  0x201d: 0x94, // comilla doble derecha "
   0x2026: 0x85, // puntos suspensivos …
 };
 
@@ -117,7 +115,7 @@ const MAPA_CP1252_PUNTUACION_UNICODE = {
  * (ej. emoji) se reemplaza por "?" — mejor avisar visiblemente que
  * corromper en silencio.
  */
-export function codificarDXFComoBytes(texto) {
+export function codificarDXFComoBytes(texto: string): Uint8Array {
   const bytes = new Uint8Array(texto.length);
   for (let i = 0; i < texto.length; i++) {
     const code = texto.charCodeAt(i);

@@ -1,4 +1,4 @@
-// src/modules/plano/deteccionLineas.js
+// src/modules/plano/deteccionLineas.ts
 //
 // Asistencia MEJORADA de trazado (usuario, 2026-11-20, "reconocer
 // perímetro, transecciones y segmentos del plano, paredes puertas
@@ -36,7 +36,8 @@
 // igual criterio que deteccionBordes.js: leer los píxeles reales es
 // responsabilidad de PlanoCanvas.jsx.
 
-import { magnitudGradiente } from "./deteccionBordes.js";
+import { magnitudGradiente, type Grises } from "./deteccionBordes.ts";
+import type { RangoIndice, ResultadoDeteccionParedes, Punto } from "./tipos.ts";
 
 export const UMBRAL_RELATIVO_PICO = 0.5; // una fila/columna es "candidata" si su suma de magnitud es >= 50% del máximo de todas
 export const UMBRAL_PIXEL_BORDE = 35; // un píxel individual cuenta como "borde fuerte" si supera esto
@@ -46,7 +47,7 @@ export const PUERTA_ANCHO_MIN_M = 0.5;
 export const PUERTA_ANCHO_MAX_M = 1.3;
 
 /** Suma de magnitud de gradiente por fila — un pico sostenido indica una línea horizontal real. */
-export function perfilFilas(magnitud, ancho, alto) {
+export function perfilFilas(magnitud: Float32Array, ancho: number, alto: number): Float64Array {
   const perfil = new Float64Array(alto);
   for (let y = 0; y < alto; y++) {
     let suma = 0;
@@ -57,7 +58,7 @@ export function perfilFilas(magnitud, ancho, alto) {
 }
 
 /** Igual que perfilFilas, por columna — para líneas verticales. */
-export function perfilColumnas(magnitud, ancho, alto) {
+export function perfilColumnas(magnitud: Float32Array, ancho: number, alto: number): Float64Array {
   const perfil = new Float64Array(ancho);
   for (let x = 0; x < ancho; x++) {
     let suma = 0;
@@ -83,14 +84,14 @@ const BRECHA_MAXIMA_PICO_PX = 3;
  * candidata. Perfil todo en cero (imagen sin bordes, ej. un lienzo
  * vacío) devuelve [] — no se inventa un pico.
  */
-export function picosDelPerfil(perfil, umbralRelativo = UMBRAL_RELATIVO_PICO) {
+export function picosDelPerfil(perfil: Float64Array, umbralRelativo: number = UMBRAL_RELATIVO_PICO): number[] {
   let maximo = 0;
   for (let i = 0; i < perfil.length; i++) if (perfil[i] > maximo) maximo = perfil[i];
   if (maximo <= 0) return [];
 
   const umbral = maximo * umbralRelativo;
-  const crudas = [];
-  let inicio = null;
+  const crudas: RangoIndice[] = [];
+  let inicio: number | null = null;
   for (let i = 0; i < perfil.length; i++) {
     if (perfil[i] >= umbral) {
       if (inicio === null) inicio = i;
@@ -101,7 +102,7 @@ export function picosDelPerfil(perfil, umbralRelativo = UMBRAL_RELATIVO_PICO) {
   }
   if (inicio !== null) crudas.push({ inicio, fin: perfil.length - 1 });
 
-  const rachas = [];
+  const rachas: RangoIndice[] = [];
   for (const racha of crudas) {
     const anterior = rachas[rachas.length - 1];
     if (anterior && racha.inicio - anterior.fin - 1 <= BRECHA_MAXIMA_PICO_PX) {
@@ -136,9 +137,9 @@ export function picosDelPerfil(perfil, umbralRelativo = UMBRAL_RELATIVO_PICO) {
  * mismo tramo, ruido de escaneo), tramos más cortos que
  * LARGO_MINIMO_TRAMO_PX se descartan (ruido disperso).
  */
-export function tramosEnLinea(valores) {
-  const crudos = [];
-  let inicio = null;
+export function tramosEnLinea(valores: Float64Array): RangoIndice[] {
+  const crudos: RangoIndice[] = [];
+  let inicio: number | null = null;
   for (let i = 0; i < valores.length; i++) {
     const activo = valores[i] >= UMBRAL_PIXEL_BORDE;
     if (activo) {
@@ -151,7 +152,7 @@ export function tramosEnLinea(valores) {
   if (inicio !== null) crudos.push({ inicio, fin: valores.length - 1 });
 
   // Puentea huecos chicos entre tramos consecutivos (ruido, no un corte real).
-  const puenteados = [];
+  const puenteados: RangoIndice[] = [];
   for (const tramo of crudos) {
     const anterior = puenteados[puenteados.length - 1];
     if (anterior && tramo.inicio - anterior.fin - 1 <= BRECHA_MAXIMA_RUIDO_PX) {
@@ -164,27 +165,27 @@ export function tramosEnLinea(valores) {
   return puenteados.filter((t) => t.fin - t.inicio + 1 >= LARGO_MINIMO_TRAMO_PX);
 }
 
+export interface OpcionesDeteccionParedes {
+  escalaMetrosPorPixel?: number;
+}
+
 /**
  * Detecta paredes candidatas (horizontales + verticales) y, si hay
  * escala calibrada, huecos entre tramos de la MISMA línea con ancho
  * plausible de puerta — puramente informativo, nada se crea solo.
  *
- * @param {Float32Array|number[]} grises - imagen completa en escala de grises, fila por fila
- * @param {number} ancho
- * @param {number} alto
- * @param {{escalaMetrosPorPixel?: number}} [opciones]
- * @returns {{paredes: {x1,y1,x2,y2,orientacion}[], puertas: {x1,y1,x2,y2,orientacion}[]}}
+ * @param grises - imagen completa en escala de grises, fila por fila
  */
-export function detectarParedesCandidatas(grises, ancho, alto, opciones = {}) {
+export function detectarParedesCandidatas(grises: Grises, ancho: number, alto: number, opciones: OpcionesDeteccionParedes = {}): ResultadoDeteccionParedes {
   const magnitud = magnitudGradiente(grises, ancho, alto);
-  const paredes = [];
-  const puertas = [];
+  const paredes: ResultadoDeteccionParedes["paredes"] = [];
+  const puertas: ResultadoDeteccionParedes["puertas"] = [];
 
   const anchoPuertaMinPx = opciones.escalaMetrosPorPixel ? PUERTA_ANCHO_MIN_M / opciones.escalaMetrosPorPixel : null;
   const anchoPuertaMaxPx = opciones.escalaMetrosPorPixel ? PUERTA_ANCHO_MAX_M / opciones.escalaMetrosPorPixel : null;
 
-  function registrarPuertasEntreTramos(tramos, aPunto) {
-    if (anchoPuertaMinPx == null) return; // sin calibrar, no se puede juzgar "plausible" — no se adivina
+  function registrarPuertasEntreTramos(tramos: RangoIndice[], aPunto: (indice: number) => Punto): void {
+    if (anchoPuertaMinPx == null || anchoPuertaMaxPx == null) return; // sin calibrar, no se puede juzgar "plausible" — no se adivina
     for (let i = 1; i < tramos.length; i++) {
       const huecoPx = tramos[i].inicio - tramos[i - 1].fin - 1;
       if (huecoPx >= anchoPuertaMinPx && huecoPx <= anchoPuertaMaxPx) {

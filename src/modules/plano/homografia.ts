@@ -1,4 +1,4 @@
-// src/modules/plano/homografia.js
+// src/modules/plano/homografia.ts
 //
 // Corrección de perspectiva — Fase 2, segunda ronda (2026-11-20). Ver
 // PLANO_INTELIGENTE_DISENO.md §5: una foto tomada con cámara rara vez
@@ -23,6 +23,8 @@
 // que aplica la matriz que este módulo calcula). Se usa a través de
 // PlanoMediator.
 
+import type { Punto } from "./tipos.ts";
+
 /**
  * Resuelve un sistema lineal Ax=b por eliminación de Gauss-Jordan con
  * pivoteo parcial. `A` es una matriz n×n (array de arrays), `b` un
@@ -30,7 +32,7 @@
  * singular (los 4 puntos de origen o destino son degenerados — ej.
  * tres de ellos alineados).
  */
-function resolverSistemaLineal(A, b) {
+function resolverSistemaLineal(A: number[][], b: number[]): number[] | null {
   const n = b.length;
   const m = A.map((fila, i) => [...fila, b[i]]);
 
@@ -67,15 +69,15 @@ function resolverSistemaLineal(A, b) {
  * puntos son degenerados (ej. 3 colineales) — nunca inventa un
  * resultado sobre datos que no lo permiten.
  *
- * @param {{x:number,y:number}[]} origen - 4 puntos, en espacio imagen (la foto tal cual)
- * @param {{x:number,y:number}[]} destino - 4 puntos, el rectángulo ideal al que deben mapear
- * @returns {number[]|null} matriz 3×3 fila por fila: [h11,h12,h13,h21,h22,h23,h31,h32,h33]
+ * @param origen - 4 puntos, en espacio imagen (la foto tal cual)
+ * @param destino - 4 puntos, el rectángulo ideal al que deben mapear
+ * @returns matriz 3×3 fila por fila: [h11,h12,h13,h21,h22,h23,h31,h32,h33]
  */
-export function calcularHomografia(origen, destino) {
+export function calcularHomografia(origen: Punto[], destino: Punto[]): number[] | null {
   if (origen?.length !== 4 || destino?.length !== 4) return null;
 
-  const A = [];
-  const b = [];
+  const A: number[][] = [];
+  const b: number[] = [];
   for (let i = 0; i < 4; i++) {
     const { x, y } = origen[i];
     const { x: u, y: v } = destino[i];
@@ -91,7 +93,7 @@ export function calcularHomografia(origen, destino) {
 }
 
 /** Aplica una homografía 3×3 a un punto (división homogénea incluida). `null` si el punto cae en el infinito. */
-export function aplicarHomografia(m, punto) {
+export function aplicarHomografia(m: number[], punto: Punto): Punto | null {
   const w = m[6] * punto.x + m[7] * punto.y + m[8];
   if (Math.abs(w) < 1e-9) return null;
   return {
@@ -101,7 +103,7 @@ export function aplicarHomografia(m, punto) {
 }
 
 /** Inversa de una matriz 3×3 (fila por fila) — `null` si es singular (determinante ≈ 0). */
-export function invertirMatriz3x3(m) {
+export function invertirMatriz3x3(m: number[]): number[] | null {
   const [a, b, c, d, e, f, g, h, i] = m;
   const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
   if (Math.abs(det) < 1e-12) return null;

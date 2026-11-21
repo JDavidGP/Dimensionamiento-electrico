@@ -1,4 +1,4 @@
-// src/modules/plano/deteccionBordes.js
+// src/modules/plano/deteccionBordes.ts
 //
 // Asistencia de bordes para el trazado de paredes — Fase 2 (2026-11-20),
 // la versión "asistida" acordada con el usuario en vez del pipeline
@@ -27,8 +27,10 @@
 const SOBEL_X = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
 const SOBEL_Y = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
 
+export type Grises = Float32Array | number[];
+
 /** Magnitud de gradiente (Sobel) por píxel de un parche en escala de grises. Bordes del parche quedan en 0 (sin vecinos completos). */
-export function magnitudGradiente(grises, ancho, alto) {
+export function magnitudGradiente(grises: Grises, ancho: number, alto: number): Float32Array {
   const magnitud = new Float32Array(ancho * alto);
   for (let y = 1; y < alto - 1; y++) {
     for (let x = 1; x < ancho - 1; x++) {
@@ -54,9 +56,17 @@ export function magnitudGradiente(grises, ancho, alto) {
  * (centroX, centroY) — o `null` si ninguno supera `umbralMinimo` (no
  * hay nada que valga la pena sugerir, se usa el click tal cual vino).
  */
-export function pixelBordeMasFuerte(grises, ancho, alto, centroX, centroY, radio, umbralMinimo) {
+export function pixelBordeMasFuerte(
+  grises: Grises,
+  ancho: number,
+  alto: number,
+  centroX: number,
+  centroY: number,
+  radio: number,
+  umbralMinimo: number
+): { x: number; y: number } | null {
   const magnitud = magnitudGradiente(grises, ancho, alto);
-  let mejor = null;
+  let mejor: { x: number; y: number } | null = null;
   let mejorMagnitud = umbralMinimo;
   const radio2 = radio * radio;
 

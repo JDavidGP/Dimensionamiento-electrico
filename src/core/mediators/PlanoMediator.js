@@ -46,7 +46,7 @@ import {
   generarDXF,
   codificarDXFComoBytes,
   detectarParedesCandidatas,
-} from "../../modules/plano/index.js";
+} from "../../modules/plano/index.ts";
 import {
   distancia,
   areaPoligono,
