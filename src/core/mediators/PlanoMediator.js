@@ -46,6 +46,8 @@ import {
   generarDXF,
   codificarDXFComoBytes,
   detectarParedesCandidatas,
+  calcularCrucesPared,
+  ANGULO_MINIMO_CRUCE_GRADOS,
 } from "../../modules/plano/index.ts";
 import {
   distancia,
@@ -85,6 +87,8 @@ export const PlanoMediator = {
   moverNodos,
   crearRutaConductor,
   eliminarRutaConductor,
+  calcularCrucesPared,
+  ANGULO_MINIMO_CRUCE_GRADOS,
 
   calcularEscala,
   calcularEscalaPorPerimetro,

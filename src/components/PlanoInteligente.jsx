@@ -90,6 +90,16 @@ export default function PlanoInteligente({
   // ahora mismo quien está trazando).
   const [asistenciaBordes, setAsistenciaBordes] = useState(true);
 
+  // Capas visibles (usuario, 2026-11-22: "necesitamos algo visual que
+  // separe las líneas de las paredes con las rutas de los
+  // conductores") — preferencia de herramienta, NO se persiste, mismo
+  // criterio que asistenciaBordes arriba: apaga/prende qué SEGMENTOS
+  // (paredes/conductores) y marcadores de equipo se DIBUJAN, filtrando
+  // antes de pasarle los datos a PlanoCanvas (que sigue sin saber nada
+  // de "capas" — solo dibuja lo que recibe, mismo patrón que
+  // nodoIdsTrazoActual/paredesCandidatas). Todas activas por defecto.
+  const [capasVisibles, setCapasVisibles] = useState({ pared: true, conductor: true, equipos: true });
+
   // Calibración: null, [puntoA], o [puntoA, puntoB] (ahí se muestra el
   // formulario de distancia real antes de confirmar).
   const [puntosCalibracion, setPuntosCalibracion] = useState([]);
@@ -557,6 +567,24 @@ export default function PlanoInteligente({
               ))}
             </div>
 
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, fontSize: 11, color: colores.textDim }}>
+              <span>Mostrar:</span>
+              {[
+                { clave: "pared", label: "Paredes" },
+                { clave: "conductor", label: "Conductores" },
+                { clave: "equipos", label: "Equipos" },
+              ].map((c) => (
+                <label key={c.clave} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={capasVisibles[c.clave]}
+                    onChange={(e) => setCapasVisibles({ ...capasVisibles, [c.clave]: e.target.checked })}
+                  />
+                  {c.label}
+                </label>
+              ))}
+            </div>
+
             {/* "Sugerir paredes" (usuario, 2026-11-20) — no es un modo de
                 trazado, es una acción puntual: analiza la imagen YA
                 cargada y ofrece líneas candidatas, que se aceptan de a
@@ -757,8 +785,8 @@ export default function PlanoInteligente({
           ref={canvasRef}
           imagen={planoImagen}
           nodos={nodosPlano}
-          segmentos={segmentosPlano}
-          marcadoresEquipo={marcadoresEquipoPlano}
+          segmentos={segmentosPlano.filter((s) => capasVisibles[s.tipo])}
+          marcadoresEquipo={capasVisibles.equipos ? marcadoresEquipoPlano : []}
           habitaciones={habitacionesPlano}
           escalaMetrosPorPixel={planoCalibracion?.escalaMetrosPorPixel ?? null}
           puntosGuiaPendientes={
@@ -964,26 +992,55 @@ export default function PlanoInteligente({
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {rutasConductorPlano.map((r) => (
-                <div key={r.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <input
-                      style={{ ...inputStyle(), flex: 1, padding: "4px 6px", fontSize: 12 }}
-                      value={r.nombre}
-                      onChange={(e) => renombrarRutaConductorPlano(r.id, e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => eliminarRutaConductorPlano(r.id)}
-                      style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 14 }}
-                      aria-label={`Eliminar ${r.nombre}`}
-                    >
-                      ×
-                    </button>
+              {rutasConductorPlano.map((r) => {
+                // Motor geométrico de cruces de pared (usuario, 2026-11-22):
+                // cuánto conducto EXTRA agrega cada pared que esta ruta
+                // cruza, calculado del espesorM ya medido + el ángulo real
+                // del cruce — ver modules/plano/cruceParedes.ts. Segmentos
+                // de tipo "pared" únicamente (una ruta nunca "cruza" otra
+                // ruta de conductor en este cálculo).
+                const segmentosPared = segmentosPlano.filter((s) => s.tipo === "pared");
+                const cruces = App.plano.calcularCrucesPared(r, nodosPlano, segmentosPared);
+                return (
+                  <div key={r.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <input
+                        style={{ ...inputStyle(), flex: 1, padding: "4px 6px", fontSize: 12 }}
+                        value={r.nombre}
+                        onChange={(e) => renombrarRutaConductorPlano(r.id, e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => eliminarRutaConductorPlano(r.id)}
+                        style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 14 }}
+                        aria-label={`Eliminar ${r.nombre}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div style={{ fontFamily: fuentes.mono, fontSize: 11.5, color: colores.textDim }}>
+                      longitud trazada {r.longitudM.toFixed(2)} m
+                      {cruces.cruces.length > 0 && (
+                        <>
+                          {" "}
+                          · +{cruces.extraTotalM.toFixed(2)} m por {cruces.cruces.length} cruce{cruces.cruces.length !== 1 ? "s" : ""} de pared ·{" "}
+                          <strong style={{ color: colores.textMain }}>total {cruces.longitudTotalM.toFixed(2)} m</strong>
+                        </>
+                      )}
+                    </div>
+                    {cruces.paredesSinEspesor.length > 0 && (
+                      <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 2 }}>
+                        ⚠ Cruza {cruces.paredesSinEspesor.length} pared{cruces.paredesSinEspesor.length !== 1 ? "es" : ""} sin espesor medido — medí su ancho para incluirlo en el total.
+                      </div>
+                    )}
+                    {cruces.paredesAnguloIndeterminado.length > 0 && (
+                      <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 2 }}>
+                        ⚠ Cruza {cruces.paredesAnguloIndeterminado.length} pared{cruces.paredesAnguloIndeterminado.length !== 1 ? "es" : ""} en un ángulo demasiado rasante para calcular el extra con confianza.
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontFamily: fuentes.mono, fontSize: 11.5, color: colores.textDim }}>longitud {r.longitudM.toFixed(2)} m</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

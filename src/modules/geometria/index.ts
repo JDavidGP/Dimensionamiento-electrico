@@ -153,6 +153,58 @@ export function interseccionCirculos(centroA: Punto, radioA: number, centroB: Pu
   ];
 }
 
+/**
+ * Intersección de 2 segmentos (no rectas infinitas) — usuario,
+ * 2026-11-22, "motor geométrico" para el cruce de una ruta de
+ * conductor contra las paredes del plano (ver
+ * modules/plano/cruceParedes.ts). Algoritmo paramétrico estándar:
+ * resuelve p1+t·(p2−p1) = p3+u·(p4−p3) para t,u ∈ [0,1] — si ambos
+ * caen en ese rango, los segmentos se cruzan DENTRO de sus propios
+ * extremos (no solo sus rectas extendidas).
+ *
+ * `null` si son paralelos (denominador ≈0, incluye el caso colineal —
+ * no hay un único punto de cruce que devolver) o si se cruzan fuera de
+ * alguno de los 2 segmentos.
+ */
+export function interseccionSegmentos(p1: Punto, p2: Punto, p3: Punto, p4: Punto): Punto | null {
+  const d1x = p2.x - p1.x;
+  const d1y = p2.y - p1.y;
+  const d2x = p4.x - p3.x;
+  const d2y = p4.y - p3.y;
+  const denom = d1x * d2y - d1y * d2x;
+  const EPSILON = 1e-9;
+  if (Math.abs(denom) < EPSILON) return null;
+
+  const t = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / denom;
+  const u = ((p3.x - p1.x) * d1y - (p3.y - p1.y) * d1x) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+
+  return { x: p1.x + t * d1x, y: p1.y + t * d1y };
+}
+
+/**
+ * Ángulo AGUDO (0 a 90°, en RADIANES) entre las direcciones de 2
+ * segmentos — usado para la "distancia inclinada" al atravesar una
+ * capa de espesor conocido en diagonal (ver cruceParedes.ts): agudo a
+ * propósito, porque cruzar una pared en 30° o en 150° atraviesa
+ * exactamente el mismo espesor real (el ángulo obtuso es el mismo
+ * cruce visto "del otro lado"). `0` si algún segmento tiene longitud
+ * cero (no tiene dirección que medir).
+ */
+export function anguloAgudoEntreSegmentos(p1: Punto, p2: Punto, p3: Punto, p4: Punto): number {
+  const d1x = p2.x - p1.x;
+  const d1y = p2.y - p1.y;
+  const d2x = p4.x - p3.x;
+  const d2y = p4.y - p3.y;
+  const mag1 = Math.hypot(d1x, d1y);
+  const mag2 = Math.hypot(d2x, d2y);
+  if (mag1 === 0 || mag2 === 0) return 0;
+
+  const cosTheta = Math.max(-1, Math.min(1, (d1x * d2x + d1y * d2y) / (mag1 * mag2)));
+  const theta = Math.acos(cosTheta);
+  return theta > Math.PI / 2 ? Math.PI - theta : theta;
+}
+
 export {
   ZOOM_MIN,
   ZOOM_MAX,
