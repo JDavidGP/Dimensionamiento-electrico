@@ -103,6 +103,49 @@ export function puntoDentroDePoligono(punto, poligono) {
   return dentro;
 }
 
+/**
+ * Intersección de 2 círculos (centros + radios, en METROS) — núcleo de
+ * la "triangulación por recorrido" (usuario, 2026-11-20): fijar un
+ * punto nuevo del plano midiendo su distancia a 2 puntos YA conocidos
+ * (dos esquinas, dos equipos ya ubicados), sin necesitar ángulo —
+ * alcanza una cinta métrica. El punto recién fijado puede, a su vez,
+ * servir de referencia para el siguiente — así se va "recorriendo" el
+ * sitio en cadena, sin volver siempre a los mismos 2 puntos de
+ * partida (ver agregarMarcadorEquipoPorTriangulacionPlano,
+ * useCircuitos.js).
+ *
+ * Caso general: 2 soluciones, una a cada lado de la recta que une los
+ * 2 centros — desambiguar cuál es la correcta (ej. con un click
+ * aproximado del usuario) es decisión de quien llama, acá solo se
+ * devuelven ambas. Tangentes (`radioA + radioB === d` o
+ * `|radioA − radioB| === d`): 1 sola solución. Si las 2 distancias
+ * ingresadas NO son compatibles con la separación real entre los 2
+ * puntos de referencia (muy lejos para alcanzarse, o un círculo
+ * adentro del otro) no hay intersección real — se devuelve []; nunca
+ * se fuerza una solución aproximada con datos que no cierran, mismo
+ * criterio de "nunca adivinar" del resto de la app.
+ */
+export function interseccionCirculos(centroA, radioA, centroB, radioB) {
+  const d = distancia(centroA, centroB);
+  const EPSILON = 1e-9;
+  if (d <= EPSILON) return []; // mismo punto de referencia dos veces — no hay cómo triangular
+  if (d > radioA + radioB + EPSILON || d < Math.abs(radioA - radioB) - EPSILON) return [];
+
+  const a = (radioA ** 2 - radioB ** 2 + d ** 2) / (2 * d);
+  const hCuadrado = radioA ** 2 - a ** 2;
+  const h = hCuadrado > EPSILON ? Math.sqrt(hCuadrado) : 0;
+  const px = centroA.x + (a * (centroB.x - centroA.x)) / d;
+  const py = centroA.y + (a * (centroB.y - centroA.y)) / d;
+  if (h === 0) return [{ x: px, y: py }]; // tangentes — una sola solución
+
+  const dx = (h * (centroB.y - centroA.y)) / d;
+  const dy = (h * (centroB.x - centroA.x)) / d;
+  return [
+    { x: px + dx, y: py - dy },
+    { x: px - dx, y: py + dy },
+  ];
+}
+
 export {
   ZOOM_MIN,
   ZOOM_MAX,

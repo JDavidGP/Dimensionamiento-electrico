@@ -26,6 +26,7 @@ const MODOS = [
   { valor: "ambiente", label: "Generar ambiente", ayuda: "Completá el nombre y la medida abajo, y hacé click en el plano donde va el CENTRO del ambiente." },
   { valor: "mover-ambiente", label: "Mover ambiente", ayuda: "Arrastrá un ambiente ya trazado (manual o generado) para reposicionarlo, manteniendo su forma y medida exactas." },
   { valor: "equipo", label: "Colocar equipo", ayuda: "Elegí el tipo abajo y hacé click en el plano donde va ubicado." },
+  { valor: "triangular", label: "Triangular equipo", ayuda: "Elegí el tipo arriba. Click en 2 puntos de referencia ya existentes (nodo de pared/conductor o equipo), escribí las 2 distancias medidas con cinta métrica, y confirmá con un click aproximado en el lugar real." },
   { valor: "eliminar", label: "Borrar", ayuda: "Click sobre un nodo, una pared/conductor o un equipo para eliminarlo." },
 ];
 
@@ -130,6 +131,20 @@ export default function PlanoInteligente({
   const [nombreEquipoNuevo, setNombreEquipoNuevo] = useState("");
   const [entidadEquipoNuevo, setEntidadEquipoNuevo] = useState("");
 
+  // Triangulación por recorrido (usuario, 2026-11-21): ubicar un
+  // equipo sin tocar la imagen directamente — click en 2 puntos de
+  // referencia YA existentes (nodo del grafo o equipo ya marcado),
+  // declarar las 2 distancias reales medidas con cinta métrica, y
+  // confirmar cuál de las 1-2 soluciones geométricas es la correcta
+  // con un click aproximado. El equipo recién ubicado queda disponible
+  // como referencia para el siguiente (ver alClickImagen, modo
+  // "triangular" y marcadorCercano más abajo) — así se "recorre" el
+  // sitio encadenando puntos, sin volver siempre a los 2 originales.
+  const [referenciasTriangulacion, setReferenciasTriangulacion] = useState([]); // hasta 2 {id, punto}
+  const [distancia1TriangulacionInput, setDistancia1TriangulacionInput] = useState("");
+  const [distancia2TriangulacionInput, setDistancia2TriangulacionInput] = useState("");
+  const [candidatosTriangulacion, setCandidatosTriangulacion] = useState([]); // 0-2 puntos MODELO (metros), resultado de interseccionCirculos
+
   // Modo "ambiente" — generador por dimensión conocida (pedido
   // explícito del usuario: "etiqueta + perímetro 12x8m" → un polígono
   // de ese tamaño exacto, en vez de trazarlo a mano). nombre/ancho/alto
@@ -167,6 +182,42 @@ export default function PlanoInteligente({
     setAltoRealInput("");
     setTrazoActual([]);
     setEntidadEquipoNuevo("");
+    setReferenciasTriangulacion([]);
+    setDistancia1TriangulacionInput("");
+    setDistancia2TriangulacionInput("");
+    setCandidatosTriangulacion([]);
+  }
+
+  function reiniciarTriangulacion() {
+    setReferenciasTriangulacion([]);
+    setDistancia1TriangulacionInput("");
+    setDistancia2TriangulacionInput("");
+    setCandidatosTriangulacion([]);
+  }
+
+  function calcularCandidatosTriangulacion(e) {
+    e.preventDefault();
+    const d1 = parseFloat(distancia1TriangulacionInput);
+    const d2 = parseFloat(distancia2TriangulacionInput);
+    if (!(d1 > 0) || !(d2 > 0)) {
+      mostrarAviso("Completá las 2 distancias (metros, mayores a 0).");
+      return;
+    }
+    const [refA, refB] = referenciasTriangulacion;
+    const candidatos = App.plano.interseccionCirculos(refA.punto, d1, refB.punto, d2);
+    if (candidatos.length === 0) {
+      const separacionReal = App.plano.distancia(refA.punto, refB.punto);
+      mostrarAviso(
+        `Esas 2 distancias no son compatibles con la separación real entre las 2 referencias (${separacionReal.toFixed(2)} m) — revisá la medición.`
+      );
+      return;
+    }
+    setCandidatosTriangulacion(candidatos);
+    mostrarAviso(
+      candidatos.length === 1
+        ? "Un único punto posible — hacé click cerca de él en el plano para confirmarlo."
+        : "2 puntos posibles (uno de cada lado) — hacé click cerca del que sabés que es el correcto."
+    );
   }
 
   async function alSeleccionarArchivo(e) {
@@ -289,6 +340,16 @@ export default function PlanoInteligente({
       return;
     }
 
+    if (modo === "triangular") {
+      const escala = planoCalibracion?.escalaMetrosPorPixel;
+      if (!escala) {
+        mostrarAviso("Calibrá el plano primero.");
+        return;
+      }
+      manejarPuntoTriangulacion(App.plano.imagenAModelo(puntoImagen, escala));
+      return;
+    }
+
     if (modo === "eliminar") {
       const escala = planoCalibracion?.escalaMetrosPorPixel ?? 1;
       const puntoModelo = App.plano.imagenAModelo(puntoImagen, escala);
@@ -303,7 +364,49 @@ export default function PlanoInteligente({
     }
   }
 
+  // Compartida entre alClickImagen (click en vacío, busca el nodo/equipo
+  // más cercano) y alClickMarcador (click directo SOBRE un equipo ya
+  // marcado, que por su propio manejador de click no deja pasar el
+  // evento al lienzo) — mismo criterio en los 2 casos, nunca duplicado.
+  // `referenciaDirecta`, si viene, YA es el nodo/equipo exacto (saltea
+  // la búsqueda por cercanía).
+  function manejarPuntoTriangulacion(puntoModelo, referenciaDirecta = null) {
+    if (candidatosTriangulacion.length > 0) {
+      if (!tipoEquipoSeleccionado) {
+        mostrarAviso("Elegí un tipo de equipo arriba antes de confirmar.");
+        return;
+      }
+      const elegido = candidatosTriangulacion.reduce((masCercano, c) =>
+        App.plano.distancia(puntoModelo, c) < App.plano.distancia(puntoModelo, masCercano) ? c : masCercano
+      );
+      const escala = planoCalibracion.escalaMetrosPorPixel;
+      const puntoImagenElegido = App.plano.modeloAImagen(elegido, escala);
+      agregarMarcadorEquipoPlano(puntoImagenElegido, tipoEquipoSeleccionado, entidadEquipoNuevo || null, nombreEquipoNuevo);
+      reiniciarTriangulacion();
+      mostrarAviso("Equipo ubicado por triangulación — ya podés usarlo de referencia para el siguiente.");
+      return;
+    }
+
+    if (referenciasTriangulacion.length < 2) {
+      const escala = planoCalibracion.escalaMetrosPorPixel;
+      const cercano = referenciaDirecta ?? App.plano.nodoCercano(puntoModelo, [...nodosPlano, ...marcadoresEquipoPlano], escala * 12);
+      if (!cercano) {
+        mostrarAviso("No hay ningún nodo o equipo ya ubicado cerca de ese click — ese es el tipo de punto que hace falta como referencia.");
+        return;
+      }
+      if (referenciasTriangulacion.some((r) => r.id === cercano.id)) {
+        mostrarAviso("Ese punto ya es una de las 2 referencias — elegí uno distinto.");
+        return;
+      }
+      setReferenciasTriangulacion([...referenciasTriangulacion, cercano]);
+    }
+  }
+
   function alClickMarcador(marcador) {
+    if (modo === "triangular") {
+      manejarPuntoTriangulacion(marcador.punto, marcador);
+      return;
+    }
     if (modo !== "eliminar") return;
     eliminarMarcadorEquipoPlano(marcador.id);
   }
@@ -511,9 +614,71 @@ export default function PlanoInteligente({
                   </label>
                 </>
               )}
+              {modo === "triangular" && (
+                <>
+                  {" "}·{" "}
+                  {referenciasTriangulacion.length < 2
+                    ? `${referenciasTriangulacion.length} de 2 referencias elegidas.`
+                    : candidatosTriangulacion.length === 0
+                      ? "2 referencias listas — completá las 2 distancias abajo."
+                      : `${candidatosTriangulacion.length} punto(s) posible(s) — click aproximado en el plano para confirmar.`}
+                  {referenciasTriangulacion.length > 0 && (
+                    <>
+                      {" "}
+                      <button type="button" onClick={reiniciarTriangulacion} style={{ background: "none", border: "none", color: colores.copper, fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 11 }}>
+                        Reiniciar
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
             </div>
 
-            {modo === "equipo" && (
+            {modo === "triangular" && referenciasTriangulacion.length === 2 && candidatosTriangulacion.length === 0 && (
+              <form onSubmit={calcularCandidatosTriangulacion} style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 10, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Distancia real a la referencia 1 (m):</div>
+                  <input
+                    style={{ ...inputStyle(), width: 110 }}
+                    type="number"
+                    step="0.01"
+                    autoFocus
+                    value={distancia1TriangulacionInput}
+                    onChange={(e) => setDistancia1TriangulacionInput(e.target.value)}
+                    placeholder="Ej: 2.5"
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Distancia real a la referencia 2 (m):</div>
+                  <input
+                    style={{ ...inputStyle(), width: 110 }}
+                    type="number"
+                    step="0.01"
+                    value={distancia2TriangulacionInput}
+                    onChange={(e) => setDistancia2TriangulacionInput(e.target.value)}
+                    placeholder="Ej: 3.1"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!distancia1TriangulacionInput || !distancia2TriangulacionInput}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 3,
+                    border: "none",
+                    background: distancia1TriangulacionInput && distancia2TriangulacionInput ? colores.copper : colores.border,
+                    color: "#171512",
+                    fontWeight: 700,
+                    fontSize: 12.5,
+                    cursor: distancia1TriangulacionInput && distancia2TriangulacionInput ? "pointer" : "not-allowed",
+                  }}
+                >
+                  Calcular
+                </button>
+              </form>
+            )}
+
+            {(modo === "equipo" || modo === "triangular") && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
                 <select
                   value={tipoEquipoSeleccionado}
@@ -603,7 +768,9 @@ export default function PlanoInteligente({
                 ? puntosContornoCalibracion
                 : modo === "espesor"
                   ? puntosEspesor
-                  : puntosCalibracion
+                  : modo === "triangular"
+                    ? referenciasTriangulacion.map((r) => App.plano.modeloAImagen(r.punto, planoCalibracion.escalaMetrosPorPixel))
+                    : puntosCalibracion
           }
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
@@ -614,6 +781,11 @@ export default function PlanoInteligente({
           paredesCandidatas={paredesCandidatas}
           puertasCandidatas={puertasCandidatas}
           onClickParedCandidata={aceptarParedCandidata}
+          candidatosTriangulacion={
+            modo === "triangular" && planoCalibracion
+              ? candidatosTriangulacion.map((c) => App.plano.modeloAImagen(c, planoCalibracion.escalaMetrosPorPixel))
+              : []
+          }
         />
 
         {modo === "perspectiva" && puntosPerspectiva.length === 4 && (

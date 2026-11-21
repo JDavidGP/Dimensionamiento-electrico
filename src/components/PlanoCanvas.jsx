@@ -48,6 +48,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     asistenciaBordes = false,
     paredesCandidatas = [],
     puertasCandidatas = [],
+    candidatosTriangulacion = [],
     onClickImagen,
     onClickMarcador,
     onArrastrarHabitacion,
@@ -419,6 +420,15 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                   strokeDasharray={`${grosorLinea} ${grosorLinea}`}
                   strokeLinecap="round"
                 />
+              ))}
+
+              {/* Candidatos de triangulación (usuario, 2026-11-21) — 1 o 2
+                  soluciones geométricas pendientes de confirmar: el siguiente
+                  click en el lienzo (en espacio imagen, ya convertido por
+                  onClickImagen) elige la más cercana a ese click y recién ahí
+                  se crea el equipo real. Puramente visual, nunca se crea solo. */}
+              {candidatosTriangulacion.map((c, i) => (
+                <circle key={`ct-${i}`} cx={c.x} cy={c.y} r={radioNodo * 2} fill="none" stroke={colores.copper} strokeWidth={grosorLinea} strokeDasharray={`${grosorLinea} ${grosorLinea}`} />
               ))}
             </g>
           </svg>

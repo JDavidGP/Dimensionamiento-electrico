@@ -52,6 +52,7 @@ import {
   areaPoligono,
   perimetroPoligono,
   puntoDentroDePoligono,
+  interseccionCirculos,
   transformVistaInicial,
   aPantalla,
   aModelo,
@@ -101,6 +102,7 @@ export const PlanoMediator = {
   areaPoligono,
   perimetroPoligono,
   puntoDentroDePoligono,
+  interseccionCirculos,
 
   calcularHomografia,
   aplicarHomografia,
