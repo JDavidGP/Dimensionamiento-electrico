@@ -36,10 +36,40 @@
 // estándar exacto) — ver test_proteccion_transformador.mjs.
 //
 // ALCANCE: NEC/CIEN únicamente (CIEN deriva de NEC, Art. 240-6 lista
-// los mismos tamaños estándar). IEC_ES (REBT) usa su propio criterio
-// por ITC-BT-47, no verificado todavía — no se aplica esta tabla ahí;
-// llamar esta función para una instalación IEC_ES sería inventar un
-// criterio que esa normativa no tiene documentado acá.
+// los mismos tamaños estándar). IEC_ES (REBT) NO usa esta tabla — tiene
+// su propio criterio, bien distinto, implementado más abajo en este
+// mismo archivo (seleccionarProteccionTransformadorREBT). Corrección
+// (usuario, 2026-11-21, documento "protección de transformador"): una
+// nota anterior en este comentario decía "ITC-BT-47" — ESO ERA UN ERROR,
+// ITC-BT-47 es "Instalaciones de receptores — Motores", no tiene nada
+// que ver con transformadores. Ya corregido.
+
+// --- IEC_ES (REBT) — criterio de protección del lado BT del transformador ---
+//
+// Usuario, 2026-11-21 (documento "protección de transformador",
+// citando ITC-BT-48 pto.3, ITC-BT-22 pto.1.1/1.2, ITC-BT-28 pto.1.1,
+// ITC-BT-19 pto.2.2.2): el REBT es INTENCIONALMENTE abierto acá — no
+// fija ningún % como el NEC. Texto exacto, ITC-BT-48 pto.3: "Todo
+// transformador estará protegido por un dispositivo de corte por
+// sobreintensidad u otro sistema equivalente. Este dispositivo estará
+// de acuerdo con las características que figuran en la placa del
+// transformador, y con la utilización de dicho transformador." No hay
+// artículo que diga "125%".
+//
+// Lo que SÍ se puede calcular (encadenando las ITC citadas, "lo que se
+// hace en proyectos" según el documento del usuario — NO un artículo
+// cerrado, es la aplicación práctica que el REBT deja abierta):
+//   - Mínimo: interruptor general BT ≥ In del transformador (secundario)
+//     — si no, lo dispara su propia carga nominal.
+//   - Máximo: interruptor ≤ Imax del conductor de salida del
+//     transformador (ITC-BT-22 pto.1.1) — eso ya lo verifica
+//     seleccionarBreaker/seleccionarSeccion en el tramo del alimentador,
+//     NO esta función (que solo propone el mínimo razonable).
+//   - Práctica habitual: el SIGUIENTE valor normalizado ≥ In (nunca el
+//     125% NEC — acá no hay tabla de %, es directo).
+//
+// AT (primario) no aplica: "no aplica (es AT → ITC-RAT)" — fuera de
+// alcance del proyecto, igual que siempre (el motor no modela AT).
 
 /**
  * Tamaños estándar NEC 240.6(A) — lista COMPLETA (a diferencia de
@@ -128,4 +158,60 @@ export function seleccionarProteccionTransformador({
   }
 
   return { ok: true, proteccionPrimariaA, porcentajePrimario: 250, proteccionSecundariaA, porcentajeSecundario };
+}
+
+/**
+ * Valores normalizados de In (serie R10) para interruptores de
+ * corrientes grandes (MCCB / interruptor de potencia) — usuario,
+ * 2026-11-21, documento "tabla de valores normalizados":
+ *
+ *   IEC 60947-2 (ed.8, 2020) §6.3.2.3: "la corriente nominal In debe
+ *   ser seleccionada de la serie R10 de la IEC 60039-1". UNE-EN
+ *   60947-2 (adopción española) mismo texto, adoptada por REBT
+ *   ITC-BT-22 pto.1.1 (que remite a UNE-EN 60947-2/60898, no define
+ *   valores propios).
+ *
+ * Distinta de BREAKERS_IEC_ES (normativa/iec/es.ts, se corta a
+ * propósito en 125A — pensada para breaker de circuito derivado
+ * residencial/comercial tipo MCB) por el mismo motivo que
+ * TAMANOS_ESTANDAR_NEC_240_6_A es distinta de BREAKERS_NEC: la
+ * protección de un transformador necesita tamaños mayores. Se omite
+ * el tramo <10A de la serie (0,5·1·2·3·4·6, propio de MCB IEC 60898
+ * §5.1) porque ningún transformador modelable en esta app tiene una
+ * In secundaria tan chica.
+ */
+export const TAMANOS_ESTANDAR_IEC_60947_2 = [
+  10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 355, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300,
+];
+
+export interface ParametrosProteccionTransformadorREBT {
+  corrienteSecundariaA: number;
+  /** Lista de tamaños estándar — por defecto, la serie R10 completa (IEC 60947-2). */
+  tamanosEstandar?: number[];
+}
+
+export type ResultadoProteccionTransformadorREBT = { ok: false; motivo: string } | { ok: true; proteccionSecundariaA: number };
+
+/**
+ * Interruptor general BT propuesto para el secundario de un
+ * transformador propio, bajo IEC_ES (REBT) — NO es una tabla de %
+ * como NEC 450.3(B) (el REBT no tiene una, ver nota de cabecera de
+ * este archivo): es el siguiente valor normalizado ≥ In. El llamador
+ * (UI) debe mostrar esto como una PROPUESTA de proyecto, no como un
+ * artículo normativo cerrado — y verificar aparte que el conductor de
+ * salida del transformador aguante esa corriente (ITC-BT-22 pto.1.1,
+ * ya lo hace seleccionarSeccion/seleccionarBreaker del alimentador).
+ */
+export function seleccionarProteccionTransformadorREBT({
+  corrienteSecundariaA,
+  tamanosEstandar = TAMANOS_ESTANDAR_IEC_60947_2,
+}: ParametrosProteccionTransformadorREBT): ResultadoProteccionTransformadorREBT {
+  if (!(corrienteSecundariaA > 0)) {
+    return { ok: false, motivo: "Falta la corriente nominal secundaria del transformador." };
+  }
+  const proteccionSecundariaA = masCercanoHaciaArriba(corrienteSecundariaA, tamanosEstandar);
+  if (proteccionSecundariaA == null) {
+    return { ok: false, motivo: `Ningún tamaño estándar de la lista alcanza ${corrienteSecundariaA.toFixed(1)}A — se necesita un tamaño mayor al listado.` };
+  }
+  return { ok: true, proteccionSecundariaA };
 }

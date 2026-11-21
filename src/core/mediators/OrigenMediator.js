@@ -41,7 +41,13 @@ import {
 import {
   TAMANOS_ESTANDAR_NEC_240_6_A,
   seleccionarProteccionTransformador,
+  TAMANOS_ESTANDAR_IEC_60947_2,
+  seleccionarProteccionTransformadorREBT,
 } from "../../modules/motor/proteccionTransformador.ts";
+import {
+  calcularImpedanciaTransformadorOhm,
+  calcularCortocircuitoTrifasico,
+} from "../../modules/motor/cortocircuito.ts";
 
 export const OrigenMediator = {
   // Enums expuestos para la UI — mismo patrón que ValidacionMediator.ESTADOS.
@@ -51,6 +57,7 @@ export const OrigenMediator = {
   CONMUTACION_VACIA,
   TRANSFORMADOR_VACIO,
   TAMANOS_ESTANDAR_NEC_240_6_A,
+  TAMANOS_ESTANDAR_IEC_60947_2,
 
   /** Fábrica de una fuente de energía nueva (no la guarda — eso lo hace el hook). */
   crearFuente(datos) {
@@ -95,6 +102,21 @@ export const OrigenMediator = {
   /** Protección de sobrecorriente del transformador — NEC Tabla 450.3(B), solo NEC/CIEN (ver proteccionTransformador.ts). */
   seleccionarProteccionTransformador(parametros) {
     return seleccionarProteccionTransformador(parametros);
+  },
+
+  /** Interruptor general BT propuesto para IEC_ES (REBT) — criterio distinto al de NEC, ver proteccionTransformador.ts. */
+  seleccionarProteccionTransformadorREBT(parametros) {
+    return seleccionarProteccionTransformadorREBT(parametros);
+  },
+
+  /** %Z de placa → impedancia en Ω (trifásico únicamente) — ver cortocircuito.ts. */
+  calcularImpedanciaTransformadorOhm(parametros) {
+    return calcularImpedanciaTransformadorOhm(parametros);
+  },
+
+  /** Cortocircuito trifásico — expuesto acá (no solo en MotorCalculoMediator) para componer con calcularImpedanciaTransformadorOhm sin saltar de mediador a mitad de un cálculo del mismo dominio (Origen/Transformador). */
+  calcularCortocircuitoTrifasico(...args) {
+    return calcularCortocircuitoTrifasico(...args);
   },
 
   /** Resuelve qué es un origenId (tableroPadreId) contra los tres catálogos. */

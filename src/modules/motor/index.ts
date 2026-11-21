@@ -17,6 +17,7 @@ export {
   calcularCortocircuitoTrifasico,
   calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
+  calcularImpedanciaTransformadorOhm,
 } from "./cortocircuito.ts";
 export { seleccionarSeccion } from "./seleccionSeccion.ts";
 export { combinarResultadosCircuitos } from "./combinarResultadosCircuitos.ts";
@@ -33,6 +34,8 @@ export {
 export {
   TAMANOS_ESTANDAR_NEC_240_6_A,
   seleccionarProteccionTransformador,
+  TAMANOS_ESTANDAR_IEC_60947_2,
+  seleccionarProteccionTransformadorREBT,
 } from "./proteccionTransformador.ts";
 export {
   TABLA_COEFICIENTE_SIMULTANEIDAD,
@@ -53,6 +56,8 @@ export type {
   EsquemaProteccionTransformador,
   ParametrosProteccionTransformador,
   ResultadoProteccionTransformador,
+  ParametrosProteccionTransformadorREBT,
+  ResultadoProteccionTransformadorREBT,
 } from "./proteccionTransformador.ts";
 export type { ResultadoCombinado } from "./combinarResultadosCircuitos.ts";
 export type { CargaCombinada } from "./cargaCombinada.ts";
@@ -67,4 +72,5 @@ export type {
   ResultadoCortocircuitoTrifasico,
   ResultadoCortocircuitoMonofasico,
   ResultadoCapacidadInterrupcion,
+  ResultadoImpedanciaTransformador,
 } from "./cortocircuito.ts";

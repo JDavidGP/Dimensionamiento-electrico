@@ -18,6 +18,17 @@
 // capacidad de interrupción (kA) del breaker específico seleccionado —
 // ese dato vive en el equipo/breaker del proyecto, no acá ni en la
 // normativa (ver conversación de diseño).
+//
+// Usuario, 2026-11-21 (documento "protección de transformador",
+// fórmula verificada contra su ejemplo numérico: 400kVA/400V/uk=4% →
+// Icc=14 434A): PRIMER dato real conectado a `impedanciaFuenteOhm` —
+// calcularImpedanciaTransformadorOhm() convierte el %Z de placa del
+// transformador a Ω, para usarlo directo en calcularCortocircuitoTrifasico
+// (ver más abajo). Esto NO cierra el "ESTADO ACTUAL" de arriba del
+// todo — solo cubre el cortocircuito EN LOS BORNES del transformador
+// (conductor = 0, sin tramo aguas abajo); seguir la cadena hasta un
+// tablero remoto sigue necesitando el nivel Tablero/diagrama que no
+// existe todavía.
 import type { ImpedanciaFuente } from "./tipos.ts";
 
 export interface ResultadoCortocircuitoTrifasico {
@@ -116,4 +127,58 @@ export function verificarCapacidadInterrupcion(iccA: number, capacidadInterrupci
     capacidadA,
     margen: capacidadA - iccA,
   };
+}
+
+export type ResultadoImpedanciaTransformador = { disponible: false; motivo: string } | { disponible: true; impedancia: ImpedanciaFuente };
+
+/**
+ * %Z de placa → impedancia en Ω, para usar como `impedanciaFuenteOhm`
+ * de calcularCortocircuitoTrifasico. Fórmula estándar (IEC 60909/IEEE,
+ * misma que usa el documento del usuario para su ejemplo numérico):
+ *
+ *   Z_trafo (Ω) = (%Z / 100) × V²_línea / S_N(VA)
+ *
+ * Verificado: 400kVA, 400V, %Z=4% → Z=0,016Ω → Icc = 400/(√3×0,016) =
+ * 14 434A, exacto contra el ejemplo del documento.
+ *
+ * Reparto R/X: el documento NO da X/R de placa (dato que normalmente
+ * viene de una tabla de fabricante aparte, no de %Z solo) — se trata
+ * TODA la impedancia como reactancia pura (r=0, x=Z). Esto no cambia
+ * el Icc en los BORNES del transformador (zTotal=√(r²+x²)=Z de
+ * cualquier forma que se reparta) — pero si algún día se suma la
+ * impedancia de un conductor aguas abajo, un reparto R/X real de placa
+ * sí cambiaría el resultado y éste deja de ser válido: no inventar esa
+ * repartición sin dato de fabricante.
+ *
+ * Alcance trifásico únicamente — el documento no cubre el caso
+ * monofásico (que necesitaría su propia derivación para el lazo de
+ * calcularCortocircuitoMonofasico, no solo la magnitud); un
+ * transformador fases:"mono" devuelve `disponible:false` en vez de
+ * inventar una fórmula no verificada.
+ */
+export function calcularImpedanciaTransformadorOhm({
+  capacidadKVA,
+  tensionSecundariaV,
+  impedanciaPct,
+  fases,
+}: {
+  capacidadKVA: number | string;
+  tensionSecundariaV: number | string;
+  impedanciaPct: number | string;
+  fases: "mono" | "tri";
+}): ResultadoImpedanciaTransformador {
+  if (fases !== "tri") {
+    return { disponible: false, motivo: "Cortocircuito por %Z solo verificado para transformador trifásico (ver nota de la función)." };
+  }
+  const kva = Number(capacidadKVA);
+  const v = Number(tensionSecundariaV);
+  const z = Number(impedanciaPct);
+  if (!(kva > 0) || !(v > 0)) {
+    return { disponible: false, motivo: "Falta capacidad (kVA) y/o tensión secundaria del transformador." };
+  }
+  if (!(z > 0)) {
+    return { disponible: false, motivo: "Falta el %Z de placa del transformador." };
+  }
+  const zOhm = (z / 100) * (v * v) / (kva * 1000);
+  return { disponible: true, impedancia: { r: 0, x: zOhm } };
 }

@@ -19,10 +19,16 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // es el único dato nuevo imprescindible para conectar
 // calcularCorrientesNominales/seleccionarProteccionTransformador (que
 // ya existían en el motor, pero nada los llamaba) a un resultado real.
-// Conexión Y/Δ y %Z siguen SIN campo acá a propósito — fuera de
-// alcance de esta ronda, "nos hace falta datos para desarrollar ese
-// apartado" (usuario, 2026-11-19, todavía vigente para esos 2).
-const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", notas: "" };
+//
+// %Z agregada después (usuario, 2026-11-21, documentos "protección de
+// transformador" + "tabla de valores normalizados"): conecta
+// calcularImpedanciaTransformadorOhm + calcularCortocircuitoTrifasico
+// (Icc en los bornes, trifásico únicamente) y habilita la propuesta de
+// interruptor general BT bajo IEC_ES (criterio REBT, distinto del NEC
+// — ver proteccionTransformador.ts). Conexión Y/Δ sigue SIN campo acá
+// a propósito — ninguno de los cálculos conectados hasta ahora la
+// necesita.
+const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", impedanciaPct: "", notas: "" };
 const FASES_TRANSFORMADOR = [
   { valor: "mono", label: "Mono" },
   { valor: "tri", label: "Tri" },
@@ -65,6 +71,7 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
       tensionPrimariaV: t.tensionPrimariaV ? String(t.tensionPrimariaV) : "",
       tensionSecundariaV: t.tensionSecundariaV ? String(t.tensionSecundariaV) : "",
       capacidadKVA: t.capacidadKVA ? String(t.capacidadKVA) : "",
+      impedanciaPct: t.impedanciaPct ? String(t.impedanciaPct) : "",
       notas: t.notas || "",
     });
     setEditandoId(t.id);
@@ -157,15 +164,26 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
             </Campo>
           </div>
 
-          <Campo label="Capacidad (kVA)">
-            <input
-              type="number"
-              style={inputStyle()}
-              value={form.capacidadKVA}
-              onChange={(e) => setForm({ ...form, capacidadKVA: e.target.value })}
-              placeholder="Ej: 75"
-            />
-          </Campo>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Campo label="Capacidad (kVA)">
+              <input
+                type="number"
+                style={inputStyle()}
+                value={form.capacidadKVA}
+                onChange={(e) => setForm({ ...form, capacidadKVA: e.target.value })}
+                placeholder="Ej: 75"
+              />
+            </Campo>
+            <Campo label="%Z de placa (opcional)">
+              <input
+                type="number"
+                style={inputStyle()}
+                value={form.impedanciaPct}
+                onChange={(e) => setForm({ ...form, impedanciaPct: e.target.value })}
+                placeholder="Ej: 4"
+              />
+            </Campo>
+          </div>
 
           <Campo label="Notas (opcional)">
             <input
@@ -177,8 +195,8 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
           </Campo>
 
           <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4, margin: "-4px 0 12px" }}>
-            Conexión Y/Δ y %Z todavía no tienen campo acá — se completan más adelante, cuando haya un proyecto industrial real que
-            los necesite.
+            Conexión Y/Δ todavía no tiene campo acá — ningún cálculo conectado hasta ahora la necesita. %Z solo habilita el cortocircuito
+            en los bornes para transformador trifásico (ver abajo).
           </div>
 
           <div style={{ display: "flex", gap: 6 }}>
@@ -332,6 +350,53 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
                             </div>
                           ) : (
                             <div style={{ fontSize: 11.5, color: colores.warn }}>{proteccion.motivo}</div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* IEC_ES (REBT) — usuario, 2026-11-21, documentos "protección
+                        de transformador" (ITC-BT-48 pto.3: sin % fijo, criterio
+                        abierto) + "tabla de valores normalizados" (serie R10 IEC
+                        60947-2). Distinto del bloque NEC de arriba: solo secundario
+                        (BT) — el REBT no modela el lado AT — y el interruptor
+                        propuesto es el SIGUIENTE valor normalizado ≥ In, no un %. */}
+                    {normativaActiva === "IEC_ES" && (() => {
+                      const corrientes = App.origen.calcularCorrientesNominales(t);
+                      if (!corrientes.disponible) {
+                        return (
+                          <div style={{ fontSize: 11, color: colores.textDim, fontStyle: "italic" }}>
+                            Corriente nominal y protección (REBT) pendientes: {corrientes.motivo}
+                          </div>
+                        );
+                      }
+                      const proteccion = App.origen.seleccionarProteccionTransformadorREBT({ corrienteSecundariaA: corrientes.corrienteSecundariaA });
+                      const impedancia = App.origen.calcularImpedanciaTransformadorOhm(t);
+                      const corto = impedancia.disponible
+                        ? App.origen.calcularCortocircuitoTrifasico(Number(t.tensionSecundariaV), impedancia.impedancia, 0, 0)
+                        : null;
+                      return (
+                        <div style={{ borderTop: `1px dashed ${colores.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                          <div style={{ fontSize: 10.5, color: colores.textDim, fontFamily: fuentes.mono }}>
+                            Corriente nominal secundario: {corrientes.corrienteSecundariaA.toFixed(1)}A
+                          </div>
+                          {proteccion.ok ? (
+                            <div style={{ fontSize: 11.5, color: colores.textMain }}>
+                              Interruptor general BT propuesto (REBT, ITC-BT-48 pto.3 — siguiente valor normalizado ≥ In):{" "}
+                              <strong>{proteccion.proteccionSecundariaA}A</strong>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 11.5, color: colores.warn }}>{proteccion.motivo}</div>
+                          )}
+                          {corto ? (
+                            <div style={{ fontSize: 11.5, color: colores.textMain }}>
+                              Icc en bornes del transformador: <strong>{(corto.iccA / 1000).toFixed(1)} kA</strong> — verificar que el
+                              interruptor elegido tenga Icu ≥ ese valor.
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 11, color: colores.textDim, fontStyle: "italic" }}>
+                              Cortocircuito en bornes pendiente: {impedancia.disponible ? "" : impedancia.motivo}
+                            </div>
                           )}
                         </div>
                       );
