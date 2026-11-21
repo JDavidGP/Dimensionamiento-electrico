@@ -21,26 +21,29 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Instalar dependencias (bug conocido de npm, "Exit handler never called!" — reproducido 7/7 veces con `npm ci` en este runner, con timing ~70s consistente en cada intento; `npm install` con timeouts de red más largos evita el mismo camino interno de npm que lo dispara, ver https://github.com/npm/cli/issues)
-        run: |
-          npm config set fetch-timeout 300000
-          npm config set fetch-retry-maxtimeout 120000
-          for intento in 1 2 3; do
-            npm install --no-audit --no-fund && exit 0
-            echo "npm install falló (intento $intento/3), reintentando..."
-            sleep 5
-          done
-          echo "npm install falló los 3 intentos."
-          exit 1
+      # Bug de npm, "Exit handler never called!" — reproducido 10/10 veces
+      # en este runner (con `npm ci`, con `npm install`, con reintentos,
+      # con timeouts más largos — ver el historial de commits de este
+      # archivo). Siempre se cuelga ~70-110s en el mismo punto (justo
+      # tras resolver workbox-build/glob, el árbol más grande de la
+      # dependencia nueva vite-plugin-pwa) y después revienta — no es
+      # de red ni transitorio. pnpm usa un instalador completamente
+      # distinto (nunca tuvo este bug, que es específico de npm) —
+      # probamos esto en vez de seguir ajustando npm.
+      - name: Habilitar pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Instalar dependencias con pnpm
+        run: pnpm install --no-frozen-lockfile
 
       - name: Instalar Chromium de Playwright
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
-      - run: npm run type-check
+      - run: pnpm run type-check
 
-      - run: npm run build
+      - run: pnpm run build
 
       - name: Correr toda la regresión
-        run: npm test
+        run: pnpm test
         env:
           BASE_URL: http://localhost:4343

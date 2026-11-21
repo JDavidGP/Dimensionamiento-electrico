@@ -36,18 +36,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Instalar dependencias (ver la nota larga en tests.yml — `npm install`, no `npm ci`, por el bug de npm)
-        run: |
-          npm config set fetch-timeout 300000
-          npm config set fetch-retry-maxtimeout 120000
-          for intento in 1 2 3; do
-            npm install --no-audit --no-fund && exit 0
-            echo "npm install falló (intento $intento/3), reintentando..."
-            sleep 5
-          done
-          echo "npm install falló los 3 intentos."
-          exit 1
-      - run: npm run build
+      # Ver la nota larga en tests.yml — pnpm en vez de npm, por el bug
+      # de npm ("Exit handler never called!") reproducido 10/10 veces.
+      - name: Habilitar pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Instalar dependencias con pnpm
+        run: pnpm install --no-frozen-lockfile
+      - run: pnpm run build
         env:
           GITHUB_PAGES: true
       - uses: actions/configure-pages@v5
