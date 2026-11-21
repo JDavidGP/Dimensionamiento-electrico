@@ -1,4 +1,4 @@
-// src/modules/tablero/index.js
+// src/modules/tablero/index.ts
 //
 // Módulo Tablero — Fase 3 (dato relacional circuito↔tablero) + Fase 4
 // (alimentador: longitud, material, fases, tableroPadreId). CERO
@@ -18,8 +18,9 @@
 // subpaneles hacia abajo — eso sigue siendo el siguiente paso.
 
 import { generarId } from "../../shared/utils/id.js";
+import type { Tablero, DatosTablero, ConTableroId } from "./tipos.ts";
 
-function normalizar(datos = {}) {
+function normalizar(datos: DatosTablero = {}): Omit<Tablero, "id"> {
   return {
     nombre: datos.nombre?.trim() || "Tablero sin nombre",
     // Sistema de etiquetado (ver modules/etiquetado/index.js) — código
@@ -66,14 +67,14 @@ function normalizar(datos = {}) {
     // todavía no tiene circuitos propios cargados (ITC-BT-10 §2.2: sin
     // conocer la demanda real, se usa el mínimo del grado). "" / valor
     // inválido = sin elegir, cae al gradoPorDefecto del padre.
-    gradoElectrificacion: ["basica", "elevada"].includes(datos.gradoElectrificacion) ? datos.gradoElectrificacion : null,
+    gradoElectrificacion: datos.gradoElectrificacion === "basica" || datos.gradoElectrificacion === "elevada" ? datos.gradoElectrificacion : null,
     // Memo libre — documental, pedido explícito del usuario, justo
     // después de la distancia de la fuente de energía en la UI.
     notas: datos.notas || "",
   };
 }
 
-export function crearTablero(datos) {
+export function crearTablero(datos: DatosTablero): Tablero {
   return { id: generarId(), ...normalizar(datos) };
 }
 
@@ -82,17 +83,17 @@ export function crearTablero(datos) {
  * (mismo criterio que asignarCircuitoATablero; la escritura real la
  * aplica la capa de aplicación / hook, ver ARCHITECTURE.md §1.6).
  */
-export function editarTablero(tablero, cambios) {
+export function editarTablero(tablero: Tablero, cambios: DatosTablero): Tablero {
   return { ...tablero, ...normalizar({ ...tablero, ...cambios }) };
 }
 
 /** Circuitos que pertenecen a un tablero (lectura, calculada). */
-export function circuitosDeTablero(tableroId, circuitos = []) {
+export function circuitosDeTablero<C extends ConTableroId>(tableroId: string, circuitos: C[] = []): C[] {
   return circuitos.filter((c) => c.tableroId === tableroId);
 }
 
 /** Circuitos sin ningún tablero asignado todavía. */
-export function circuitosSinTablero(circuitos = []) {
+export function circuitosSinTablero<C extends ConTableroId>(circuitos: C[] = []): C[] {
   return circuitos.filter((c) => !c.tableroId);
 }
 
@@ -101,7 +102,7 @@ export function circuitosSinTablero(circuitos = []) {
  * (mutaciones reales las aplica la capa de aplicación / hook, ver
  * ARCHITECTURE.md §1.6). Pasar `null` desasigna.
  */
-export function asignarCircuitoATablero(circuito, tableroId) {
+export function asignarCircuitoATablero<C extends ConTableroId>(circuito: C, tableroId: string | null): C {
   return { ...circuito, tableroId: tableroId ?? null };
 }
 
@@ -114,7 +115,7 @@ export function asignarCircuitoATablero(circuito, tableroId) {
  * (shared/utils/lineasFases.js), que ya constriñe la interacción para
  * que no pueda quedar mal armada desde ahí.
  */
-export function asignarLineasACircuito(circuito, lineas) {
+export function asignarLineasACircuito<C extends object>(circuito: C, lineas: unknown): C & { lineas: unknown[] } {
   return { ...circuito, lineas: Array.isArray(lineas) ? lineas : [] };
 }
 
@@ -122,10 +123,15 @@ export function asignarLineasACircuito(circuito, lineas) {
  * Al eliminar un tablero, los circuitos que le pertenecían quedan sin
  * asignar (no se borran, no quedan huérfanos apuntando a un ID muerto).
  */
-export function liberarCircuitosDeTablero(tableroId, circuitos = []) {
+export function liberarCircuitosDeTablero<C extends ConTableroId>(tableroId: string, circuitos: C[] = []): C[] {
   return circuitos.map((c) =>
     c.tableroId === tableroId ? { ...c, tableroId: null } : c
   );
+}
+
+export interface CadenaAscendente {
+  cadena: Tablero[];
+  ciclo: boolean;
 }
 
 /**
@@ -141,12 +147,10 @@ export function liberarCircuitosDeTablero(tableroId, circuitos = []) {
  * que apunta a un tablero inexistente simplemente termina la cadena
  * ahí (no es un ciclo, es una referencia rota — la reporta
  * ValidacionMediator aparte).
- *
- * @returns {{ cadena: object[], ciclo: boolean }}
  */
-export function obtenerCadenaAscendente(tableroId, tableros = []) {
-  const cadena = [];
-  const visitados = new Set();
+export function obtenerCadenaAscendente(tableroId: string | null | undefined, tableros: Tablero[] = []): CadenaAscendente {
+  const cadena: Tablero[] = [];
+  const visitados = new Set<string>();
   let actualId = tableroId;
 
   while (actualId) {
@@ -164,8 +168,14 @@ export function obtenerCadenaAscendente(tableroId, tableros = []) {
 }
 
 /** Subpaneles directos (hijos) de un tablero (lectura, calculada). */
-export function hijosDeTablero(tableroId, tableros = []) {
+export function hijosDeTablero(tableroId: string, tableros: Tablero[] = []): Tablero[] {
   return tableros.filter((t) => t.tableroPadreId === tableroId);
+}
+
+export interface ArbolDescendente {
+  orden: Tablero[];
+  ciclo: boolean;
+  tableroCiclo?: Tablero;
 }
 
 /**
@@ -184,16 +194,16 @@ export function hijosDeTablero(tableroId, tableros = []) {
  * descendientes es un ciclo en esta dirección: se corta ahí, nunca
  * recursión infinita.
  *
- * @returns {{ orden: object[], ciclo: boolean, tableroCiclo?: object }}
- *   `orden`: tableros del subárbol (incluido el propio `tableroId`),
- *   en orden post-orden. Si `ciclo` es true, `orden` puede venir
- *   incompleto — el llamador no debe usarlo como si fuera válido.
+ * @returns `orden`: tableros del subárbol (incluido el propio
+ *   `tableroId`), en orden post-orden. Si `ciclo` es true, `orden`
+ *   puede venir incompleto — el llamador no debe usarlo como si fuera
+ *   válido.
  */
-export function obtenerArbolDescendentePostOrden(tableroId, tableros = []) {
-  const orden = [];
-  const visitados = new Set();
+export function obtenerArbolDescendentePostOrden(tableroId: string, tableros: Tablero[] = []): ArbolDescendente {
+  const orden: Tablero[] = [];
+  const visitados = new Set<string>();
 
-  function visitar(id) {
+  function visitar(id: string): { ciclo: boolean; tableroCiclo?: Tablero } {
     if (visitados.has(id)) {
       return { ciclo: true, tableroCiclo: tableros.find((t) => t.id === id) };
     }
@@ -202,7 +212,7 @@ export function obtenerArbolDescendentePostOrden(tableroId, tableros = []) {
     visitados.add(id);
 
     for (const hijo of hijosDeTablero(id, tableros)) {
-      const resultado = visitar(hijo.id);
+      const resultado = visitar(hijo.id!);
       if (resultado.ciclo) return resultado;
     }
 
@@ -215,3 +225,5 @@ export function obtenerArbolDescendentePostOrden(tableroId, tableros = []) {
     ? { orden, ciclo: true, tableroCiclo: resultado.tableroCiclo }
     : { orden, ciclo: false };
 }
+
+export type { Tablero, DatosTablero, ConTableroId } from "./tipos.ts";

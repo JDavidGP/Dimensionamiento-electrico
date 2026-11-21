@@ -39,7 +39,7 @@ import {
   obtenerCadenaAscendente,
   hijosDeTablero,
   obtenerArbolDescendentePostOrden,
-} from "../../modules/tablero/index.js";
+} from "../../modules/tablero/index.ts";
 import {
   calcularAlimentador,
   evaluarCaidaAcumulada,
