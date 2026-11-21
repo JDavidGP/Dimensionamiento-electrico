@@ -1,4 +1,4 @@
-// src/modules/diagrama/index.js
+// src/modules/diagrama/index.ts
 //
 // Módulo Diagrama — modelo de datos del diagrama unifilar (Nodo +
 // Conexión). FASE 1 ("Motor de datos" + cardinalidad) y FASE 2 (motor
@@ -28,9 +28,10 @@
 
 import { generarId } from "../../shared/utils/id.js";
 import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.js";
-import { validarReglaElectrica } from "./reglas.js";
+import { validarReglaElectrica } from "./reglas.ts";
+import type { NodoDiagrama, DatosNodo, ConexionDiagrama, DatosConexion, ResultadoValidacion } from "./tipos.ts";
 
-export const NODO_VACIO = {
+export const NODO_VACIO: Omit<NodoDiagrama, "id"> = {
   tipo: "", // id del catálogo (shared/data/bibliotecaComponentes.js)
   nombre: "",
   posicion: { x: 0, y: 0 },
@@ -49,7 +50,7 @@ export const NODO_VACIO = {
   estado: "activo", // activo | desactivado | falla
 };
 
-export const CONEXION_VACIA = {
+export const CONEXION_VACIA: Omit<ConexionDiagrama, "id"> = {
   nodoOrigenId: "",
   nodoDestinoId: "",
   tipoConductor: "cable", // "cable" | "barra" — lo suficiente para distinguir un conductor de una barra de distribución
@@ -60,8 +61,8 @@ export const CONEXION_VACIA = {
   notas: "",
 };
 
-function normalizarNodo(datos = {}) {
-  const posicion = datos.posicion && typeof datos.posicion === "object" ? datos.posicion : {};
+function normalizarNodo(datos: DatosNodo = {}): Omit<NodoDiagrama, "id"> {
+  const posicion = datos.posicion && typeof datos.posicion === "object" ? datos.posicion : { x: 0, y: 0 };
   return {
     tipo: datos.tipo || "",
     nombre: datos.nombre?.trim() || "",
@@ -72,16 +73,16 @@ function normalizarNodo(datos = {}) {
   };
 }
 
-export function crearNodo(datos) {
+export function crearNodo(datos: DatosNodo): NodoDiagrama {
   return { id: generarId(), ...normalizarNodo(datos) };
 }
 
 /** Devuelve el nodo con los cambios aplicados — no muta el original (mismo criterio que editarTablero). */
-export function editarNodo(nodo, cambios) {
+export function editarNodo(nodo: NodoDiagrama, cambios: DatosNodo): NodoDiagrama {
   return { ...nodo, ...normalizarNodo({ ...nodo, ...cambios }) };
 }
 
-function normalizarConexion(datos = {}) {
+function normalizarConexion(datos: DatosConexion = {}): Omit<ConexionDiagrama, "id"> {
   return {
     nodoOrigenId: datos.nodoOrigenId || "",
     nodoDestinoId: datos.nodoDestinoId || "",
@@ -94,11 +95,11 @@ function normalizarConexion(datos = {}) {
   };
 }
 
-export function crearConexion(datos) {
+export function crearConexion(datos: DatosConexion): ConexionDiagrama {
   return { id: generarId(), ...normalizarConexion(datos) };
 }
 
-export function editarConexion(conexion, cambios) {
+export function editarConexion(conexion: ConexionDiagrama, cambios: DatosConexion): ConexionDiagrama {
   return { ...conexion, ...normalizarConexion({ ...conexion, ...cambios }) };
 }
 
@@ -109,7 +110,7 @@ export function editarConexion(conexion, cambios) {
  * se ELIMINAN directamente: una conexión sin uno de sus dos extremos
  * no es un dato parcial válido, es basura.
  */
-export function eliminarConexionesDeNodo(nodoId, conexiones = []) {
+export function eliminarConexionesDeNodo(nodoId: string, conexiones: ConexionDiagrama[] = []): ConexionDiagrama[] {
   return conexiones.filter((c) => c.nodoOrigenId !== nodoId && c.nodoDestinoId !== nodoId);
 }
 
@@ -121,7 +122,7 @@ export function eliminarConexionesDeNodo(nodoId, conexiones = []) {
  * mismo criterio que liberarTablerosDeFuente / liberarCircuitosDeTablero
  * en los otros módulos de dominio.
  */
-export function liberarNodosDeEntidad(entidadId, nodos = []) {
+export function liberarNodosDeEntidad(entidadId: string, nodos: NodoDiagrama[] = []): NodoDiagrama[] {
   return nodos.map((n) => (n.entidadId === entidadId ? { ...n, entidadId: null } : n));
 }
 
@@ -133,13 +134,12 @@ export function liberarNodosDeEntidad(entidadId, nodos = []) {
  * ver reglas.js — ej. "un motor no puede conectarse directo a un
  * medidor") y cardinalidad (Fase 1, cuántas entradas/salidas admite
  * cada tipo según el catálogo).
- *
- * @param {{nodoOrigenId: string, nodoDestinoId: string}} conexionPropuesta
- * @param {object[]} nodos
- * @param {object[]} conexionesExistentes
- * @returns {{valido: true} | {valido: false, motivo: string}}
  */
-export function validarConexion(conexionPropuesta, nodos = [], conexionesExistentes = []) {
+export function validarConexion(
+  conexionPropuesta: { nodoOrigenId: string; nodoDestinoId: string },
+  nodos: NodoDiagrama[] = [],
+  conexionesExistentes: ConexionDiagrama[] = []
+): ResultadoValidacion {
   const { nodoOrigenId, nodoDestinoId } = conexionPropuesta;
 
   if (!nodoOrigenId || !nodoDestinoId) {
@@ -190,5 +190,7 @@ export function validarConexion(conexionPropuesta, nodos = [], conexionesExisten
   return { valido: true };
 }
 
-export { validarReglaElectrica } from "./reglas.js";
-export { autoorganizarNodos } from "./autoorganizar.js";
+export { validarReglaElectrica } from "./reglas.ts";
+export { autoorganizarNodos } from "./autoorganizar.ts";
+export type { NodoDiagrama, DatosNodo, ConexionDiagrama, DatosConexion, ResultadoValidacion, Componente } from "./tipos.ts";
+export type { NodoConId, ConexionSimple, OpcionesAutoorganizar } from "./autoorganizar.ts";

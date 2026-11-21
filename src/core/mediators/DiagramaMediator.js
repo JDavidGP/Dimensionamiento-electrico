@@ -29,7 +29,7 @@ import {
   validarConexion,
   validarReglaElectrica,
   autoorganizarNodos,
-} from "../../modules/diagrama/index.js";
+} from "../../modules/diagrama/index.ts";
 import {
   transformVistaInicial,
   aPantalla,

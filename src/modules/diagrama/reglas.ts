@@ -1,4 +1,4 @@
-// src/modules/diagrama/reglas.js
+// src/modules/diagrama/reglas.ts
 //
 // Motor de reglas eléctricas del diagrama unifilar — Fase 2 de la spec
 // larga del usuario (2026-11-20), ahora que la Fase 1 (modelo de
@@ -40,12 +40,13 @@
 // (validarConexion) y, por extensión, DiagramaMediator.
 
 import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.js";
+import type { ResultadoValidacion } from "./tipos.ts";
 
 // Categoría de origen → categorías de destino permitidas por defecto.
 // "carga" no origina nada (ya reforzado por cardinalidad, salidas:0 en
 // todos los tipos de esa categoría) — se deja explícito igual, para
 // que quede documentado el porqué sin tener que ir a buscarlo.
-export const FLUJO_PERMITIDO_POR_CATEGORIA = {
+export const FLUJO_PERMITIDO_POR_CATEGORIA: Record<string, string[]> = {
   fuente: ["medicion_proteccion", "distribucion"],
   medicion_proteccion: ["medicion_proteccion", "distribucion", "control", "carga"],
   distribucion: ["medicion_proteccion", "distribucion", "carga"],
@@ -55,16 +56,22 @@ export const FLUJO_PERMITIDO_POR_CATEGORIA = {
 
 // "X debe conectarse a Y" — si un tipo aparece acá, SUS destinos
 // válidos son EXACTAMENTE esta lista, no la de su categoría general.
-export const DESTINOS_EXCLUSIVOS_POR_TIPO = {
+export const DESTINOS_EXCLUSIVOS_POR_TIPO: Record<string, string[]> = {
   // "Los paneles solares deben conectarse a un inversor o controlador
   // según el sistema" — "controlador" interpretado ampliamente como
   // variador de frecuencia o PLC, además del inversor explícito.
   panel_fotovoltaico: ["inversor", "variador_frecuencia", "plc"],
 };
 
+export interface ParProhibido {
+  origen: string;
+  destino: string;
+  motivo: string;
+}
+
 // "X no puede conectarse directo a Y [sin Z de por medio]" — pares
 // puntuales prohibidos aunque la categoría general los permitiría.
-export const PARES_PROHIBIDOS = [
+export const PARES_PROHIBIDOS: ParProhibido[] = [
   {
     origen: "medidor",
     destino: "motor",
@@ -79,11 +86,9 @@ export const PARES_PROHIBIDOS = [
  * modules/diagrama/index.js, validarConexion) ni existencia de los
  * nodos (idem), solo compatibilidad semántica entre tipos.
  *
- * @param {string} tipoOrigen - id del catálogo (ej. "medidor")
- * @param {string} tipoDestino
- * @returns {{valido: true} | {valido: false, motivo: string}}
+ * @param tipoOrigen - id del catálogo (ej. "medidor")
  */
-export function validarReglaElectrica(tipoOrigen, tipoDestino) {
+export function validarReglaElectrica(tipoOrigen: string, tipoDestino: string): ResultadoValidacion {
   const compOrigen = obtenerComponente(tipoOrigen);
   const compDestino = obtenerComponente(tipoDestino);
 

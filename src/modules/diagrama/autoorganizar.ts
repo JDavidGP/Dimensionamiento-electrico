@@ -1,4 +1,4 @@
-// src/modules/diagrama/autoorganizar.js
+// src/modules/diagrama/autoorganizar.ts
 //
 // Autoorganización del diagrama unifilar (usuario, 2026-11-20, segundo
 // pedido de su lista para el diagrama, después del PDF embebido):
@@ -25,13 +25,29 @@
 // cómo se guardan — eso es el hook, igual criterio que el resto de los
 // módulos de dominio.
 
-/**
- * @param {object[]} nodos - [{id, ...}]
- * @param {object[]} conexiones - [{nodoOrigenId, nodoDestinoId}]
- * @param {{anchoCelda?: number, altoCelda?: number, margenX?: number, margenY?: number}} [opciones]
- * @returns {Object<string, {x:number, y:number}>}
- */
-export function autoorganizarNodos(nodos = [], conexiones = [], opciones = {}) {
+import type { Punto } from "../geometria/index.ts";
+
+export interface NodoConId {
+  id: string;
+}
+
+export interface ConexionSimple {
+  nodoOrigenId: string;
+  nodoDestinoId: string;
+}
+
+export interface OpcionesAutoorganizar {
+  anchoCelda?: number;
+  altoCelda?: number;
+  margenX?: number;
+  margenY?: number;
+}
+
+export function autoorganizarNodos(
+  nodos: NodoConId[] = [],
+  conexiones: ConexionSimple[] = [],
+  opciones: OpcionesAutoorganizar = {}
+): Record<string, Punto> {
   const anchoCelda = opciones.anchoCelda ?? 150;
   const altoCelda = opciones.altoCelda ?? 125;
   const margenX = opciones.margenX ?? 40;
@@ -40,30 +56,30 @@ export function autoorganizarNodos(nodos = [], conexiones = [], opciones = {}) {
   if (nodos.length === 0) return {};
 
   const idsValidos = new Set(nodos.map((n) => n.id));
-  const entradasPendientes = new Map(nodos.map((n) => [n.id, 0]));
-  const salientesDe = new Map(nodos.map((n) => [n.id, []]));
+  const entradasPendientes = new Map<string, number>(nodos.map((n) => [n.id, 0]));
+  const salientesDe = new Map<string, string[]>(nodos.map((n) => [n.id, []]));
   for (const c of conexiones) {
     // Referencia rota (nodo inexistente) — ya la reporta integridad
     // referencial; acá simplemente se ignora, no se inventa un nodo.
     if (!idsValidos.has(c.nodoOrigenId) || !idsValidos.has(c.nodoDestinoId)) continue;
     entradasPendientes.set(c.nodoDestinoId, (entradasPendientes.get(c.nodoDestinoId) ?? 0) + 1);
-    salientesDe.get(c.nodoOrigenId).push(c.nodoDestinoId);
+    salientesDe.get(c.nodoOrigenId)!.push(c.nodoDestinoId);
   }
 
-  const nivelDe = new Map();
+  const nivelDe = new Map<string, number>();
   const pendientesRestantes = new Map(entradasPendientes);
   let cola = nodos.filter((n) => (entradasPendientes.get(n.id) ?? 0) === 0).map((n) => n.id);
   const visitados = new Set(cola);
   cola.forEach((id) => nivelDe.set(id, 0));
 
   while (cola.length > 0) {
-    const siguienteCola = [];
+    const siguienteCola: string[] = [];
     for (const id of cola) {
       for (const destinoId of salientesDe.get(id) ?? []) {
         pendientesRestantes.set(destinoId, (pendientesRestantes.get(destinoId) ?? 0) - 1);
         const nivelPropuesto = (nivelDe.get(id) ?? 0) + 1;
         nivelDe.set(destinoId, Math.max(nivelDe.get(destinoId) ?? 0, nivelPropuesto));
-        if (pendientesRestantes.get(destinoId) <= 0 && !visitados.has(destinoId)) {
+        if ((pendientesRestantes.get(destinoId) ?? 0) <= 0 && !visitados.has(destinoId)) {
           visitados.add(destinoId);
           siguienteCola.push(destinoId);
         }
@@ -80,14 +96,14 @@ export function autoorganizarNodos(nodos = [], conexiones = [], opciones = {}) {
   // Agrupados por nivel, en el mismo orden relativo que ya traían (lista
   // `nodos` estable) — reordenar la vista no debería "barajar" la
   // topología sin motivo.
-  const idsPorNivel = new Map();
+  const idsPorNivel = new Map<number, string[]>();
   nodos.forEach((n) => {
-    const lv = nivelDe.get(n.id);
+    const lv = nivelDe.get(n.id)!;
     if (!idsPorNivel.has(lv)) idsPorNivel.set(lv, []);
-    idsPorNivel.get(lv).push(n.id);
+    idsPorNivel.get(lv)!.push(n.id);
   });
 
-  const posiciones = {};
+  const posiciones: Record<string, Punto> = {};
   for (const [lv, ids] of idsPorNivel) {
     ids.forEach((id, i) => {
       posiciones[id] = { x: margenX + i * anchoCelda, y: margenY + lv * altoCelda };
