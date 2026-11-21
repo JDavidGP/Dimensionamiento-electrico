@@ -1,4 +1,4 @@
-// src/modules/importacionEquipos/index.js
+// src/modules/importacionEquipos/index.ts
 //
 // Dominio: interpretar un bloque de texto escrito a mano en una lista
 // de "comandos de creación de equipo", agrupados bajo la etiqueta de
@@ -40,17 +40,28 @@
 
 const PATRON_LINEA_EQUIPO = /^(\d+)\s+(.+?)\s+(\d+(?:\.\d+)?)\s*(W|A)$/i;
 
-/**
- * @param {string} texto
- * @returns {Array<
- *   { numeroLinea: number, ok: true, etiquetaCircuito: string, nombre: string, cantidad: string, valor: string, modoEntrada: "potencia"|"corriente" } |
- *   { numeroLinea: number, ok: false, motivo: string }
- * >}
- */
-export function interpretarTexto(texto) {
+export interface LineaEquipoInterpretada {
+  numeroLinea: number;
+  ok: true;
+  etiquetaCircuito: string;
+  nombre: string;
+  cantidad: string;
+  valor: string;
+  modoEntrada: "potencia" | "corriente";
+}
+
+export interface LineaEquipoInvalida {
+  numeroLinea: number;
+  ok: false;
+  motivo: string;
+}
+
+export type LineaInterpretada = LineaEquipoInterpretada | LineaEquipoInvalida;
+
+export function interpretarTexto(texto: string): LineaInterpretada[] {
   const lineas = (texto || "").split("\n");
-  const resultados = [];
-  let etiquetaActual = null;
+  const resultados: LineaInterpretada[] = [];
+  let etiquetaActual: string | null = null;
 
   lineas.forEach((lineaCruda, indice) => {
     const linea = lineaCruda.trim();

@@ -19,7 +19,7 @@
  * final; la escritura real la hace el hook, igual criterio que el
  * resto de los mediadores de dominio.
  */
-import { interpretarTexto } from "../../modules/importacionEquipos/index.js";
+import { interpretarTexto } from "../../modules/importacionEquipos/index.ts";
 import { ValidacionMediator } from "./ValidacionMediator.js";
 
 // Campos del formulario de equipo que el texto NO especifica —
