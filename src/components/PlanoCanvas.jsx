@@ -329,13 +329,25 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
               {marcadoresEquipo.map((marcador) => {
                 const p = px(marcador.punto);
                 const tamano = 22 / transformVista.zoom;
+                // Solo intercepta el click (y detiene su propagación) en los
+                // modos que de verdad hacen algo con un marcador —
+                // "triangular" (usarlo de referencia) y "eliminar" (borrarlo).
+                // Usuario, 2026-11-22 ("pegar una ruta de conductor a la
+                // posición EXACTA de un equipo marcado"): en cualquier OTRO
+                // modo (sobre todo "conductor") el click debe LLEGAR al
+                // handler general del lienzo para que agregarNodoPlano
+                // pueda pegarse al punto del marcador — antes se perdía acá
+                // sin más, aunque alClickMarcador no fuera a hacer nada con
+                // él (mismo problema latente para "pared"/"ambiente", no
+                // solo para conductor).
+                const marcadorInterceptaClick = onClickMarcador && (modo === "triangular" || modo === "eliminar");
                 return (
                   <g
                     key={marcador.id}
                     transform={`translate(${p.x - tamano / 2},${p.y - tamano / 2})`}
-                    style={{ cursor: onClickMarcador ? "pointer" : undefined }}
+                    style={{ cursor: marcadorInterceptaClick ? "pointer" : undefined }}
                     onClick={(e) => {
-                      if (!onClickMarcador) return;
+                      if (!marcadorInterceptaClick) return;
                       e.stopPropagation();
                       onClickMarcador(marcador);
                     }}

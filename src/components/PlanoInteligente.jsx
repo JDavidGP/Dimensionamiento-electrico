@@ -320,7 +320,7 @@ export default function PlanoInteligente({
     }
 
     if (modo === "conductor") {
-      const nodo = agregarNodoPlano(puntoImagen);
+      const nodo = agregarNodoPlano(puntoImagen, true); // true: pegar al equipo marcado más cercano, si hay uno
       if (!nodo) return; // sin calibrar todavía
       if (trazoActual.length === 0) {
         setTrazoActual([nodo.id]);

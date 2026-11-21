@@ -707,12 +707,26 @@ export function useCircuitos() {
   // resultado real de la anterior.
   const nodosPlanoRef = useRef(nodosPlano);
   nodosPlanoRef.current = nodosPlano;
-  function agregarNodoPlano(puntoImagen) {
+  // `pegarAEquipo` (usuario, 2026-11-22, "pegar una ruta de conductor a
+  // la posición EXACTA de un equipo marcado" — el último de los 3
+  // puntos diferidos de PLANO_INTELIGENTE_DISENO.md §12): al trazar un
+  // CONDUCTOR (no una pared — un equipo no pinta nada en una pared),
+  // si el click cae cerca de un marcador de equipo (no de un nodo ya
+  // existente, eso sigue mandando primero) el nodo nuevo se crea EN EL
+  // PUNTO EXACTO del marcador, no en el click aproximado — para que la
+  // ruta termine pixel-perfecta en el símbolo del equipo, no "cerca".
+  // `nodoCercano` ya es genérico sobre cualquier `{punto}` (mismo que
+  // usa la triangulación para mezclar nodos+marcadores como
+  // referencia) — acá no hace falta mezclarlos, un marcador nunca
+  // reemplaza a un nodo real (la ruta sigue guardando `nodoIds`, no
+  // `marcadorId`), solo presta su punto exacto para el nodo nuevo.
+  function agregarNodoPlano(puntoImagen, pegarAEquipo = false) {
     if (!planoCalibracion) return null;
     const puntoModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
     const existente = App.plano.nodoCercano(puntoModelo, nodosPlanoRef.current);
     if (existente) return existente;
-    const nodo = App.plano.crearNodo(puntoModelo);
+    const marcadorCercano = pegarAEquipo ? App.plano.nodoCercano(puntoModelo, marcadoresEquipoPlano) : null;
+    const nodo = App.plano.crearNodo(marcadorCercano ? marcadorCercano.punto : puntoModelo);
     nodosPlanoRef.current = [...nodosPlanoRef.current, nodo];
     setNodosPlano(nodosPlanoRef.current);
     return nodo;
