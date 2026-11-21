@@ -77,8 +77,12 @@ export const ApplicationMediator = {
     DataProvider.setSnapshot(partial);
   },
 
-  /** Guardar / abrir proyecto. */
+  /** Guardar / abrir proyecto — .pdf por defecto (usuario, 2026-11-22); .json queda disponible para quien lo prefiera. */
   guardarProyecto(estado) {
+    return PersistenciaMediator.descargarPdf(estado);
+  },
+
+  guardarProyectoComoJson(estado) {
     return PersistenciaMediator.descargarJson(estado);
   },
 

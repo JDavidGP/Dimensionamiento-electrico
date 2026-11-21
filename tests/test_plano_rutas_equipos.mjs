@@ -118,14 +118,14 @@ assert((await selectVinculo.locator("option:checked").textContent()).includes("T
 // =========== PARTE 3: persistencia (guardar + reabrir) ===========
 const [descarga] = await Promise.all([
   page.waitForEvent("download"),
-  page.getByRole("button", { name: "↓ Guardar (.json)" }).click(),
+  page.getByRole("button", { name: "↓ Guardar (.pdf)" }).click(),
 ]);
-const rutaDescargada = DIR + "tmp/plano_rutas_equipos.json";
+const rutaDescargada = DIR + "tmp/plano_rutas_equipos.pdf";
 await descarga.saveAs(rutaDescargada);
 await page.waitForTimeout(200);
 
 await page.reload({ waitUntil: "networkidle" });
-await page.locator('input[type="file"][accept="application/json"]').setInputFiles(rutaDescargada);
+await page.locator("label", { hasText: "Abrir" }).locator('input[type="file"]').setInputFiles(rutaDescargada);
 await page.waitForTimeout(400);
 await page.getByRole("button", { name: "Esquemas", exact: true }).click();
 await page.waitForTimeout(150);

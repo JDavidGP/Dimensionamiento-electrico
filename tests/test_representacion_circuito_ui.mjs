@@ -60,14 +60,14 @@ assert((await page.getByText(/sin representar en el plano/).count()) === 0, "Con
 // --- 4. La preferencia persiste al guardar y reabrir el proyecto ---
 const [descarga] = await Promise.all([
   page.waitForEvent("download"),
-  page.getByRole("button", { name: "↓ Guardar (.json)" }).click(),
+  page.getByRole("button", { name: "↓ Guardar (.pdf)" }).click(),
 ]);
-const rutaDescargada = DIR + "tmp/representacion_circuito.json";
+const rutaDescargada = DIR + "tmp/representacion_circuito.pdf";
 await descarga.saveAs(rutaDescargada);
 await page.waitForTimeout(200);
 
 await page.reload({ waitUntil: "networkidle" });
-await page.locator('input[type="file"][accept="application/json"]').setInputFiles(rutaDescargada);
+await page.locator("label", { hasText: "Abrir" }).locator('input[type="file"]').setInputFiles(rutaDescargada);
 await page.waitForTimeout(400);
 await page.getByRole("button", { name: "Circuitos y resultados", exact: true }).click();
 await page.waitForTimeout(200);

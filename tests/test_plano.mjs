@@ -123,9 +123,9 @@ assert(Math.abs(perimNum - 17.5) < 0.05, `Perímetro calculado ≈ 2×(5+3.75) =
 // --- 5. Guardar y volver a abrir el proyecto — la calibración/medidas no deben cambiar ---
 const [descarga] = await Promise.all([
   page.waitForEvent("download"),
-  page.getByRole("button", { name: "↓ Guardar (.json)" }).click(),
+  page.getByRole("button", { name: "↓ Guardar (.pdf)" }).click(),
 ]);
-const rutaDescargada = DIR + "tmp/plano_proyecto.json";
+const rutaDescargada = DIR + "tmp/plano_proyecto.pdf";
 await descarga.saveAs(rutaDescargada);
 await page.waitForTimeout(200);
 
@@ -136,7 +136,7 @@ await page.getByRole("button", { name: "Plano", exact: true }).click();
 await page.waitForTimeout(200);
 assert((await page.getByText("Cargá un plano para empezar.").count()) === 1, "Tras recargar la página (proyecto nuevo), el plano vuelve a estar vacío");
 
-await page.locator('input[type="file"][accept="application/json"]').setInputFiles(rutaDescargada);
+await page.locator("label", { hasText: "Abrir" }).locator('input[type="file"]').setInputFiles(rutaDescargada);
 await page.waitForTimeout(400);
 await page.getByRole("button", { name: "Plano", exact: true }).click();
 await page.waitForTimeout(300);

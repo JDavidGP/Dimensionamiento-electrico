@@ -965,8 +965,45 @@ export function useCircuitos() {
   }
 
   // --- PROYECTO ---
-  function guardarProyecto() {
-    const nombre = App.guardarProyecto({
+  // Guarda como .pdf (usuario, 2026-11-22: "quiero que el empaquetado...
+  // guarde en PDF en vez de json") — App.guardarProyecto ahora arma el
+  // PDF (ficha legible + datos completos incrustados, ver
+  // modules/persistencia/pdf.ts), por eso esta función es async.
+  async function guardarProyecto() {
+    const datosProyecto = {
+      proyecto,
+      normativaActiva,
+      tipoInstalacion,
+      circuitos,
+      equipos,
+      tableros,
+      fuentesEnergia,
+      transformadores,
+      nodosDiagrama,
+      conexionesDiagrama,
+      plano: {
+        imagen: planoImagen,
+        calibracion: planoCalibracion,
+        nodos: nodosPlano,
+        segmentos: segmentosPlano,
+        habitaciones: habitacionesPlano,
+        rutasConductor: rutasConductorPlano,
+        marcadoresEquipo: marcadoresEquipoPlano,
+      },
+    };
+    try {
+      const nombre = await App.guardarProyecto(datosProyecto);
+      setAvisoArchivo(`Guardado como ${nombre}`);
+    } catch (err) {
+      setAvisoArchivo(`No se pudo guardar: ${err.message}`);
+    }
+    setTimeout(() => setAvisoArchivo(""), 4000);
+  }
+
+  // Guardar como .json sigue disponible (botón secundario en
+  // BarraProyecto) para quien prefiera el formato de siempre.
+  function guardarProyectoComoJson() {
+    const nombre = App.guardarProyectoComoJson({
       proyecto,
       normativaActiva,
       tipoInstalacion,
@@ -1053,6 +1090,7 @@ export function useCircuitos() {
     setProyecto,
     avisoArchivo,
     guardarProyecto,
+    guardarProyectoComoJson,
     abrirProyecto,
     nuevoProyecto,
     circuitos,

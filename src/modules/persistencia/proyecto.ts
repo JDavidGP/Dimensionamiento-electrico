@@ -111,7 +111,7 @@ export function deserializarProyecto(data: unknown): ProyectoSerializado {
   };
 }
 
-export function nombreArchivo(proyecto: { nombre?: string } | null | undefined): string {
+export function nombreArchivo(proyecto: { nombre?: string } | null | undefined, extension: string = "json"): string {
   const slug = (proyecto?.nombre || "proyecto")
     .toLowerCase()
     .normalize("NFD")
@@ -119,5 +119,5 @@ export function nombreArchivo(proyecto: { nombre?: string } | null | undefined):
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   const fecha = new Date().toISOString().slice(0, 10);
-  return `${slug || "proyecto"}_${fecha}.json`;
+  return `${slug || "proyecto"}_${fecha}.${extension}`;
 }
