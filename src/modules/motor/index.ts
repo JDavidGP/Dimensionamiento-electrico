@@ -46,12 +46,14 @@ export {
   calcularCargaSimultaneaViviendas,
   SIMULTANEIDAD_REBT_VACIA,
   normalizarSimultaneidadREBT,
+  ESQUEMAS_CONTADORES,
+  limiteCaidaTensionDI_REBT,
 } from "./simultaneidadREBT.ts";
 
 export type { Equipo, Circuito, Tablero, Fases, ClaseCircuitoREBT, ResultadoCircuito, ImpedanciaFuente, DetalleDemandaTipo } from "./tipos.ts";
 export type { ContextoInstalacionCircuito } from "./calcularCircuito.ts";
 export type { Transformador, ResultadoCorrientesNominales, TableroConPadre } from "./transformador.ts";
-export type { SimultaneidadREBT, GradoElectrificacion, ResultadoCargaSimultaneaViviendas } from "./simultaneidadREBT.ts";
+export type { SimultaneidadREBT, GradoElectrificacion, ResultadoCargaSimultaneaViviendas, EsquemaContadores } from "./simultaneidadREBT.ts";
 export type { ResultadoAlimentador } from "./calcularAlimentador.ts";
 export type {
   EsquemaProteccionTransformador,

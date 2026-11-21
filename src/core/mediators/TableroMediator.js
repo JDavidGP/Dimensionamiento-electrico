@@ -53,6 +53,7 @@ import {
   obtenerXRTransformador,
   calcularCortocircuitoTrifasico,
   calcularCortocircuitoMonofasico,
+  limiteCaidaTensionDI_REBT,
 } from "../../modules/motor/index.ts";
 import { DataProvider } from "../services/DataProvider.js";
 import { NormativaMediator } from "./NormativaMediator.js";
@@ -285,13 +286,52 @@ export const TableroMediator = {
       });
     }
 
-    const evaluacion = evaluarCaidaAcumulada(deltaVPorTramo, Number(circuito.voltaje), limitePctOverride);
+    // Usuario, 2026-11-21 (ITC-BT-19 §2.2.2, cita exacta: "El valor de
+    // la caída de tensión podrá compensarse entre la de la instalación
+    // interior y la de las derivaciones individuales, de forma que la
+    // caída de tensión total sea inferior a la suma de los valores
+    // límites especificados para ambas" + ITC-BT-15 apdo.3.b para el
+    // límite propio de la DI) — decisión de modelado confirmada por el
+    // usuario: la derivación individual ES el alimentador del tablero
+    // "vivienda" (hijo directo de un tablero "edificio" con
+    // simultaneidadREBT.activa) hacia ese edificio — reusa el modelo de
+    // ITC-BT-10 ya existente, sin inventar un concepto nuevo.
+    //
+    // Si el edificio tiene SU PROPIO alimentador hacia arriba (hacia la
+    // acometida), ese tramo es la LGA (ITC-BT-14) — un límite propio
+    // DISTINTO (0,5%/1%, ver la relación "LGA+DI=1,5%" del documento
+    // del usuario), que esta función NO modela ni valida: cada tramo
+    // de la cadena YA pasó su propio chequeo individual en el loop de
+    // arriba (seleccionarSeccion contra el 3% fijo), así que no queda
+    // sin verificar — solo se EXCLUYE de ESTE total en particular,
+    // para no mezclar un tercer segmento en una suma que ITC-BT-19
+    // define para solo dos (DI + interior).
+    let deltaVParaEvaluar = deltaVPorTramo;
+    let limitePctFinal = limitePctOverride;
+    let cantidadTablerosIncluidos = cadena.length;
+
+    const indiceViviendaEnCadena = cadena.findIndex((t) => {
+      const padreDeT = listaTableros.find((p) => p.id === t.tableroPadreId);
+      return padreDeT?.simultaneidadREBT?.activa === true;
+    });
+    if (indiceViviendaEnCadena >= 0 && limitePctOverride != null) {
+      const edificio = listaTableros.find((p) => p.id === cadena[indiceViviendaEnCadena].tableroPadreId);
+      const limiteDI = limiteCaidaTensionDI_REBT(edificio?.simultaneidadREBT?.esquemaContadores);
+      if (limiteDI != null) {
+        const indiceTramoDI = 1 + indiceViviendaEnCadena; // índice 0 de deltaVPorTramo es el circuito propio
+        deltaVParaEvaluar = deltaVPorTramo.slice(0, indiceTramoDI + 1); // circuito + tramos hasta la DI inclusive, nunca lo que esté arriba (LGA)
+        limitePctFinal = limitePctOverride + limiteDI;
+        cantidadTablerosIncluidos = indiceTramoDI;
+      }
+    }
+
+    const evaluacion = evaluarCaidaAcumulada(deltaVParaEvaluar, Number(circuito.voltaje), limitePctFinal);
 
     return {
       aplica: true,
       ok: true,
       ...evaluacion,
-      cantidadTableros: cadena.length,
+      cantidadTableros: cantidadTablerosIncluidos,
     };
   },
 

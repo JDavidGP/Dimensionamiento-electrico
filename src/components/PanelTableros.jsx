@@ -358,6 +358,18 @@ const GRADOS_ELECTRIFICACION_UI = [
   { valor: "elevada", label: "Elevada (9200W)" },
 ];
 
+// ITC-BT-15 apdo.3.b — usuario, 2026-11-21, documento "ITC-BT-15":
+// determina el límite de caída de tensión de la derivación individual
+// (ver limiteCaidaTensionDI_REBT en modules/motor/simultaneidadREBT.ts),
+// que a su vez habilita la compensación ITC-BT-19 §2.2.2 contra el
+// límite de instalación interior. Opcional — sin elegirlo, la
+// compensación simplemente no se aplica (se sigue con el límite de
+// instalación interior solo, como hasta ahora).
+const ESQUEMAS_CONTADORES_UI = [
+  { valor: "concentrados_mas_de_un_lugar", label: "Concentrados en más de un lugar (0,5%)" },
+  { valor: "totalmente_concentrados", label: "Totalmente concentrados (1%)" },
+];
+
 /**
  * Edificio de viviendas REBT ITC-BT-10 (usuario, 2026-11-19): este
  * tablero es "la gestión de la conexión del edificio" — sus hijos
@@ -371,10 +383,11 @@ const GRADOS_ELECTRIFICACION_UI = [
 function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }) {
   const [editando, setEditando] = useState(false);
   const conf = tablero.simultaneidadREBT;
-  const [form, setForm] = useState(() => conf ?? { activa: false, gradoPorDefecto: "basica" });
+  const FORM_VACIO_SIMULTANEIDAD = { activa: false, gradoPorDefecto: "basica", esquemaContadores: "" };
+  const [form, setForm] = useState(() => conf ?? FORM_VACIO_SIMULTANEIDAD);
 
   function abrirEdicion() {
-    setForm(conf ?? { activa: false, gradoPorDefecto: "basica" });
+    setForm(conf ?? FORM_VACIO_SIMULTANEIDAD);
     setEditando(true);
   }
 
@@ -410,6 +423,11 @@ function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }) {
                   · {detalle.n} vivienda{detalle.n !== 1 ? "s" : ""} · coeficiente {detalle.coeficiente} · carga {(detalle.cargaW / 1000).toFixed(2)}kW
                 </span>
               )}
+              {conf.esquemaContadores ? (
+                <span style={{ color: colores.textDim }}> · DI (ITC-BT-15): {ESQUEMAS_CONTADORES_UI.find((e) => e.valor === conf.esquemaContadores)?.label}</span>
+              ) : (
+                <span style={{ color: colores.textDim }}> · sin esquema de contadores (sin compensación ITC-BT-19 con la instalación interior)</span>
+              )}
             </span>
             <button type="button" onClick={abrirEdicion} style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}>
               ✎ Editar
@@ -443,6 +461,20 @@ function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }) {
         {GRADOS_ELECTRIFICACION_UI.map((g) => (
           <BotonPill key={g.valor} activo={form.gradoPorDefecto === g.valor} onClick={() => setForm({ ...form, gradoPorDefecto: g.valor })}>
             {g.label}
+          </BotonPill>
+        ))}
+      </div>
+      <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>
+        Esquema de contadores (ITC-BT-15, opcional — habilita la compensación de caída de tensión con la instalación interior de ITC-BT-19 §2.2.2):
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+        {ESQUEMAS_CONTADORES_UI.map((e) => (
+          <BotonPill
+            key={e.valor}
+            activo={form.esquemaContadores === e.valor}
+            onClick={() => setForm({ ...form, esquemaContadores: e.valor === form.esquemaContadores ? "" : e.valor })}
+          >
+            {e.label}
           </BotonPill>
         ))}
       </div>

@@ -87,12 +87,46 @@ export function calcularCargaSimultaneaViviendas(potenciasW: number[]): Resultad
   return { ok: true, n, coeficiente, mediaW, cargaW: mediaW * coeficiente };
 }
 
+/**
+ * Esquema de centralización de contadores (ITC-BT-15 apdo.3.b) — "" =
+ * sin asignar (la compensación de ITC-BT-19 §2.2.2 no se aplica hasta
+ * que se elija uno, ver limiteCaidaTensionDI_REBT). El 3er caso del
+ * texto oficial ("único usuario sin LGA") NO se modela acá a
+ * propósito — no encaja en la estructura "edificio con tableros hijos
+ * vivienda" (sería una instalación de un solo usuario, sin edificio).
+ */
+export type EsquemaContadores = "" | "concentrados_mas_de_un_lugar" | "totalmente_concentrados";
+
+export const ESQUEMAS_CONTADORES = {
+  CONCENTRADOS_MAS_DE_UN_LUGAR: "concentrados_mas_de_un_lugar" as const,
+  TOTALMENTE_CONCENTRADOS: "totalmente_concentrados" as const,
+};
+
+/**
+ * Límite de caída de tensión de la DERIVACIÓN INDIVIDUAL — ITC-BT-15
+ * apdo.3.b (RD 842/2002), cita exacta:
+ *   "La caída de tensión máxima admisible será:
+ *    - Para el caso de contadores concentrados en más de un lugar: 0,5%.
+ *    - Para el caso de contadores totalmente concentrados: 1%.
+ *    - Para el caso de derivaciones individuales en suministros para
+ *      un único usuario en que no existe línea general de
+ *      alimentación: 1,5%." (este último caso no se modela, ver arriba)
+ * `null` si no se reconoce el esquema (no se inventa un valor).
+ */
+export function limiteCaidaTensionDI_REBT(esquemaContadores: string | undefined): number | null {
+  if (esquemaContadores === ESQUEMAS_CONTADORES.CONCENTRADOS_MAS_DE_UN_LUGAR) return 0.5;
+  if (esquemaContadores === ESQUEMAS_CONTADORES.TOTALMENTE_CONCENTRADOS) return 1.0;
+  return null;
+}
+
 export interface SimultaneidadREBT {
   activa: boolean;
   gradoPorDefecto: string;
+  /** ITC-BT-15 apdo.3.b — ver limiteCaidaTensionDI_REBT. Solo importa cuando `activa` es true (este tablero es un "edificio"). */
+  esquemaContadores: EsquemaContadores;
 }
 
-export const SIMULTANEIDAD_REBT_VACIA: SimultaneidadREBT = { activa: false, gradoPorDefecto: GRADOS_ELECTRIFICACION.BASICA.id };
+export const SIMULTANEIDAD_REBT_VACIA: SimultaneidadREBT = { activa: false, gradoPorDefecto: GRADOS_ELECTRIFICACION.BASICA.id, esquemaContadores: "" };
 
 /**
  * Normaliza tablero.simultaneidadREBT antes de guardarlo — mismo
@@ -105,5 +139,9 @@ export function normalizarSimultaneidadREBT(datos: Partial<SimultaneidadREBT> = 
     gradoPorDefecto: Object.values(GRADOS_ELECTRIFICACION).some((g) => g.id === datos.gradoPorDefecto)
       ? (datos.gradoPorDefecto as string)
       : GRADOS_ELECTRIFICACION.BASICA.id,
+    esquemaContadores:
+      datos.esquemaContadores === ESQUEMAS_CONTADORES.CONCENTRADOS_MAS_DE_UN_LUGAR || datos.esquemaContadores === ESQUEMAS_CONTADORES.TOTALMENTE_CONCENTRADOS
+        ? datos.esquemaContadores
+        : "",
   };
 }
