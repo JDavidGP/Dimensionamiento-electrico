@@ -205,13 +205,22 @@ export type TipoRefrigeracionTransformador = "aceite" | "seco";
  * por separado cuando se SUMA la impedancia de un conductor aguas
  * abajo (en los bornes solos el reparto no cambia el resultado).
  *
- * Discrepancia encontrada entre los 2 documentos del usuario, 750kVA
- * aceite: el documento "tabla de X/R por tamaño de transformador"
- * (el primero) da X/R=6.0; el documento "tabla completa X/R
- * aceite/seco" (el segundo, más explícito en separar ambos tipos) da
- * X/R=5.5. Se usa 5.5 acá — PENDIENTE de que el usuario confirme cuál
- * es la correcta si llega a importar en un proyecto real con un
- * transformador de 750kVA.
+ * Discrepancia 750kVA aceite — RESUELTA (usuario, 2026-11-21,
+ * documento "discrepancia"): ni 6.0 (primer documento) ni 5.5 (segundo
+ * documento) eran el dato de catálogo exacto para ESTE punto. Contra
+ * la fuente primaria (catálogo GE/ABB, PDF 45TMEDVOLT), 750kVA aceite
+ * real de fabricante da X/R=3.25-3.79 — pero ESE catálogo es de diseño
+ * MV (12.47-13.2kV primario), un rango de tensión distinto al de esta
+ * tabla (secundario 480V), no comparable fila a fila. El usuario
+ * propuso después 4.0 (cifra aislada "conservadora sin catálogo"), que
+ * ROMPERÍA la tendencia creciente de ESTA tabla en particular
+ * (500kVA=5.2 → 750kVA=4.0 → 1000kVA=6.5, una caída seguida de un
+ * salto, contradice la física que confirman todos los documentos:
+ * X/R crece con el tamaño) — detectado y señalado antes de aceptarlo.
+ * Decisión final del usuario: mantener 5.5 (punto medio entre 5.2 y
+ * 6.5 de la MISMA tabla GE/ABB, consistente internamente) en vez de un
+ * dato de catálogo exacto para este punto puntual, que no existe en
+ * el rango de tensión correcto.
  *
  * Fuera de rango (<75 o >1000 kVA): no disponible a propósito — la
  * tabla de transformadores de POTENCIA (>1MVA) del mismo documento da
