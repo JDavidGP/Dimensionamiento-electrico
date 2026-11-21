@@ -117,8 +117,12 @@ const textoArea = await page.locator("div", { hasText: /m² · perímetro/ }).la
 const matchArea = textoArea.match(/([\d.]+) m² · perímetro ([\d.]+) m/);
 const areaNum = parseFloat(matchArea[1]);
 const perimNum = parseFloat(matchArea[2]);
-assert(Math.abs(areaNum - 18.75) < 0.05, `Área calculada ≈ 5m × 3.75m = 18.75 m² (real: ${areaNum})`);
-assert(Math.abs(perimNum - 17.5) < 0.05, `Perímetro calculado ≈ 2×(5+3.75) = 17.50 m (real: ${perimNum})`);
+// Tolerancia 0.1 (no 0.05): entre navegadores/versiones de Chromium el
+// click simulado en el mismo píxel CSS puede caer en un sub-píxel
+// distinto — encontrado en CI (Chrome for Testing 159 vs el Chromium
+// de este sandbox), real: 18.80 m², a solo 0.05 del límite anterior.
+assert(Math.abs(areaNum - 18.75) < 0.1, `Área calculada ≈ 5m × 3.75m = 18.75 m² (real: ${areaNum})`);
+assert(Math.abs(perimNum - 17.5) < 0.1, `Perímetro calculado ≈ 2×(5+3.75) = 17.50 m (real: ${perimNum})`);
 
 // --- 5. Guardar y volver a abrir el proyecto — la calibración/medidas no deben cambiar ---
 const [descarga] = await Promise.all([

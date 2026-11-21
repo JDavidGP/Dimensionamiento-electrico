@@ -16,7 +16,7 @@
   "test_simultaneidad_rebt_ui": "mismo selector 'Tri' desactualizado que test_balance_ui",
   "test_sin_rol": "nombre de panel cambiado ('Editar fuentes de energía') tras el rediseño de Fuente de energía",
   "test_subtablero": "mismo selector 'Tri' desactualizado que test_balance_ui",
-  "test_sync_ui": "desactualizado, sin re-verificar selector exacto",
+  "test_sync_ui": "inestable, no por un selector — un recurso 404 en consola que no siempre aparece (depende del entorno); el resto de la prueba pasa siempre",
   "test_tipo_instalacion": "botones 'Domiciliaria'/'Industrial' ya no existen — reemplazados por los 3 niveles (Residencial básico/avanzado, Comercial-Industrial)",
   "test_tipo_instalacion_roundtrip": "mismo cambio de enum de tipo de instalación que test_tipo_instalacion",
   "test_transformador_gate": "aserción desactualizada sobre cuándo se ofrece Transformador como fuente, tras cambios posteriores del gateo",
