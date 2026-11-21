@@ -6,4 +6,4 @@ export {
   obtenerDetalleElectrico,
   resumenIntegridad,
   ESTADOS,
-} from "../modules/validacion/index.js";
+} from "../modules/validacion/index.ts";

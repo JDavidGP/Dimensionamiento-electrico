@@ -14,7 +14,7 @@ import {
   formularioAEquipo,
   equipoAFormulario,
   ESTADOS,
-} from "../../modules/validacion/index.js";
+} from "../../modules/validacion/index.ts";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { DataProvider } from "../services/DataProvider.js";
 

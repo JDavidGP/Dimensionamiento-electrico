@@ -1,5 +1,5 @@
 /**
- * validation/referencial.js
+ * validation/referencial.ts
  * Fase 1 — Validación de integridad REFERENCIAL.
  *
  * Recorre Project → Circuit → Equipment (modelo plano real de la app)
@@ -13,15 +13,26 @@
  *
  * No calcula nada eléctrico aquí — solo estructura y referencias.
  */
+import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, NodoDiagrama, MarcadorEquipoPlano, Proyecto, Estado } from "./tipos.ts";
 
-const ESTADOS = { OK: "ok", ADVERTENCIA: "advertencia", ERROR: "error" };
+const ESTADOS: Record<"OK" | "ADVERTENCIA" | "ERROR", Estado> = { OK: "ok", ADVERTENCIA: "advertencia", ERROR: "error" };
 
-function peorEstado(a, b) {
-  const rango = { ok: 0, advertencia: 1, error: 2 };
+function peorEstado(a: Estado, b: Estado): Estado {
+  const rango: Record<Estado, number> = { ok: 0, advertencia: 1, error: 2 };
   return rango[b] > rango[a] ? b : a;
 }
 
-function crearEntrada({ id, tipo, nombre, parentId, estado, resumen, problemas }) {
+export interface Entrada {
+  id: string;
+  tipo: "tablero" | "circuito" | "equipo" | "fuenteEnergia" | "transformador";
+  nombre: string;
+  parentId: string | null | undefined;
+  estado: Estado;
+  resumen: string;
+  problemas: string[];
+}
+
+function crearEntrada({ id, tipo, nombre, parentId, estado, resumen, problemas }: Entrada): Entrada {
   return {
     id,
     tipo, // "tablero" | "circuito" | "equipo"
@@ -33,7 +44,7 @@ function crearEntrada({ id, tipo, nombre, parentId, estado, resumen, problemas }
   };
 }
 
-function resumenCargaEquipo(equipo) {
+function resumenCargaEquipo(equipo: Equipo): string {
   if (equipo.modoEntrada === "corriente" && equipo.valor != null) {
     return `${equipo.valor} A × ${equipo.cantidad ?? 1}`;
   }
@@ -43,9 +54,9 @@ function resumenCargaEquipo(equipo) {
   return "sin datos de carga";
 }
 
-function validarEquipo(equipo, circuito, idsVistos) {
-  const problemas = [];
-  let estado = ESTADOS.OK;
+function validarEquipo(equipo: Equipo, circuito: Circuito | null | undefined, idsVistos: Set<string>): Entrada {
+  const problemas: string[] = [];
+  let estado: Estado = ESTADOS.OK;
 
   if (idsVistos.has(equipo.id)) {
     problemas.push("ID duplicado en el proyecto");
@@ -77,7 +88,7 @@ function validarEquipo(equipo, circuito, idsVistos) {
     estado = peorEstado(estado, ESTADOS.ADVERTENCIA);
   }
 
-  if (!(equipo.cantidad >= 1)) {
+  if (!(Number(equipo.cantidad) >= 1)) {
     problemas.push("Cantidad inválida (< 1)");
     estado = peorEstado(estado, ESTADOS.ADVERTENCIA);
   }
@@ -93,9 +104,17 @@ function validarEquipo(equipo, circuito, idsVistos) {
   });
 }
 
-function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tableros = [], nodosDiagrama = [], marcadoresEquipoPlano = []) {
-  const problemas = [];
-  let estado = ESTADOS.OK;
+function validarCircuito(
+  circuito: Circuito,
+  equiposDelCircuito: Equipo[],
+  proyecto: Proyecto,
+  idsVistos: Set<string>,
+  tableros: Tablero[] = [],
+  nodosDiagrama: NodoDiagrama[] = [],
+  marcadoresEquipoPlano: MarcadorEquipoPlano[] = []
+): Entrada[] {
+  const problemas: string[] = [];
+  let estado: Estado = ESTADOS.OK;
 
   if (idsVistos.has(circuito.id)) {
     problemas.push("ID duplicado en el proyecto");
@@ -210,9 +229,18 @@ function validarCircuito(circuito, equiposDelCircuito, proyecto, idsVistos, tabl
   return [entradaCircuito, ...entradasEquipos];
 }
 
-function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = [], fuentesEnergia = [], nodosDiagrama = [], transformadores = []) {
-  const problemas = [];
-  let estado = ESTADOS.OK;
+function validarTablero(
+  tablero: Tablero,
+  circuitos: Circuito[],
+  idsVistos: Set<string>,
+  proyectoId: string | undefined,
+  tableros: Tablero[] = [],
+  fuentesEnergia: FuenteEnergia[] = [],
+  nodosDiagrama: NodoDiagrama[] = [],
+  transformadores: Transformador[] = []
+): Entrada {
+  const problemas: string[] = [];
+  let estado: Estado = ESTADOS.OK;
 
   if (idsVistos.has(tablero.id)) {
     problemas.push("ID duplicado en el proyecto");
@@ -253,7 +281,7 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []
   // — mismo chequeo que tableroPadreId: "acometida" y "" (ninguna) son
   // siempre válidos; cualquier otro valor debe ser una fuente real.
   if (tablero.conmutacion?.activa) {
-    const camposFuente = [
+    const camposFuente: [string, string | null | undefined][] = [
       ["fuentePrincipalId", tablero.conmutacion.fuentePrincipalId],
       ["fuenteSecundariaId", tablero.conmutacion.fuenteSecundariaId],
       ["fuenteAuxiliarId", tablero.conmutacion.fuenteAuxiliarId],
@@ -292,9 +320,9 @@ function validarTablero(tablero, circuitos, idsVistos, proyectoId, tableros = []
  * representación en el diagrama (advertencia) — nada más se valida de
  * una fuenteEnergia hoy (capacidadKW/notas son libres, no tienen regla).
  */
-function validarFuenteEnergia(fuente, idsVistos, proyectoId, nodosDiagrama = []) {
-  const problemas = [];
-  let estado = ESTADOS.OK;
+function validarFuenteEnergia(fuente: FuenteEnergia, idsVistos: Set<string>, proyectoId: string | undefined, nodosDiagrama: NodoDiagrama[] = []): Entrada {
+  const problemas: string[] = [];
+  let estado: Estado = ESTADOS.OK;
 
   if (idsVistos.has(fuente.id)) {
     problemas.push("ID duplicado en el proyecto");
@@ -313,7 +341,7 @@ function validarFuenteEnergia(fuente, idsVistos, proyectoId, nodosDiagrama = [])
     nombre: fuente.nombre || fuente.id,
     parentId: proyectoId,
     estado,
-    resumen: fuente.tipo,
+    resumen: fuente.tipo ?? "",
     problemas,
   });
 }
@@ -326,9 +354,9 @@ function validarFuenteEnergia(fuente, idsVistos, proyectoId, nodosDiagrama = [])
  * Capacidad/conexiones/%Z siguen sin campo de UI (ver TRANSFORMADOR_VACIO),
  * así que no hay nada más que validar todavía.
  */
-function validarTransformador(transformador, idsVistos, proyectoId, nodosDiagrama = []) {
-  const problemas = [];
-  let estado = ESTADOS.OK;
+function validarTransformador(transformador: Transformador, idsVistos: Set<string>, proyectoId: string | undefined, nodosDiagrama: NodoDiagrama[] = []): Entrada {
+  const problemas: string[] = [];
+  let estado: Estado = ESTADOS.OK;
 
   if (idsVistos.has(transformador.id)) {
     problemas.push("ID duplicado en el proyecto");
@@ -354,20 +382,29 @@ function validarTransformador(transformador, idsVistos, proyectoId, nodosDiagram
 
 /**
  * Punto de entrada de Fase 1 (+ Fase 3, Tablero).
- * @param {Object} proyecto - metadatos del proyecto ({ id, nombre, ... })
- * @param {Array}  circuitos - array plano de circuitos
- * @param {Array}  equipos   - array plano de equipos (con circuitoId)
- * @param {Array}  tableros  - array plano de tableros (con id, nombre...)
- * @param {Array}  fuentesEnergia - array plano de fuentes de energía (Batería/Generador)
- * @param {Array}  nodosDiagrama - array plano de nodos del diagrama unifilar (con entidadId) — caso inverso de la sincronización, ver ARCHITECTURE.md §9
- * @param {Array}  transformadores - array plano de transformadores (ver modules/motor/transformador.js) — origen seleccionable solo en instalaciones industriales
- * @param {Array}  marcadoresEquipoPlano - marcadores de equipo del plano (con entidadId) — caso inverso simétrico al de nodosDiagrama, ver modules/plano/index.js
- * @returns {Array} lista plana de entradas para la UI
+ * @param proyecto - metadatos del proyecto ({ id, nombre, ... })
+ * @param circuitos - array plano de circuitos
+ * @param equipos   - array plano de equipos (con circuitoId)
+ * @param tableros  - array plano de tableros (con id, nombre...)
+ * @param fuentesEnergia - array plano de fuentes de energía (Batería/Generador)
+ * @param nodosDiagrama - array plano de nodos del diagrama unifilar (con entidadId) — caso inverso de la sincronización, ver ARCHITECTURE.md §9
+ * @param transformadores - array plano de transformadores (ver modules/motor/transformador.js) — origen seleccionable solo en instalaciones industriales
+ * @param marcadoresEquipoPlano - marcadores de equipo del plano (con entidadId) — caso inverso simétrico al de nodosDiagrama, ver modules/plano/index.js
+ * @returns lista plana de entradas para la UI
  */
-export function validarIntegridadReferencial(proyecto, circuitos = [], equipos = [], tableros = [], fuentesEnergia = [], nodosDiagrama = [], transformadores = [], marcadoresEquipoPlano = []) {
-  const idsVistos = new Set();
-  const entradas = [];
-  const proj = proyecto || { id: "proyecto" };
+export function validarIntegridadReferencial(
+  proyecto: Proyecto | null | undefined,
+  circuitos: Circuito[] = [],
+  equipos: Equipo[] = [],
+  tableros: Tablero[] = [],
+  fuentesEnergia: FuenteEnergia[] = [],
+  nodosDiagrama: NodoDiagrama[] = [],
+  transformadores: Transformador[] = [],
+  marcadoresEquipoPlano: MarcadorEquipoPlano[] = []
+): Entrada[] {
+  const idsVistos = new Set<string>();
+  const entradas: Entrada[] = [];
+  const proj: Proyecto = proyecto || { id: "proyecto" };
   // Compatibilidad: si alguien todavía anida tableros en proyecto.tableros
   // en vez de pasarlos explícitos, se siguen aceptando.
   const listaTableros = tableros.length > 0 ? tableros : proj.tableros || [];

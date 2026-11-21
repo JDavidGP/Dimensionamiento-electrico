@@ -1,5 +1,5 @@
 /**
- * validation/electrica.js
+ * validation/electrica.ts
  * Fase 2 — Validación de integridad ELÉCTRICA.
  *
  * Se dispara al seleccionar una entrada de la lista de Fase 1.
@@ -12,19 +12,22 @@
  *     resultado de calcularCircuito() si se pasa el mapa de resultados
  *   - normativaEngine: objeto NORMATIVAS[id] o wrapper con verificarCircuito
  */
+import type { Circuito, Equipo, Tablero, Proyecto, ResultadoCalculoLaxo, NormativaEngine, Estado } from "./tipos.ts";
 
-const ESTADOS = { OK: "ok", ADVERTENCIA: "advertencia", ERROR: "error" };
+const ESTADOS: Record<"OK" | "ADVERTENCIA" | "ERROR", Estado> = { OK: "ok", ADVERTENCIA: "advertencia", ERROR: "error" };
 
-function peorEstado(a, b) {
-  const rango = { ok: 0, advertencia: 1, error: 2 };
+function peorEstado(a: Estado, b: Estado): Estado {
+  const rango: Record<Estado, number> = { ok: 0, advertencia: 1, error: 2 };
   return rango[b] > rango[a] ? b : a;
 }
 
-/**
- * Localiza nodo por id dentro del estado plano.
- * @returns {{ tipo, data, circuitoPadre? } | null}
- */
-function localizarNodo(id, proyecto, circuitos = [], equipos = []) {
+export type NodoLocalizado =
+  | { tipo: "tablero"; data: Tablero }
+  | { tipo: "circuito"; data: Circuito }
+  | { tipo: "equipo"; data: Equipo; circuitoPadre: Circuito | null };
+
+/** Localiza nodo por id dentro del estado plano. */
+function localizarNodo(id: string, proyecto: Proyecto | null | undefined, circuitos: Circuito[] = [], equipos: Equipo[] = []): NodoLocalizado | null {
   const tablero = (proyecto?.tableros || []).find((t) => t.id === id);
   if (tablero) return { tipo: "tablero", data: tablero };
 
@@ -45,7 +48,7 @@ function localizarNodo(id, proyecto, circuitos = [], equipos = []) {
  * cosφ completo). Útil como fallback cuando no hay resultado de cálculo.
  * Preferir siempre el resultado de calcularCircuito cuando esté disponible.
  */
-function estimarCorrienteSimple(circuito, equiposDelCircuito) {
+function estimarCorrienteSimple(circuito: Circuito, equiposDelCircuito: Equipo[]): { cargaTotalW: number; corriente: number } {
   let cargaTotalW = 0;
   for (const eq of equiposDelCircuito) {
     const cant = eq.cantidad ?? 1;
@@ -66,9 +69,17 @@ function estimarCorrienteSimple(circuito, equiposDelCircuito) {
   return { cargaTotalW, corriente };
 }
 
-function validarEquipoElectrico(equipo) {
-  const mensajes = [];
-  let estado = ESTADOS.OK;
+export interface ReporteElectrico {
+  id?: string;
+  tipo?: "tablero" | "circuito" | "equipo";
+  estado: Estado;
+  datos?: Record<string, unknown>;
+  mensajes: string[];
+}
+
+function validarEquipoElectrico(equipo: Equipo): ReporteElectrico {
+  const mensajes: string[] = [];
+  let estado: Estado = ESTADOS.OK;
 
   if (equipo.valor == null || !(Number(equipo.valor) > 0)) {
     mensajes.push(
@@ -103,20 +114,20 @@ function validarEquipoElectrico(equipo) {
   };
 }
 
-/**
- * @param {Object} circuito
- * @param {Array}  equiposDelCircuito
- * @param {Object} [opts]
- * @param {Object} [opts.resultadoCalculo] - salida de calcularCircuito() para este circuito
- * @param {Object} [opts.normativaEngine]  - módulo NORMATIVAS[id] o wrapper
- */
-function validarCircuitoElectrico(circuito, equiposDelCircuito, opts = {}) {
-  const { resultadoCalculo, normativaEngine } = opts;
-  const mensajes = [];
-  let estado = ESTADOS.OK;
+export interface OpcionesValidarCircuitoElectrico {
+  /** salida de calcularCircuito() para este circuito */
+  resultadoCalculo?: ResultadoCalculoLaxo;
+  /** módulo NORMATIVAS[id] o wrapper */
+  normativaEngine?: NormativaEngine;
+}
 
-  let cargaTotalW;
-  let corriente;
+function validarCircuitoElectrico(circuito: Circuito, equiposDelCircuito: Equipo[], opts: OpcionesValidarCircuitoElectrico = {}): ReporteElectrico {
+  const { resultadoCalculo, normativaEngine } = opts;
+  const mensajes: string[] = [];
+  let estado: Estado = ESTADOS.OK;
+
+  let cargaTotalW: number;
+  let corriente: number;
 
   if (resultadoCalculo && resultadoCalculo.ok) {
     cargaTotalW =
@@ -212,7 +223,7 @@ function validarCircuitoElectrico(circuito, equiposDelCircuito, opts = {}) {
   };
 }
 
-function validarTableroElectrico(tablero, circuitos, equipos) {
+function validarTableroElectrico(tablero: Tablero, circuitos: Circuito[], _equipos: Equipo[]): ReporteElectrico {
   const circuitosAsociados = circuitos.filter((c) => c.tableroId === tablero.id);
   return {
     id: tablero.id,
@@ -230,23 +241,15 @@ function validarTableroElectrico(tablero, circuitos, equipos) {
 
 /**
  * Punto de entrada de Fase 2.
- *
- * @param {string} id
- * @param {Object} proyecto
- * @param {Array}  circuitos
- * @param {Array}  equipos
- * @param {Object} [opts]
- * @param {Object} [opts.resultadoCalculo] - resultado de calcularCircuito para el circuito (si aplica)
- * @param {Object} [opts.normativaEngine]
- * @returns {Object} reporte eléctrico del nodo
+ * @returns reporte eléctrico del nodo
  */
 export function validarIntegridadElectrica(
-  id,
-  proyecto,
-  circuitos = [],
-  equipos = [],
-  opts = {}
-) {
+  id: string,
+  proyecto: Proyecto | null | undefined,
+  circuitos: Circuito[] = [],
+  equipos: Equipo[] = [],
+  opts: OpcionesValidarCircuitoElectrico = {}
+): ReporteElectrico {
   const nodo = localizarNodo(id, proyecto, circuitos, equipos);
   if (!nodo) {
     return {

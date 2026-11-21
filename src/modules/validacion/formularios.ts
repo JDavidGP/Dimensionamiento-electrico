@@ -1,12 +1,32 @@
 import { MIN_COSPHI, MAX_COSPHI, MIN_TEMP_C, MAX_TEMP_C } from "../../shared/constants/constantes.js";
 import { generarId } from "../../shared/utils/id.js";
-import { TIPOS_EQUIPO_NEC } from "../../shared/data/tiposEquipoNEC.js";
+import { TIPOS_EQUIPO_NEC as TIPOS_EQUIPO_NEC_CRUDO } from "../../shared/data/tiposEquipoNEC.js";
+const TIPOS_EQUIPO_NEC: Record<string, unknown> = TIPOS_EQUIPO_NEC_CRUDO;
+import type { Circuito, Equipo } from "./tipos.ts";
 
 // ---------------------------------------------------------------------------
 // CIRCUITO
 // ---------------------------------------------------------------------------
 
-export function validarCircuito(form) {
+/** Estado crudo del formulario de circuito — todo texto (inputs de UI), antes de convertir. */
+export interface FormularioCircuito {
+  nombre: string;
+  etiqueta?: string;
+  funcion?: string;
+  representacion?: string;
+  tipo: string;
+  fases: string;
+  voltaje: string;
+  voltajeManual?: boolean;
+  material: string;
+  distancia: string;
+  temp: string;
+  factorSimultaneidadManual?: string | number | null;
+  tableroId?: string | null;
+  lineas?: unknown[];
+}
+
+export function validarCircuito(form: FormularioCircuito): string | null {
   const voltaje = parseFloat(form.voltaje);
   const distancia = parseFloat(form.distancia);
   const temp = parseFloat(form.temp);
@@ -18,18 +38,18 @@ export function validarCircuito(form) {
     return `La temperatura debe estar entre ${MIN_TEMP_C}°C y ${MAX_TEMP_C}°C.`;
   }
   if (form.factorSimultaneidadManual !== "" && form.factorSimultaneidadManual != null) {
-    const fs = parseFloat(form.factorSimultaneidadManual);
+    const fs = parseFloat(String(form.factorSimultaneidadManual));
     if (!(fs >= 0 && fs <= 1)) return "El factor de simultaneidad debe estar entre 0 y 1.";
   }
   return null;
 }
 
-export function formularioACircuito(form, idExistente = null) {
+export function formularioACircuito(form: FormularioCircuito, idExistente: string | null = null): Circuito {
   const fsRaw = form.factorSimultaneidadManual;
   const factorSimultaneidadManual =
-    fsRaw === "" || fsRaw == null || Number.isNaN(parseFloat(fsRaw))
+    fsRaw === "" || fsRaw == null || Number.isNaN(parseFloat(String(fsRaw)))
       ? null
-      : parseFloat(fsRaw);
+      : parseFloat(String(fsRaw));
 
   return {
     id: idExistente ?? generarId(),
@@ -39,7 +59,7 @@ export function formularioACircuito(form, idExistente = null) {
     etiqueta: form.etiqueta || "",
     funcion: form.funcion || "",
     representacion: form.representacion || "ambos",
-    tipo: form.tipo,
+    tipo: form.tipo as Circuito["tipo"],
     fases: form.fases,
     voltaje: parseFloat(form.voltaje),
     voltajeManual: form.voltajeManual ?? false,
@@ -57,9 +77,9 @@ export function formularioACircuito(form, idExistente = null) {
   };
 }
 
-export function circuitoAFormulario(circuito) {
+export function circuitoAFormulario(circuito: Circuito): FormularioCircuito {
   return {
-    nombre: circuito.nombre,
+    nombre: circuito.nombre ?? "",
     etiqueta: circuito.etiqueta || "",
     funcion: circuito.funcion || "",
     representacion: circuito.representacion || "ambos",
@@ -81,10 +101,24 @@ export function circuitoAFormulario(circuito) {
 // EQUIPO
 // ---------------------------------------------------------------------------
 
-export function validarEquipo(form) {
-  const cantidad = parseInt(form.cantidad, 10);
-  const valor = parseFloat(form.valor);
-  const cosPhi = parseFloat(form.cosPhi);
+/** Estado crudo del formulario de equipo — todo texto (inputs de UI), antes de convertir. */
+export interface FormularioEquipo {
+  nombre: string;
+  etiqueta?: string;
+  funcion?: string;
+  cantidad: string | number;
+  modoEntrada: "corriente" | "potencia";
+  valor: string | number;
+  cosPhi: string | number;
+  tipoEquipoNEC?: string;
+  esCargaContinua?: boolean;
+  corrienteRotorBloqueado?: string | number | null;
+}
+
+export function validarEquipo(form: FormularioEquipo): string | null {
+  const cantidad = parseInt(String(form.cantidad), 10);
+  const valor = parseFloat(String(form.valor));
+  const cosPhi = parseFloat(String(form.cosPhi));
 
   if (!form.nombre.trim()) return "El nombre del equipo es obligatorio.";
   if (!(cantidad >= 1)) return "La cantidad debe ser 1 o más.";
@@ -102,11 +136,11 @@ export function validarEquipo(form) {
   return null;
 }
 
-export function formularioAEquipo(form, circuitoId, idExistente = null) {
+export function formularioAEquipo(form: FormularioEquipo, circuitoId: string | null, idExistente: string | null = null): Equipo {
   const lra =
     form.corrienteRotorBloqueado === "" || form.corrienteRotorBloqueado == null
       ? null
-      : parseFloat(form.corrienteRotorBloqueado);
+      : parseFloat(String(form.corrienteRotorBloqueado));
 
   return {
     id: idExistente ?? generarId(),
@@ -114,10 +148,10 @@ export function formularioAEquipo(form, circuitoId, idExistente = null) {
     nombre: form.nombre,
     etiqueta: form.etiqueta || "",
     funcion: form.funcion || "",
-    cantidad: parseInt(form.cantidad, 10),
+    cantidad: parseInt(String(form.cantidad), 10),
     modoEntrada: form.modoEntrada,
-    valor: parseFloat(form.valor),
-    cosPhi: parseFloat(form.cosPhi),
+    valor: parseFloat(String(form.valor)),
+    cosPhi: parseFloat(String(form.cosPhi)),
     tipoEquipoNEC: form.tipoEquipoNEC || "CARGA_GENERAL",
     esCargaContinua: !!form.esCargaContinua,
     corrienteRotorBloqueado:
@@ -125,7 +159,7 @@ export function formularioAEquipo(form, circuitoId, idExistente = null) {
   };
 }
 
-export function equipoAFormulario(equipo) {
+export function equipoAFormulario(equipo: Equipo): FormularioEquipo {
   return {
     nombre: equipo.nombre,
     etiqueta: equipo.etiqueta || "",
