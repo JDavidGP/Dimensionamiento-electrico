@@ -51,8 +51,6 @@ const FORM_VACIO = {
   notas: "",
 };
 
-const FORM_FUENTE_VACIO = { nombre: "", tipo: "bateria" };
-
 // Mini-formulario inline para crear un Transformador — solo los campos
 // mínimos para darle identidad como origen (nombre + fases + tensiones
 // para que calcularCorrientesNominales pueda calcular algo si hace
@@ -645,7 +643,6 @@ export default function PanelTableros({
   normativaActiva,
   tipoInstalacion,
   fuentesEnergia = [],
-  crearFuenteEnergia,
   transformadores = [],
   crearTransformador,
 }) {
@@ -658,13 +655,7 @@ export default function PanelTableros({
   // dropdown) — guardamos el objeto completo para mostrar su nombre sin
   // tener que volver a buscarlo por id.
   const [padreForzado, setPadreForzado] = useState(null);
-  // Mini-formulario inline para crear una fuente de energía nueva
-  // (Batería/Generador) sin salir del formulario de tablero — ver
-  // DECISIÓN DE UI en modules/origen/index.js: el selector de "Tablero
-  // padre" es el lugar elegido para esto.
-  const [nuevaFuenteAbierta, setNuevaFuenteAbierta] = useState(false);
-  const [formFuente, setFormFuente] = useState(FORM_FUENTE_VACIO);
-  // Mismo mini-formulario inline, para Transformador — solo visible
+  // Mini-formulario inline para Transformador — solo visible
   // cuando tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL (ver TIPOS_ORIGEN.
   // TRANSFORMADOR en modules/origen/index.js).
   const [nuevoTransformadorAbierto, setNuevoTransformadorAbierto] = useState(false);
@@ -743,8 +734,6 @@ export default function PanelTableros({
     setEditandoId(null);
     setPadreForzado(null);
     setFormAbierto(false);
-    setNuevaFuenteAbierta(false);
-    setFormFuente(FORM_FUENTE_VACIO);
     setNuevoTransformadorAbierto(false);
     setFormTransformador(FORM_TRANSFORMADOR_VACIO);
   }
@@ -803,9 +792,9 @@ export default function PanelTableros({
   // baterías" (y viceversa), y el generador suele quedar de auxiliar.
   // Solo rellena los campos que el usuario todavía no tocó ("") — una
   // vez que elige algo a mano, no se le vuelve a pisar.
-  // `tipoConocido` es para cuando se acaba de CREAR la fuente inline
-  // (mini-formulario "+ Nueva fuente de energía"): el objeto recién
-  // creado todavía no está en el array `fuentesEnergia` (llega en el
+  // `tipoConocido` es para cuando se acaba de CREAR un transformador
+  // inline (mini-formulario "+ Nuevo transformador"): el objeto recién
+  // creado todavía no está en el array correspondiente (llega en el
   // próximo render, vía el hook) así que buscarlo ahí no lo
   // encontraría — se pasa su tipo de una, ya se sabe.
   function alElegirPrincipal(nuevoPrincipalId, tipoConocido) {
@@ -982,70 +971,12 @@ export default function PanelTableros({
                 )}
               </select>
 
-              {crearFuenteEnergia && (
-                <div style={{ marginTop: 8 }}>
-                  {nuevaFuenteAbierta ? (
-                    <div style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
-                      <input
-                        style={{ ...inputStyle(), marginBottom: 6 }}
-                        value={formFuente.nombre}
-                        onChange={(e) => setFormFuente({ ...formFuente, nombre: e.target.value })}
-                        placeholder="Ej: Banco de baterías solar, Generador diesel 10kW"
-                      />
-                      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                        {TIPOS_FUENTE_UI.map((t) => (
-                          <BotonPill key={t.valor} activo={formFuente.tipo === t.valor} onClick={() => setFormFuente({ ...formFuente, tipo: t.valor })}>
-                            {t.label}
-                          </BotonPill>
-                        ))}
-                      </div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button
-                          type="button"
-                          disabled={!formFuente.nombre.trim()}
-                          onClick={() => {
-                            const fuente = crearFuenteEnergia(formFuente);
-                            alElegirPrincipal(fuente.id, fuente.tipo);
-                            setFormFuente(FORM_FUENTE_VACIO);
-                            setNuevaFuenteAbierta(false);
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: "6px 0",
-                            borderRadius: 3,
-                            border: "none",
-                            background: formFuente.nombre.trim() ? colores.copper : colores.border,
-                            color: formFuente.nombre.trim() ? colores.textSobreAcento : colores.textDim,
-                            fontWeight: 700,
-                            fontSize: 11.5,
-                            cursor: formFuente.nombre.trim() ? "pointer" : "not-allowed",
-                          }}
-                        >
-                          + Crear y usar como origen
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormFuente(FORM_FUENTE_VACIO);
-                            setNuevaFuenteAbierta(false);
-                          }}
-                          style={{ padding: "6px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11.5, cursor: "pointer" }}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setNuevaFuenteAbierta(true)}
-                      style={{ background: "none", border: "none", color: colores.copper, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
-                    >
-                      + Nueva fuente de energía (Batería/Generador)
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* Crear una fuente nueva (Batería/Generador) se hace en el
+                  panel "Declarar fuente de energía" (PanelFuentesEnergia),
+                  no acá — usuario, 2026-11-22: el mini-formulario inline
+                  que vivía en este mismo lugar duplicaba esa acción y
+                  confundía (dos lugares para "crear fuente"). Este
+                  selector solo ELIGE entre las fuentes ya declaradas. */}
 
               {tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL && crearTransformador && (
                 <div style={{ marginTop: 8 }}>

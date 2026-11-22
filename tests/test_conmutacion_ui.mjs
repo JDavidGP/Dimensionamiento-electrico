@@ -7,21 +7,28 @@ const errores = [];
 page.on("pageerror", (e) => errores.push(String(e)));
 await page.goto((process.env.BASE_URL || "http://localhost:4328"), { waitUntil: "networkidle" });
 
-// 1. Crear tablero y dos fuentes (batería + generador) para tener algo que conmutar
+// 1. Crear tablero y dos fuentes (batería + generador) para tener algo que conmutar.
+// Ya no hay mini-formulario inline en el form de tablero (usuario,
+// 2026-11-22: lo eliminó por duplicado/confuso) — se crean en el panel
+// "Declarar fuente de energía", identificado acá por su input de Nombre
+// (único con ese placeholder: el form de "Configurar características"
+// de una fuente ya creada usa el mismo input pero SIN placeholder).
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("Casa");
 
-await page.getByText("+ Nueva fuente de energía (Batería/Generador)").click();
-await page.getByPlaceholder("Ej: Banco de baterías solar, Generador diesel 10kW").fill("Banco solar");
-await page.locator("form").getByRole("button", { name: "Batería", exact: true }).click();
-await page.locator("form").getByRole("button", { name: "Secundaria", exact: true }).click();
-await page.getByRole("button", { name: "+ Crear y usar como origen" }).click();
+const formCrearFuente = page.locator("form").filter({ has: page.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW") });
 
-await page.getByText("+ Nueva fuente de energía (Batería/Generador)").click();
-await page.getByPlaceholder("Ej: Banco de baterías solar, Generador diesel 10kW").fill("Generador diesel");
-await page.locator("form").getByRole("button", { name: "Generador", exact: true }).click();
-await page.locator("form").getByRole("button", { name: "Auxiliar", exact: true }).click();
-await page.getByRole("button", { name: "+ Crear y usar como origen" }).click();
+await formCrearFuente.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW").fill("Banco solar");
+await formCrearFuente.getByRole("button", { name: "Batería", exact: true }).click();
+await formCrearFuente.getByRole("button", { name: "Secundaria", exact: true }).click();
+await formCrearFuente.getByRole("button", { name: "+ Crear fuente" }).click();
+await page.waitForTimeout(200);
+
+await formCrearFuente.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW").fill("Generador diesel");
+await formCrearFuente.getByRole("button", { name: "Generador", exact: true }).click();
+await formCrearFuente.getByRole("button", { name: "Auxiliar", exact: true }).click();
+await formCrearFuente.getByRole("button", { name: "+ Crear fuente" }).click();
+await page.waitForTimeout(200);
 
 await page.getByRole("button", { name: "+ Crear tablero" }).click();
 await page.waitForTimeout(300);

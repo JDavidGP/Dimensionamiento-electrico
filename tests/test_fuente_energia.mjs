@@ -32,13 +32,21 @@ assert((await page.getByText("Red eléctrica local (acometida / poste)").count()
 // --- 3. Transformador NO debe aparecer como opción en residencial básico ---
 assert((await page.getByText("+ Nuevo transformador").count()) === 0, "Transformador no se ofrece en residencial básico");
 
-// --- 4. Crear una fuente de energía (batería) desde el mini-formulario,
-//     usarla como fuente principal, confirmar label "Distancia de la
+// --- 4. Crear una fuente de energía (batería) desde el panel "Declarar
+//     fuente de energía" (ya no hay mini-formulario inline acá — usuario,
+//     2026-11-22, lo eliminó por duplicado/confuso con ese panel),
+//     elegirla como fuente principal, confirmar label "Distancia de la
 //     fuente de energía" y "Material del conductor" ---
-await page.getByText("+ Nueva fuente de energía (Batería/Generador)").click();
-await page.getByPlaceholder("Ej: Banco de baterías solar, Generador diesel 10kW").fill("Banco solar 5kWh");
-await page.getByText("+ Crear y usar como origen").click();
+await page.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW").fill("Banco solar 5kWh");
+await page.getByRole("button", { name: "Batería", exact: true }).click();
+await page.getByRole("button", { name: "+ Crear fuente" }).click();
 await page.waitForTimeout(200);
+await page
+  .locator("label")
+  .filter({ hasText: /^Fuente de energía — Principal/ })
+  .locator("xpath=following-sibling::select[1]")
+  .selectOption({ label: "Banco solar 5kWh (Batería)" });
+await page.waitForTimeout(150);
 
 assert((await page.locator("label").filter({ hasText: "Distancia de la fuente de energía" }).count()) === 1, "El campo de distancia dice 'Distancia de la fuente de energía (m)'");
 assert((await page.locator("label").filter({ hasText: "Material del conductor" }).count()) >= 1, "El campo de material dice 'Material del conductor' (aparece también en el form de circuito)");

@@ -19,10 +19,18 @@ await page.waitForTimeout(300);
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 await page.waitForTimeout(200);
 
-await page.getByText("+ Nueva fuente de energía (Batería/Generador)").click();
-await page.getByPlaceholder("Ej: Banco de baterías solar, Generador diesel 10kW").fill("Banco solar 5kWh");
-await page.getByText("+ Crear y usar como origen").click();
+// Ya no hay mini-formulario inline acá (usuario, 2026-11-22: lo eliminó
+// por duplicado/confuso con el panel "Declarar fuente de energía").
+await page.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW").fill("Banco solar 5kWh");
+await page.getByRole("button", { name: "Batería", exact: true }).click();
+await page.getByRole("button", { name: "+ Crear fuente" }).click();
 await page.waitForTimeout(200);
+await page
+  .locator("label")
+  .filter({ hasText: /^Fuente de energía — Principal/ })
+  .locator("xpath=following-sibling::select[1]")
+  .selectOption({ label: "Banco solar 5kWh (Batería)" });
+await page.waitForTimeout(150);
 
 // --- 2. Confirmar las 3 filas de rol están todas visibles en el
 //     mismo formulario (roles primero, antes de crear el tablero) ---

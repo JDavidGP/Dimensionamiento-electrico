@@ -242,7 +242,6 @@ export default function App() {
                   normativaActiva={normativaActiva}
                   tipoInstalacion={tipoInstalacion}
                   fuentesEnergia={fuentesEnergia}
-                  crearFuenteEnergia={crearFuenteEnergia}
                   transformadores={transformadores}
                   crearTransformador={crearTransformador}
                 />

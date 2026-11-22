@@ -5,20 +5,30 @@ const errores = [];
 page.on("pageerror", (e) => errores.push(String(e)));
 await page.goto((process.env.BASE_URL || "http://localhost:4327"), { waitUntil: "networkidle" });
 
-// 1. Crear un tablero, y usar el enlace "+ Nueva fuente de energía" para crear un Generador diesel auxiliar como su origen
+// 1. Crear un tablero, y declarar un Generador diesel en el panel
+// "Declarar fuente de energía" (ya no hay mini-formulario inline en el
+// form de tablero — usuario, 2026-11-22, lo eliminó por duplicado/
+// confuso), luego elegirlo a mano como origen del tablero.
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("Sub Taller");
 
-await page.getByText("+ Nueva fuente de energía (Batería/Generador)").click();
-await page.getByPlaceholder("Ej: Banco de baterías solar, Generador diesel 10kW").fill("Generador diesel 10kW");
-await page.locator("form").getByRole("button", { name: "Generador", exact: true }).click();
-await page.locator("form").getByRole("button", { name: "Auxiliar", exact: true }).click();
-await page.getByRole("button", { name: "+ Crear y usar como origen" }).click();
+const formCrearFuente = page.locator("form").filter({ has: page.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW") });
+await formCrearFuente.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW").fill("Generador diesel 10kW");
+await formCrearFuente.getByRole("button", { name: "Generador", exact: true }).click();
+await formCrearFuente.getByRole("button", { name: "Auxiliar", exact: true }).click();
+await formCrearFuente.getByRole("button", { name: "+ Crear fuente" }).click();
+await page.waitForTimeout(200);
 
-// Verificar que el <select> de origen ahora tiene seleccionada esa fuente
-const valorSelect = await page.locator("form select").first().inputValue();
-const textoOpcionSeleccionada = await page.locator(`form select option[value="${valorSelect}"]`).textContent();
-console.log("Fuente seleccionada automáticamente como origen tras crearla:", textoOpcionSeleccionada);
+const selectPrincipal = page
+  .locator("label")
+  .filter({ hasText: /^Fuente de energía — Principal/ })
+  .locator("xpath=following-sibling::select[1]");
+await selectPrincipal.selectOption({ label: "Generador diesel 10kW (Generador)" });
+
+// Verificar que el <select> de origen quedó con esa fuente elegida
+const valorSelect = await selectPrincipal.inputValue();
+const textoOpcionSeleccionada = await selectPrincipal.locator(`option[value="${valorSelect}"]`).textContent();
+console.log("Fuente elegida como origen:", textoOpcionSeleccionada);
 
 await page.getByRole("button", { name: "+ Crear tablero" }).click();
 await page.waitForTimeout(300);

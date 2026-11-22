@@ -10,7 +10,6 @@
   "test_fuente_roles": "filas 'Fuente de energía — Secundaria/Auxiliar' ya no existen tal cual tras el rediseño de rol global",
   "test_fuentes_energia": "desactualizado por el mismo rediseño de Fuente de energía, sin re-verificar selector exacto",
   "test_fuentes_persistencia": "selector 'Batería' dentro de 'form' ahora matchea 2 elementos",
-  "test_fuentes_ui": "selector 'Generador' dentro de 'form' ahora matchea 2 elementos",
   "test_grado_vivienda": "placeholder 'Desde el origen' ya no existe tal cual (texto de campo cambiado)",
   "test_informe_tecnico_ui": "placeholder 'Desde la fuente de energía' ya no existe tal cual",
   "test_simultaneidad_rebt_ui": "mismo selector 'Tri' desactualizado que test_balance_ui",
