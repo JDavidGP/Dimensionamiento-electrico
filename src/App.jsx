@@ -4,6 +4,7 @@ import BarraProyecto from "./components/BarraProyecto";
 import FormularioCircuito from "./components/FormularioCircuito";
 import FormularioEquipo from "./components/FormularioEquipo";
 import ImportarEquiposTexto from "./components/ImportarEquiposTexto";
+import ImportarProyectoPDF from "./components/ImportarProyectoPDF";
 import Metrica from "./components/Metrica";
 import TablaResultados from "./components/TablaResultados";
 import PanelBreakers from "./components/PanelBreakers";
@@ -77,6 +78,7 @@ export default function App() {
     editarEtiquetaFuncionEquipo,
     previsualizarImportacionEquipos,
     confirmarImportacionEquipos,
+    confirmarImportacionProyectoPDF,
     equiposDe,
     tableros,
     crearTablero,
@@ -254,6 +256,10 @@ export default function App() {
                     eliminarFuenteEnergia={eliminarFuenteEnergia}
                     listaIntegridad={listaIntegridad}
                   />
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <ImportarProyectoPDF onConfirmar={confirmarImportacionProyectoPDF} normativaActiva={normativaActiva} />
                 </div>
 
                 {/* Transformador: origen seleccionable SOLO en instalación

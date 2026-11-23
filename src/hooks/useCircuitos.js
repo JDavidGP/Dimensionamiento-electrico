@@ -453,6 +453,45 @@ export function useCircuitos() {
     return equipos.filter((e) => e.circuitoId === circuitoId);
   }
 
+  // --- IMPORTACIÓN DE PROYECTO DESDE PDF CON IA LOCAL (2026-11-23) ---
+  // Pedido explícito del usuario: a diferencia de "Importación de
+  // equipos por texto" (que solo agrega equipos a circuitos ya
+  // creados), acá SÍ se crean tableros y circuitos nuevos — es el
+  // reemplazo de cargar un proyecto real desde cero a mano. El texto
+  // del documento ya pasó por la IA local y el adaptador (ver
+  // modules/iaLocal/adaptador.ts) ANTES de llegar acá — esta función
+  // solo inserta lo que el usuario ya confirmó en la vista previa, con
+  // la MISMA validación/fábrica que el resto de la app (nunca un
+  // camino de cálculo paralelo). Un solo setState por array (mismo
+  // criterio que confirmarImportacionEquipos) para no pisarse entre
+  // inserciones de varios tableros/circuitos de una sola vez.
+  function confirmarImportacionProyectoPDF(tablerosParaImportar) {
+    const nuevosTableros = [];
+    const nuevosCircuitos = [];
+    const nuevosEquipos = [];
+
+    tablerosParaImportar.forEach((t) => {
+      const tablero = App.tablero.crear(t.datos);
+      nuevosTableros.push(tablero);
+
+      t.circuitos
+        .filter((c) => c.incluir && c.valido)
+        .forEach((c) => {
+          const circuito = App.validacion.formularioACircuito({ ...c.form, tableroId: tablero.id }, null);
+          nuevosCircuitos.push(circuito);
+          if (c.equipoForm) {
+            nuevosEquipos.push(App.validacion.formularioAEquipo(c.equipoForm, circuito.id, null));
+          }
+        });
+    });
+
+    if (nuevosTableros.length > 0) setTableros([...tableros, ...nuevosTableros]);
+    if (nuevosCircuitos.length > 0) setCircuitos([...circuitos, ...nuevosCircuitos]);
+    if (nuevosEquipos.length > 0) setEquipos([...equipos, ...nuevosEquipos]);
+
+    return { tableros: nuevosTableros.length, circuitos: nuevosCircuitos.length, equipos: nuevosEquipos.length };
+  }
+
   // --- TABLERO (Fase 3 dato relacional + Fase 4 alimentador) ---
   function crearTablero(datos) {
     const tablero = App.tablero.crear(datos);
@@ -1128,6 +1167,7 @@ export function useCircuitos() {
     editarEtiquetaFuncionEquipo,
     previsualizarImportacionEquipos,
     confirmarImportacionEquipos,
+    confirmarImportacionProyectoPDF,
     equiposDe,
     tableros,
     crearTablero,
