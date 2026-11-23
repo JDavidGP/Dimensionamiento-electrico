@@ -442,10 +442,58 @@ export function useCircuitos() {
   // Confirma una previsualización YA vista por el usuario — inserta
   // los equipos (ya armados por previsualizarImportacionEquipos, no
   // se vuelven a interpretar/validar acá) tal cual, de una sola vez.
+  //
+  // También arma el diagrama unifilar de cada equipo nuevo (usuario,
+  // 2026-11-23, mismo pedido que para la importación por PDF+IA: "que
+  // también corra con la importación de equipos por texto") — a
+  // diferencia de esa, acá el circuito YA existe (puede o no tener
+  // tablero asignado, y ese tablero puede o no tener ya su propio nodo
+  // de diagrama de antes) — por eso se busca/reusa el nodo del tablero
+  // en vez de crear uno siempre, para no duplicar lo que el usuario ya
+  // armó a mano. Sin tablero asignado, el equipo queda sin nodo (no
+  // hay de dónde colgarlo) — la advertencia de integridad existente ya
+  // avisa de eso, no hace falta inventar nada acá.
   function confirmarImportacionEquipos(filasPrevisualizadas) {
     const nuevos = filasPrevisualizadas.filter((f) => f.ok).map((f) => f.equipo);
     if (nuevos.length === 0) return 0;
+
+    const nodosAcumulados = [...nodosDiagrama];
+    const conexionesAcumuladas = [...conexionesDiagrama];
+
+    function conectar(origenId, destinoId) {
+      const resultado = App.diagrama.crearConexionValidada({ nodoOrigenId: origenId, nodoDestinoId: destinoId }, nodosAcumulados, conexionesAcumuladas);
+      if (resultado.ok) conexionesAcumuladas.push(resultado.conexion);
+    }
+
+    function nodoDeTablero(tableroId) {
+      const existente = nodosAcumulados.find((n) => n.tipo === "tablero_electrico" && n.entidadId === tableroId);
+      if (existente) return existente;
+      const tablero = tableros.find((t) => t.id === tableroId);
+      if (!tablero) return null;
+      const nodo = App.diagrama.crearNodo({ tipo: "tablero_electrico", nombre: tablero.nombre, entidadId: tablero.id });
+      nodosAcumulados.push(nodo);
+      const nodoAcometida = App.diagrama.crearNodo({ tipo: "acometida", nombre: "Red eléctrica local" });
+      nodosAcumulados.push(nodoAcometida);
+      conectar(nodoAcometida.id, nodo.id);
+      return nodo;
+    }
+
+    nuevos.forEach((equipo) => {
+      const circuito = circuitos.find((c) => c.id === equipo.circuitoId);
+      if (!circuito?.tableroId) return;
+      const nodoTablero = nodoDeTablero(circuito.tableroId);
+      if (!nodoTablero) return;
+      const nodoEquipo = App.diagrama.crearNodo({ tipo: App.diagrama.elegirSimboloEquipo(equipo), nombre: equipo.nombre, entidadId: equipo.id });
+      nodosAcumulados.push(nodoEquipo);
+      conectar(nodoTablero.id, nodoEquipo.id);
+    });
+
     setEquipos([...equipos, ...nuevos]);
+    if (nodosAcumulados.length > nodosDiagrama.length) {
+      const posiciones = App.diagrama.autoorganizar(nodosAcumulados, conexionesAcumuladas);
+      setNodosDiagrama(nodosAcumulados.map((n) => (posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
+      setConexionesDiagrama(conexionesAcumuladas);
+    }
     return nuevos.length;
   }
 
@@ -469,14 +517,15 @@ export function useCircuitos() {
   // 2026-11-23, "la IA hace un etiquetado referencial... para agilizar
   // todo"): un nodo "Acometida" + un nodo del tablero (vinculado,
   // mismo criterio que el resto de la app: entidadId, nunca duplica
-  // datos) + un nodo por cada equipo importado (tipo "carga_especial"
-  // — genérico a propósito, el documento solo da una descripción de
-  // texto, no alcanza para adivinar si es una luminaria, un motor o un
-  // tomacorriente real), conectados Acometida→Tablero→cada equipo.
-  // Nada de esto necesita la IA de nuevo: es mecánico, reusa las
-  // MISMAS fábricas/validación de cardinalidad que si lo armaras a
-  // mano arrastrando símbolos — por eso el nombre del nodo vinculado
-  // queda "vivo" (sigue el de la entidad real) sin código extra.
+  // datos) + un nodo por cada equipo importado, conectados
+  // Acometida→Tablero→cada equipo. El símbolo de cada equipo lo elige
+  // elegirSimboloEquipo() por palabras clave en su nombre (luminaria/
+  // motor/contacto/variantes de control); cuando no reconoce nada cae
+  // a "carga_especial", nunca adivina de más. Nada de esto necesita la
+  // IA de nuevo: es mecánico, reusa las MISMAS fábricas/validación de
+  // cardinalidad que si lo armaras a mano arrastrando símbolos — por
+  // eso el nombre del nodo vinculado queda "vivo" (sigue el de la
+  // entidad real) sin código extra.
   function confirmarImportacionProyectoPDF(tablerosParaImportar) {
     const nuevosTableros = [];
     const nuevosCircuitos = [];
@@ -511,7 +560,7 @@ export function useCircuitos() {
           if (c.equipoForm) {
             const equipo = App.validacion.formularioAEquipo(c.equipoForm, circuito.id, null);
             nuevosEquipos.push(equipo);
-            const nodoEquipo = agregarNodo({ tipo: "carga_especial", nombre: equipo.nombre, entidadId: equipo.id });
+            const nodoEquipo = agregarNodo({ tipo: App.diagrama.elegirSimboloEquipo(equipo), nombre: equipo.nombre, entidadId: equipo.id });
             conectar(nodoTablero.id, nodoEquipo.id);
           }
         });

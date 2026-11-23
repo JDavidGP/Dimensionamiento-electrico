@@ -29,6 +29,7 @@ import {
   validarConexion,
   validarReglaElectrica,
   autoorganizarNodos,
+  elegirSimboloEquipo,
 } from "../../modules/diagrama/index.ts";
 import {
   transformVistaInicial,
@@ -57,6 +58,11 @@ export const DiagramaMediator = {
   /** Posiciones nuevas (nodoId -> {x,y}) que acomodan el diagrama en capas según el sentido de las conexiones — el hook decide cómo aplicarlas. */
   autoorganizar(nodos, conexiones, opciones) {
     return autoorganizarNodos(nodos ?? [], conexiones ?? [], opciones);
+  },
+
+  /** Símbolo del catálogo que mejor representa a un equipo, por palabras clave en su nombre/función (ver seleccionSimbolo.ts) — nunca certero, cae a "carga_especial" ante la duda. */
+  elegirSimboloEquipo(equipo) {
+    return elegirSimboloEquipo(equipo);
   },
 
   // Vista (zoom/pan) — matemática pura de modules/geometria/, mismo

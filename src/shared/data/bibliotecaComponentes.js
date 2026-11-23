@@ -68,6 +68,19 @@ export const CATALOGO_COMPONENTES = [
   { id: "contacto", nombre: "Contacto (tomacorriente)", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
   { id: "interruptor", nombre: "Interruptor", categoria: "carga", puntosConexion: { entradas: 1, salidas: 1 }, entidadVinculada: null },
   { id: "luminaria", nombre: "Luminaria", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
+  // Variantes de luminaria SOLO por cómo se controla (usuario,
+  // 2026-11-23) — puramente documental/visual, ningún cálculo cambia
+  // según cuál sea: "conmutada" = 2 puntos de control (ej. escalera);
+  // "cascada" = una cadena de conmutados donde cada uno intermedio
+  // deriva a SU propia luz o sigue la cadena, cerrando con un
+  // interruptor sencillo en cada extremo — el cableado real entre
+  // interruptores NO se modela como conexiones del diagrama (rompería
+  // la cardinalidad simple fuente→tablero→carga del resto de la app
+  // para algo que no alimenta ningún cálculo); el símbolo distinto ya
+  // avisa que ese grupo tiene un esquema de control distinto a
+  // "interruptor sencillo" (que reusa el símbolo de luminaria común).
+  { id: "luminaria_conmutada", nombre: "Luminaria (conmutada)", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
+  { id: "luminaria_cascada", nombre: "Luminaria (cascada)", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
   { id: "motor", nombre: "Motor", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
   { id: "carga_especial", nombre: "Carga especial", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
 

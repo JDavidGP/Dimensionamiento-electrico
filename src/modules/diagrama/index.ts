@@ -192,5 +192,6 @@ export function validarConexion(
 
 export { validarReglaElectrica } from "./reglas.ts";
 export { autoorganizarNodos } from "./autoorganizar.ts";
+export { elegirSimboloEquipo } from "./seleccionSimbolo.ts";
 export type { NodoDiagrama, DatosNodo, ConexionDiagrama, DatosConexion, ResultadoValidacion, Componente } from "./tipos.ts";
 export type { NodoConId, ConexionSimple, OpcionesAutoorganizar } from "./autoorganizar.ts";
