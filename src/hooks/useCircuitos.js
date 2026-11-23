@@ -872,6 +872,35 @@ export function useCircuitos() {
     return resultado.habitacion;
   }
 
+  // Generador de ambiente por ARRASTRE (usuario, 2026-11-23: "hacemos
+  // click y estiramos un polígono... click en una esquina... estiramos
+  // hacia la otra esquina") — tercera forma de crear un rectángulo,
+  // junto al trazado manual punto por punto y "Generar ambiente" por
+  // medida ya conocida: acá ni se tipea la medida ni se traza punto a
+  // punto, se define visualmente arrastrando sobre la imagen. Ambos
+  // puntos llegan en espacio IMAGEN (mismo contrato que
+  // agregarNodoPlano/generarHabitacionPlano) — se convierten a metros
+  // acá y se arma el rectángulo con la MISMA fábrica que la versión
+  // por medida conocida (crearHabitacionRectangular), nunca una
+  // geometría paralela.
+  function generarHabitacionPorArrastre(puntoImagenA, puntoImagenB, nombre) {
+    if (!planoCalibracion) return null;
+    const a = App.plano.imagenAModelo(puntoImagenA, planoCalibracion.escalaMetrosPorPixel);
+    const b = App.plano.imagenAModelo(puntoImagenB, planoCalibracion.escalaMetrosPorPixel);
+    const anchoM = Math.abs(b.x - a.x);
+    const altoM = Math.abs(b.y - a.y);
+    // Arrastre casi nulo (un click sin mover, o un temblor de mano) —
+    // no genera un ambiente de medida absurda, se ignora en silencio.
+    if (!(anchoM > 0.05) || !(altoM > 0.05)) return null;
+    const centroModelo = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const resultado = App.plano.crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre);
+    if (!resultado) return null;
+    setNodosPlano([...nodosPlano, ...resultado.nodos]);
+    setSegmentosPlano([...segmentosPlano, ...resultado.segmentos]);
+    setHabitacionesPlano([...habitacionesPlano, resultado.habitacion]);
+    return resultado.habitacion;
+  }
+
   // Arrastrar un ambiente entero (ver modo "Mover ambiente" en
   // PlanoCanvas.jsx) — `deltaM` ya viene en metros, calculado por el
   // canvas a partir del movimiento del puntero (el hook no sabe nada
@@ -1251,6 +1280,7 @@ export function useCircuitos() {
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
     generarHabitacionPlano,
+    generarHabitacionPorArrastre,
     moverHabitacionPlano,
     rutasConductorPlano,
     cerrarRutaConductorPlano,

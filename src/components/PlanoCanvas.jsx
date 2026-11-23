@@ -54,6 +54,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     onClickMarcador,
     onArrastrarHabitacion,
     onClickParedCandidata,
+    onTrazarRectangulo,
   },
   ref
 ) {
@@ -66,6 +67,13 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   // del de arriba (uno mueve la VISTA, este mueve DATOS del proyecto).
   // { habitacionId, x, y, seMovio }.
   const arrastreAmbienteRef = useRef(null);
+  // Arrastre de un rectángulo nuevo — modo "rectangulo" (usuario,
+  // 2026-11-23: "click en una esquina... estiramos hacia la otra
+  // esquina"). `inicio`/`actual` en espacio IMAGEN (mismo contrato que
+  // onClickImagen) — SOLO para dibujar la vista previa en vivo acá; el
+  // rectángulo real lo arma el padre (onTrazarRectangulo) recién al
+  // soltar, nunca mientras se arrastra.
+  const [rectanguloArrastre, setRectanguloArrastre] = useState(null);
   // Canvas oculto con los píxeles de la imagen cargada — solo para que
   // alClick pueda leer un parche chico y "pegarse" al borde más
   // cercano (ver modules/plano/deteccionBordes.js). Se arma UNA vez
@@ -186,7 +194,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
 
   function alClick(e) {
     if (!imagen || !onClickImagen || arrastreRef.current?.seMovio || arrastreAmbienteRef.current?.seMovio) return;
-    if (modo === "mover-ambiente") return; // ese modo es solo para arrastrar, un click sin arrastre no hace nada
+    if (modo === "mover-ambiente" || modo === "rectangulo") return; // esos modos son solo para arrastrar, un click sin arrastre no hace nada
     let puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
     if (asistenciaBordes && (modo === "pared" || modo === "conductor" || modo === "calibrar-perimetro" || modo === "espesor")) puntoImagen = ajustarABorde(puntoImagen);
     onClickImagen(puntoImagen);
@@ -211,6 +219,10 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
       if (habitacion) {
         arrastreAmbienteRef.current = { habitacionId: habitacion.id, x: e.clientX, y: e.clientY, seMovio: false };
       }
+    }
+    if (modo === "rectangulo") {
+      const puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
+      setRectanguloArrastre({ inicio: puntoImagen, actual: puntoImagen });
     }
   }
 
@@ -238,11 +250,19 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
         arrastreAmbienteRef.current.y = e.clientY;
       }
     }
+    if (rectanguloArrastre && modo === "rectangulo") {
+      const puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
+      setRectanguloArrastre({ inicio: rectanguloArrastre.inicio, actual: puntoImagen });
+    }
   }
 
   function alPointerUp() {
     arrastreRef.current = null;
     arrastreAmbienteRef.current = null;
+    if (rectanguloArrastre && modo === "rectangulo" && onTrazarRectangulo) {
+      onTrazarRectangulo(rectanguloArrastre.inicio, rectanguloArrastre.actual);
+    }
+    setRectanguloArrastre(null);
   }
 
   function zoomBoton(factor) {
@@ -267,7 +287,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     <div style={{ position: "relative" }}>
       <div
         ref={contenedorRef}
-        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" || modo === "mover-ambiente" ? "none" : "pan-y" }}
+        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" || modo === "mover-ambiente" || modo === "rectangulo" ? "none" : "pan-y" }}
       >
         {!imagen ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: colores.textDim, fontSize: 13 }}>
@@ -430,6 +450,24 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                   x2={puntosGuiaPendientes[0].x}
                   y2={puntosGuiaPendientes[0].y}
                   stroke={colores.warn}
+                  strokeWidth={grosorLinea}
+                  strokeDasharray={`${grosorLinea * 2} ${grosorLinea * 2}`}
+                />
+              )}
+
+              {/* Vista previa en vivo del rectángulo que se está arrastrando
+                  (modo "rectangulo") — puramente visual, el ambiente real
+                  recién se crea al soltar (ver alPointerUp → onTrazarRectangulo).
+                  Mismo espacio IMAGEN que puntosGuiaPendientes, sin pasar por px(). */}
+              {rectanguloArrastre && (
+                <rect
+                  x={Math.min(rectanguloArrastre.inicio.x, rectanguloArrastre.actual.x)}
+                  y={Math.min(rectanguloArrastre.inicio.y, rectanguloArrastre.actual.y)}
+                  width={Math.abs(rectanguloArrastre.actual.x - rectanguloArrastre.inicio.x)}
+                  height={Math.abs(rectanguloArrastre.actual.y - rectanguloArrastre.inicio.y)}
+                  fill={colores.ok}
+                  fillOpacity={0.12}
+                  stroke={colores.ok}
                   strokeWidth={grosorLinea}
                   strokeDasharray={`${grosorLinea * 2} ${grosorLinea * 2}`}
                 />

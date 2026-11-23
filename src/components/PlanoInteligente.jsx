@@ -24,6 +24,7 @@ const MODOS = [
   { valor: "espesor", label: "Medir espesor", ayuda: "Marcá 2 puntos a los dos lados de una pared ya trazada — se mide el espesor real y se guarda en la pared más cercana." },
   { valor: "conductor", label: "Trazar conductor", ayuda: "Click para ir agregando el recorrido de un conductor. No hace falta cerrarlo — terminalo con el botón." },
   { valor: "ambiente", label: "Generar ambiente", ayuda: "Completá el nombre y la medida abajo, y hacé click en el plano donde va el CENTRO del ambiente." },
+  { valor: "rectangulo", label: "Trazar rectángulo", ayuda: "Hacé click en una esquina del ambiente y arrastrá hasta la esquina opuesta — soltá para crearlo con la medida real." },
   { valor: "mover-ambiente", label: "Mover ambiente", ayuda: "Arrastrá un ambiente ya trazado (manual o generado) para reposicionarlo, manteniendo su forma y medida exactas." },
   { valor: "equipo", label: "Colocar equipo", ayuda: "Elegí el tipo abajo y hacé click en el plano donde va ubicado." },
   { valor: "triangular", label: "Triangular equipo", ayuda: "Elegí el tipo arriba. Click en 2 puntos de referencia ya existentes (nodo de pared/conductor o equipo), escribí las 2 distancias medidas con cinta métrica, y confirmá con un click aproximado en el lugar real." },
@@ -53,6 +54,7 @@ export default function PlanoInteligente({
   eliminarHabitacionPlano,
   renombrarHabitacionPlano,
   generarHabitacionPlano,
+  generarHabitacionPorArrastre,
   moverHabitacionPlano,
   rutasConductorPlano,
   cerrarRutaConductorPlano,
@@ -376,6 +378,22 @@ export default function PlanoInteligente({
     }
   }
 
+  // Modo "rectangulo" (usuario, 2026-11-23: "click en una esquina...
+  // estiramos hacia la otra esquina") — tercera forma de crear un
+  // ambiente rectangular, junto al trazado manual y "Generar ambiente"
+  // por medida ya conocida: PlanoCanvas.jsx ya hizo todo el trabajo de
+  // arrastre/vista previa en vivo, acá solo llega el resultado final
+  // (las 2 esquinas, en espacio imagen) al soltar.
+  function alTrazarRectangulo(puntoImagenA, puntoImagenB) {
+    const nombre = window.prompt("Nombre del ambiente (opcional):", "") ?? "";
+    const habitacion = generarHabitacionPorArrastre(puntoImagenA, puntoImagenB, nombre);
+    if (!habitacion) {
+      mostrarAviso(planoCalibracion ? "El arrastre fue demasiado chico — probá estirar más el rectángulo." : "Calibrá el plano primero.");
+      return;
+    }
+    mostrarAviso(`"${habitacion.nombre}" generado — ${habitacion.areaM2.toFixed(2)} m². Podés reposicionarlo con "Mover ambiente".`);
+  }
+
   // Compartida entre alClickImagen (click en vacío, busca el nodo/equipo
   // más cercano) y alClickMarcador (click directo SOBRE un equipo ya
   // marcado, que por su propio manejador de click no deja pasar el
@@ -618,7 +636,7 @@ export default function PlanoInteligente({
             <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10, lineHeight: 1.4 }}>
               {MODOS.find((m) => m.valor === modo)?.ayuda}
               {modo === "perspectiva" && puntosPerspectiva.length > 0 && puntosPerspectiva.length < 4 && ` (van ${puntosPerspectiva.length} de 4)`}
-              {(modo === "pared" || modo === "conductor" || modo === "ambiente") && !planoCalibracion && " — primero calibrá la escala."}
+              {(modo === "pared" || modo === "conductor" || modo === "ambiente" || modo === "rectangulo") && !planoCalibracion && " — primero calibrá la escala."}
               {modo === "pared" && trazoActual.length > 0 && (
                 <>
                   {" "}·{" "}
@@ -805,6 +823,7 @@ export default function PlanoInteligente({
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
           onArrastrarHabitacion={moverHabitacionPlano}
+          onTrazarRectangulo={alTrazarRectangulo}
           asistenciaBordes={asistenciaBordes}
           onClickImagen={alClickImagen}
           onClickMarcador={alClickMarcador}

@@ -124,6 +124,7 @@ export default function App() {
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
     generarHabitacionPlano,
+    generarHabitacionPorArrastre,
     moverHabitacionPlano,
     rutasConductorPlano,
     cerrarRutaConductorPlano,
@@ -403,6 +404,7 @@ export default function App() {
                           eliminarHabitacionPlano={eliminarHabitacionPlano}
                           renombrarHabitacionPlano={renombrarHabitacionPlano}
                           generarHabitacionPlano={generarHabitacionPlano}
+                          generarHabitacionPorArrastre={generarHabitacionPorArrastre}
                           moverHabitacionPlano={moverHabitacionPlano}
                           rutasConductorPlano={rutasConductorPlano}
                           cerrarRutaConductorPlano={cerrarRutaConductorPlano}
