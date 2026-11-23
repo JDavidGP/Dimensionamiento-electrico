@@ -80,6 +80,18 @@ export interface Normativa {
    * llamador sigue usando LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT.
    */
   limiteCaidaTensionAcumuladaPct?: (contexto: ContextoCaidaTensionREBT) => number;
+  /**
+   * Carga unitaria de alumbrado general por área (VA/m²) — NEC Tabla
+   * 220.12, "Dwelling Unit": 33 VA/m² (equivalente a 3 VA/pie², mismo
+   * valor publicado en la tabla, no una conversión propia). Usuario,
+   * 2026-11-23: quería saber para qué sirve el área construida de un
+   * plano — esto es lo que la conecta a un cálculo real. REBT (IEC_ES)
+   * no define este campo — ahí el área es solo UN criterio (junto con
+   * A/C central, calefacción eléctrica, carga de VE) para elegir el
+   * grado de electrificación a mano (ver GRADOS_ELECTRIFICACION), no
+   * alimenta una fórmula de VA directa.
+   */
+  cargaIluminacionGeneralVaPorM2?: number;
   validado: boolean;
   notaValidacion: string;
 }

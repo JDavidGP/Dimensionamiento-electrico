@@ -14,6 +14,15 @@ function assert(cond, msg) {
 
 async function puntoPantallaDesdeImagen(puntoImagen) {
   const svg = page.locator("svg").last();
+  // Scroll explícito antes de medir: el layout de TabsViewPager monta
+  // TODAS las pestañas a la vez en una fila flex sin wrap (ver su
+  // propio comentario) — el alto de la fila es el de la pestaña más
+  // alta entre TODAS, aunque esté inactiva, así que el SVG de Plano
+  // puede terminar más abajo de lo que cabe en un viewport fijo según
+  // cuánto contenido tengan las otras pestañas. page.mouse.click (a
+  // diferencia de locator.click) no hace autoscroll — sin esto, un
+  // clic en una esquina que cayó fuera del viewport nunca llega.
+  await svg.scrollIntoViewIfNeeded();
   const box = await svg.boundingBox();
   const transformAttr = await page.locator("svg > g").last().getAttribute("transform");
   const m = transformAttr.match(/translate\(([-\d.]+),([-\d.]+)\) scale\(([-\d.]+)\)/);

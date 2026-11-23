@@ -428,6 +428,53 @@ export function useCircuitos() {
     );
   }
 
+  // --- CÁLCULO DE ILUMINACIÓN GENERAL (NEC Tabla 220.12) ---
+  // Usuario, 2026-11-23: quería saber para qué sirve el área
+  // construida de un plano — esto la conecta a un cálculo real en vez
+  // de quedar solo como dato descriptivo. Área × VA/m²
+  // (normativa.cargaIluminacionGeneralVaPorM2 — SOLO NEC/CIEN lo
+  // definen, ver modules/normativa/tipos.ts) = la carga de alumbrado
+  // general OBLIGATORIA por NEC Art. 220.12, independiente de cuántos
+  // focos haya instalados realmente. Crea un circuito + 1 equipo
+  // (tipoEquipoNEC: ILUMINACION_GENERAL, que ya activa la demanda
+  // escalonada de Art. 220.42 — mismo motor que cualquier otro
+  // circuito, no es un camino de cálculo aparte) — igual que un
+  // circuito tipeado a mano, sin tablero asignado todavía (el usuario
+  // lo asigna después, como cualquier circuito nuevo).
+  function crearCircuitoIluminacionGeneral(areaM2, normativaActiva) {
+    const normativa = App.normativa.obtener(normativaActiva);
+    const vaPorM2 = normativa.cargaIluminacionGeneralVaPorM2;
+    if (!vaPorM2 || !(areaM2 > 0)) return null;
+    const va = Math.round(areaM2 * vaPorM2);
+
+    const voltajeDefecto = normativa.voltajesPorFase?.mono?.[0] ?? 120;
+    const formCircuito = {
+      ...CIRCUITO_VACIO,
+      nombre: "Iluminación general",
+      etiqueta: App.etiquetado.sugerirCircuito(null, circuitos),
+      fases: "mono",
+      voltaje: String(voltajeDefecto),
+      distancia: "0",
+      temp: "30",
+    };
+    const circuito = App.validacion.formularioACircuito(formCircuito, null);
+
+    const formEquipo = {
+      ...EQUIPO_VACIO,
+      nombre: "Carga general de iluminación (NEC 220.12)",
+      funcion: `Área construida: ${areaM2} m² × ${vaPorM2} VA/m²`,
+      cantidad: "1",
+      modoEntrada: "potencia",
+      valor: String(va),
+      tipoEquipoNEC: "ILUMINACION_GENERAL",
+    };
+    const equipo = App.validacion.formularioAEquipo(formEquipo, circuito.id, null);
+
+    setCircuitos([...circuitos, circuito]);
+    setEquipos([...equipos, equipo]);
+    return { circuito, equipo, va };
+  }
+
   // --- IMPORTACIÓN DE EQUIPOS POR TEXTO (2026-11-20) ---
   // Pedido explícito del usuario, alcance acotado (discutido y
   // aceptado): SOLO crea equipos, nunca tableros/circuitos — deben
@@ -1280,6 +1327,7 @@ export function useCircuitos() {
     cancelarEdicionEquipo,
     eliminarEquipo,
     editarEtiquetaFuncionEquipo,
+    crearCircuitoIluminacionGeneral,
     previsualizarImportacionEquipos,
     confirmarImportacionEquipos,
     confirmarImportacionProyectoPDF,

@@ -141,6 +141,9 @@ export const NEC: Normativa = {
   // (no todas las normativas lo tienen todavía, ver checklist). CIEN lo
   // hereda automático porque comparte esta tabla con NEC.
   canalizaciones: CANALIZACION_NEC,
+  // Tabla 220.12, "Dwelling Unit": 33 VA/m² (3 VA/pie², mismo valor
+  // publicado en la tabla). CIEN lo hereda automático por el spread.
+  cargaIluminacionGeneralVaPorM2: 33,
   validado: true,
   notaValidacion: "Ampacidad verificada contra NEC 310.16 (columna 60°C) — coincide exactamente.",
 };

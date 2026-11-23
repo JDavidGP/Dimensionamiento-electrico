@@ -4,6 +4,7 @@ import BarraProyecto from "./components/BarraProyecto";
 import FormularioCircuito from "./components/FormularioCircuito";
 import FormularioEquipo from "./components/FormularioEquipo";
 import ImportarEquiposTexto from "./components/ImportarEquiposTexto";
+import CalcularIluminacionGeneral from "./components/CalcularIluminacionGeneral";
 import ImportarProyectoPDF from "./components/ImportarProyectoPDF";
 import Metrica from "./components/Metrica";
 import TablaResultados from "./components/TablaResultados";
@@ -76,6 +77,7 @@ export default function App() {
     cancelarEdicionEquipo,
     eliminarEquipo,
     editarEtiquetaFuncionEquipo,
+    crearCircuitoIluminacionGeneral,
     previsualizarImportacionEquipos,
     confirmarImportacionEquipos,
     confirmarImportacionProyectoPDF,
@@ -321,6 +323,8 @@ export default function App() {
                     onPrevisualizar={previsualizarImportacionEquipos}
                     onConfirmar={confirmarImportacionEquipos}
                   />
+
+                  <CalcularIluminacionGeneral normativaActiva={normativaActiva} onCrear={(areaM2) => crearCircuitoIluminacionGeneral(areaM2, normativaActiva)} />
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
