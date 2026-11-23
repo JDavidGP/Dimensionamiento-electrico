@@ -61,7 +61,7 @@ Tu única tarea es devolver un JSON con esta forma exacta, sin texto adicional a
 Reglas estrictas:
 - Si el documento no da un dato, usá null — NUNCA inventes un número que no esté en el texto.
 - Los campos numéricos son solo el número (sin unidades, sin texto).
-- "fases" es mono (una fase), bi (bifásico/dos fases), o tri (trifásico) — si el documento no lo aclara, null.
+- "fases": mono = 1 polo/fase (120V típico en EEUU/Centroamérica). bi = 2 polos ("2P" en la tabla de breakers), sistema split-phase de 240V — ESTO ES LO MÁS COMÚN en residencias de EEUU/NEC para electrodomésticos grandes (estufa, secadora, A/C, cargador de auto): un breaker de 2 polos a 240V en una vivienda SIEMPRE es "bi", NUNCA "tri". "tri" es trifásico real (3 fases), casi siempre 208V o 480V, y aparece casi exclusivamente en instalaciones comerciales/industriales grandes, nunca en una vivienda unifamiliar. Si el documento no aclara cuántas fases/polos tiene un circuito, usá null.
 - Si no encontrás ningún tablero o circuito reconocible, devolvé {"tableros": []}.
 - Respondé SOLO el JSON, nada más.`;
 
