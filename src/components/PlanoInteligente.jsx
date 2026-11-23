@@ -906,9 +906,12 @@ export default function PlanoInteligente({
 
         {modo === "calibrar-perimetro" && (
           <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 10.5, color: colores.textDim, marginBottom: 8 }}>
+            <div style={{ fontSize: 10.5, color: colores.textDim, marginBottom: 4 }}>
               {puntosContornoCalibracion.length} punto{puntosContornoCalibracion.length !== 1 ? "s" : ""} trazado{puntosContornoCalibracion.length !== 1 ? "s" : ""}
               {puntosContornoCalibracion.length < 3 && " — agregá al menos 3 para declarar el perímetro."}
+            </div>
+            <div style={{ fontSize: 10.5, color: colores.warn, marginBottom: 8 }}>
+              ⚠ Ojo: es el <strong>perímetro</strong> (metros LINEALES alrededor del contorno), no el área total del plano (m²) — son datos distintos, fácil de confundir si tu plano muestra la superficie construida bien grande. Si tenés una medida de un tramo recto marcada en el plano (ej. "12.50 m"), usar "Calibrar" (2 puntos) en vez de esto es más preciso.
             </div>
             {puntosContornoCalibracion.length >= 3 && (
               <form onSubmit={confirmarCalibracionPerimetro} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
