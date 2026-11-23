@@ -1,1 +1,0 @@
-- [Vite package firewall](vite-package-firewall.md) — Replit blocks the imported Vite 5 build dependency; use an approved current release and Node.js 20.19+.
