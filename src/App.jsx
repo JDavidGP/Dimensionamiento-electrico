@@ -325,7 +325,7 @@ export default function App() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                     <Metrica label="Circuitos" valor={circuitos.length} />
-                    <Metrica label="Demanda NEC" valor={`${totales.potenciaTotal.toFixed(0)} W`} />
+                    <Metrica label="Demanda" valor={`${totales.potenciaTotal.toFixed(0)} W`} />
                     <Metrica label="Corriente diseño" valor={`${totales.corrienteTotal.toFixed(2)} A`} />
                   </div>
 

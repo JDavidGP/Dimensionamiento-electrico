@@ -63,6 +63,8 @@ Reglas estrictas:
 - Los campos numéricos son solo el número (sin unidades, sin texto).
 - "fases": mono = 1 polo/fase (120V típico en EEUU/Centroamérica). bi = 2 polos ("2P" en la tabla de breakers), sistema split-phase de 240V — ESTO ES LO MÁS COMÚN en residencias de EEUU/NEC para electrodomésticos grandes (estufa, secadora, A/C, cargador de auto): un breaker de 2 polos a 240V en una vivienda SIEMPRE es "bi", NUNCA "tri". "tri" es trifásico real (3 fases), casi siempre 208V o 480V, y aparece casi exclusivamente en instalaciones comerciales/industriales grandes, nunca en una vivienda unifamiliar. Si el documento no aclara cuántas fases/polos tiene un circuito, usá null.
 - Si no encontrás ningún tablero o circuito reconocible, devolvé {"tableros": []}.
+- MUY IMPORTANTE — evitar duplicados: una memoria técnica normalmente describe LOS MISMOS circuitos más de una vez, en lugares distintos (una tabla detallada de cargas, Y DESPUÉS un diagrama unifilar o esquema que los vuelve a nombrar de forma resumida, ej. "C1 10A Alumb., C2 16A Tomas..."). Eso NO son circuitos nuevos — es el mismo circuito mencionado otra vez. Mirá TODO el documento primero e incluí cada circuito UNA SOLA VEZ en tu respuesta (identificalos por su nombre/código, ej. "C1", o por su descripción si coinciden). Nunca devuelvas el mismo tablero ni la misma lista de circuitos dos veces.
+- Un valor de voltaje que aparece junto a un dispositivo de protección (ej. "protector de sobretensiones", "SPD", "PCS", descargador) es la tensión nominal DE ESE DISPOSITIVO, nunca la tensión de alimentación de la instalación — no lo uses como tension_v del tablero.
 - Respondé SOLO el JSON, nada más.`;
 
 export class ErrorIALocal extends Error {
