@@ -28,8 +28,18 @@ const jsonExtraido = {
       nombre: "TD1",
       tension_v: 120,
       fases: "mono",
+      // Derivación individual/alimentador dada explícita en el
+      // documento (usuario, 2026-11-23: "la CPM al CGMP es otra
+      // distancia", el documento ya la calcula, no hay que tipearla).
+      longitud_alimentador_m: 18,
       circuitos: [
-        { descripcion: "Iluminación dormitorios", corriente_a: 15, voltaje_v: 120, fases: "mono" },
+        // Da potencia Y corriente (caso típico: columna "Potencia (W)"
+        // + columna "PIA (A)" del breaker) — debe preferir potencia_w,
+        // sin avisar que es una aproximación.
+        { descripcion: "Iluminación dormitorios", potencia_w: 2300, corriente_a: 15, voltaje_v: 120, fases: "mono" },
+        // Solo da corriente (el breaker) — cae al último recurso, con
+        // aviso de que es una aproximación (usuario, 2026-11-23:
+        // "¿hizo el cálculo con todo trabajando a la vez?").
         { descripcion: "Tomacorrientes cocina", corriente_a: 20, voltaje_v: null, fases: null },
         // Corriente absurda (fuera de todo rango físico posible) — debe
         // sanearse a null, NUNCA usarse tal cual (ver esquema.ts).
@@ -57,8 +67,14 @@ await page.waitForTimeout(1000);
 
 assert((await page.getByText("Iluminación dormitorios").count()) === 1, "El circuito con todos los datos aparece en la vista previa");
 assert((await page.getByText(/Sin voltaje en el documento/).count()) === 1, "Avisa que el voltaje faltante se rellenó por defecto");
-assert((await page.getByText(/Sin corriente en el documento/).count()) === 1, "La corriente fuera de rango se sanea a 'sin corriente', no se usa tal cual");
+assert((await page.getByText(/Sin potencia ni corriente en el documento/).count()) === 1, "La corriente fuera de rango se sanea a 'sin dato', no se usa tal cual");
 assert((await page.getByText("999999").count()) === 0, "El valor absurdo de corriente NUNCA se muestra tal cual (se saneó)");
+
+// --- 1b. Potencia real vs. amperaje del breaker (usuario, 2026-11-23) ---
+assert((await page.getByText("18m de alimentador").count()) === 1, "La longitud de la derivación individual del documento se muestra en la vista previa del tablero");
+assert((await page.getByText(/Iluminación dormitorios.*2300W/).count()) === 1, "Con potencia Y corriente dadas, se usa la potencia real (2300W), no el amperaje del breaker");
+assert((await page.getByText(/El documento no da la potencia real/).count()) === 1, "Cuando SOLO hay amperaje de breaker, avisa que es una aproximación");
+assert((await page.getByText(/breaker 20A \(según documento\)/).count()) === 1, "El amperaje del breaker se muestra de referencia, nunca se confunde con la carga real");
 
 // --- 2. Importar: debe crear 1 tablero y 3 circuitos reales en el proyecto ---
 const botonImportar = page.getByRole("button", { name: /Importar \d+ tablero/ });
@@ -73,13 +89,20 @@ assert((await page.getByText("TD1").count()) >= 1, "El tablero TD1 quedó creado
 await page.getByRole("button", { name: "Circuitos y resultados", exact: true }).click();
 await page.waitForTimeout(300);
 
-assert((await page.getByText(/I=15\.00A/).count()) === 1, "El circuito de 15A calculó su corriente real vía el motor (no un valor pegado)");
-assert((await page.getByText(/I=20\.00A/).count()) === 1, "El circuito de 20A calculó su corriente real vía el motor");
+// 2300W / 120V = 19.1666...A — calculado por el motor a partir de la
+// POTENCIA real, no del amperaje de breaker (15A) que también daba el
+// documento para este mismo circuito.
+assert((await page.getByText(/I=19\.17A/).count()) === 1, "El circuito con potencia real calculó su corriente real desde los 2300W, no desde el breaker de 15A");
+assert((await page.getByText(/I=20\.00A/).count()) === 1, "El circuito sin potencia real usó el amperaje del breaker como aproximación, y calculó desde ahí");
+// Confirma que el total NO está inflado por el amperaje del breaker
+// del primer circuito (15A, descartado a favor de la potencia real).
+assert((await page.getByText(/I=15\.00A/).count()) === 0, "El amperaje del breaker del primer circuito (15A) NO se usó para nada — se descartó a favor de la potencia real");
 // >=1, no ===1: TabsViewPager mantiene todas las pestañas montadas a
 // la vez (Informe técnico también refleja el mismo error de este
 // circuito) — mismo criterio que el resto de la suite para texto no
 // acotado a un contenedor específico.
 assert((await page.getByText(/El circuito no tiene equipos asignados/).count()) >= 1, "El circuito sin corriente válida queda SIN equipo inventado (honesto, no se inventa una carga)");
+assert((await page.getByText(/Falta la longitud del alimentador/).count()) === 0, "La longitud del alimentador quedó cargada desde el documento — ya no falta");
 
 // --- 4. El diagrama unifilar se arma solo: Acometida → tablero → cada
 //     equipo importado (usuario, 2026-11-23, "etiquetado referencial

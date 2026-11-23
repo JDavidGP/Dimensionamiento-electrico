@@ -46,10 +46,12 @@ Tu única tarea es devolver un JSON con esta forma exacta, sin texto adicional a
       "nombre": "string — nombre o identificador del tablero/panel tal como aparece en el documento",
       "tension_v": number o null,
       "fases": "mono" | "bi" | "tri" | null,
+      "longitud_alimentador_m": number o null — longitud del tramo que alimenta a ESTE tablero desde el origen (acometida/CPM/caja de medición): "derivación individual", "DI", "longitud de acometida" o similar, en metros,
       "circuitos": [
         {
           "descripcion": "string corta — qué alimenta este circuito",
-          "corriente_a": number o null,
+          "potencia_w": number o null — la potencia/carga de ese circuito (vatios), si el documento la da,
+          "corriente_a": number o null — la corriente nominal del breaker/PIA de ese circuito (amperios) — OJO, esto es la capacidad del breaker, NO la carga real,
           "voltaje_v": number o null,
           "fases": "mono" | "bi" | "tri" | null
         }
@@ -60,7 +62,8 @@ Tu única tarea es devolver un JSON con esta forma exacta, sin texto adicional a
 
 Reglas estrictas:
 - Si el documento no da un dato, usá null — NUNCA inventes un número que no esté en el texto.
-- Los campos numéricos son solo el número (sin unidades, sin texto).
+- Los campos numéricos son solo el número (sin unidades, sin texto). "potencia_w" siempre en VATIOS — si el documento la da en kW o kVA, convertí multiplicando por 1000 (ej. "5,75 kW" → 5750). "longitud_alimentador_m" siempre en METROS — si el documento la da en pies (ft), convertí multiplicando por 0,3048.
+- "potencia_w" vs "corriente_a" de un circuito son DOS DATOS DISTINTOS, no los confundas: potencia_w es cuánto consume el equipo/carga real (columna "Potencia (W)" o similar); corriente_a es la capacidad del breaker/protección (columna "PIA (A)", "Breaker" o similar) — el breaker SIEMPRE es mayor que la carga real por margen de seguridad, nunca son el mismo número salvo coincidencia. Extraé ambos si el documento los da, cada uno de su propia columna — no calcules uno a partir del otro.
 - "fases": mono = 1 polo/fase (120V típico en EEUU/Centroamérica). bi = 2 polos ("2P" en la tabla de breakers), sistema split-phase de 240V — ESTO ES LO MÁS COMÚN en residencias de EEUU/NEC para electrodomésticos grandes (estufa, secadora, A/C, cargador de auto): un breaker de 2 polos a 240V en una vivienda SIEMPRE es "bi", NUNCA "tri". "tri" es trifásico real (3 fases), casi siempre 208V o 480V, y aparece casi exclusivamente en instalaciones comerciales/industriales grandes, nunca en una vivienda unifamiliar. Si el documento no aclara cuántas fases/polos tiene un circuito, usá null.
 - Si no encontrás ningún tablero o circuito reconocible, devolvé {"tableros": []}.
 - MUY IMPORTANTE — evitar duplicados: una memoria técnica normalmente describe LOS MISMOS circuitos más de una vez, en lugares distintos (una tabla detallada de cargas, Y DESPUÉS un diagrama unifilar o esquema que los vuelve a nombrar de forma resumida, ej. "C1 10A Alumb., C2 16A Tomas..."). Eso NO son circuitos nuevos — es el mismo circuito mencionado otra vez. Mirá TODO el documento primero e incluí cada circuito UNA SOLA VEZ en tu respuesta (identificalos por su nombre/código, ej. "C1", o por su descripción si coinciden). Nunca devuelvas el mismo tablero ni la misma lista de circuitos dos veces.

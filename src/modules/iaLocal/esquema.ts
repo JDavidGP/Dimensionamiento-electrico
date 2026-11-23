@@ -16,6 +16,7 @@ export type Fases = "mono" | "bi" | "tri" | null;
 
 export interface CircuitoExtraido {
   descripcion: string;
+  potencia_w: number | null;
   corriente_a: number | null;
   voltaje_v: number | null;
   fases: Fases;
@@ -25,6 +26,11 @@ export interface TableroExtraido {
   nombre: string;
   tension_v: number | null;
   fases: Fases;
+  // Longitud de la derivación individual / alimentador (CPM/acometida
+  // → este tablero) — usuario, 2026-11-23: varios documentos la dan
+  // explícita (ej. REBT "longitud de derivación individual de 18
+  // metros"), no hay razón para dejarla en blanco si el texto la trae.
+  longitud_alimentador_m: number | null;
   circuitos: CircuitoExtraido[];
 }
 
@@ -41,6 +47,10 @@ const VOLTAJE_MIN = 1;
 const VOLTAJE_MAX = 50000; // cubre hasta media tensión, por si acaso
 const CORRIENTE_MIN = 0.01;
 const CORRIENTE_MAX = 10000;
+const POTENCIA_MIN = 1;
+const POTENCIA_MAX = 1000000; // 1 MW — cubre de sobra residencial/comercial chico
+const LONGITUD_MIN = 0; // 0 válido: tablero pegado directo a la fuente
+const LONGITUD_MAX = 10000; // 10 km — generoso, nunca recorta un valor real
 
 function numeroONull(valor: unknown, min: number, max: number): number | null {
   if (valor === null || valor === undefined) return null;
@@ -92,6 +102,7 @@ export function validarExtraccion(crudo: unknown): ResultadoValidacion {
       const c = cCrudo as Record<string, unknown>;
       circuitos.push({
         descripcion: textoONull(c.descripcion) || `Circuito ${j + 1}`,
+        potencia_w: numeroONull(c.potencia_w, POTENCIA_MIN, POTENCIA_MAX),
         corriente_a: numeroONull(c.corriente_a, CORRIENTE_MIN, CORRIENTE_MAX),
         voltaje_v: numeroONull(c.voltaje_v, VOLTAJE_MIN, VOLTAJE_MAX),
         fases: fasesONull(c.fases),
@@ -102,6 +113,7 @@ export function validarExtraccion(crudo: unknown): ResultadoValidacion {
       nombre,
       tension_v: numeroONull(t.tension_v, VOLTAJE_MIN, VOLTAJE_MAX),
       fases: fasesONull(t.fases),
+      longitud_alimentador_m: numeroONull(t.longitud_alimentador_m, LONGITUD_MIN, LONGITUD_MAX),
       circuitos,
     });
   });

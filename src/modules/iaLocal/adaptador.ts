@@ -23,11 +23,17 @@ export interface CircuitoParaImportar {
   descripcion: string;
   form: FormularioCircuito;
   // Equipo "resumen" que representa la carga declarada en el documento
-  // (según la corriente que dio) — null si el documento no dio
-  // corriente para este circuito, en cuyo caso el circuito se crea sin
-  // carga y el usuario la completa a mano (mismo criterio de "nunca
-  // inventar un dato que no esté" que el resto de la importación).
+  // — null si el documento no dio ni potencia ni corriente para este
+  // circuito, en cuyo caso el circuito se crea sin carga y el usuario
+  // la completa a mano (mismo criterio de "nunca inventar un dato que
+  // no esté" que el resto de la importación).
   equipoForm: FormularioEquipo | null;
+  // Amperaje del breaker/PIA tal como lo da el documento, SOLO para
+  // mostrarlo de referencia en la vista previa — usuario, 2026-11-23:
+  // confundir esto con la carga real infla el total ("todo prendido a
+  // la vez" con el margen del breaker incluido). Nunca se usa para
+  // calcular nada, el breaker real lo deriva DEC de la carga.
+  breakerDocumentoA: number | null;
   advertencias: string[];
   valido: boolean;
   errorValidacion: string | null;
@@ -55,6 +61,7 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
       nombre: t.nombre,
       tensionAlimentacion: String(tensionTablero),
       fases: fasesTablero,
+      longitudAlimentador: t.longitud_alimentador_m != null ? String(t.longitud_alimentador_m) : "",
     };
 
     const circuitos: CircuitoParaImportar[] = t.circuitos.map((c) => {
@@ -78,14 +85,27 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
         temp: "30",
       };
 
-      // La corriente del documento se traduce en un equipo "resumen"
-      // adentro del circuito (CIRCUITO_VACIO no tiene un campo de
-      // corriente propio — la carga real vive en sus equipos, igual
-      // que en el formulario manual). Sin esto, el dato más importante
-      // del documento (la corriente del circuito) se perdería en
-      // silencio.
+      // La carga real del documento se traduce en un equipo "resumen"
+      // adentro del circuito (CIRCUITO_VACIO no tiene un campo de carga
+      // propio — la carga real vive en sus equipos, igual que en el
+      // formulario manual). Se PREFIERE la potencia real (potencia_w)
+      // sobre la corriente del breaker — usuario, 2026-11-23: usar el
+      // amperaje del breaker como si fuera la carga infla el total
+      // (el breaker siempre tiene margen de seguridad sobre la carga
+      // real). La corriente del breaker solo se usa como ÚLTIMO
+      // recurso, cuando el documento no da potencia — y queda avisado
+      // como una aproximación, no un dato exacto.
       let equipoForm: FormularioEquipo | null = null;
-      if (c.corriente_a != null) {
+      if (c.potencia_w != null) {
+        equipoForm = {
+          ...EQUIPO_VACIO,
+          nombre: c.descripcion || "Carga según documento",
+          funcion: "Importado de memoria técnica (IA local)",
+          cantidad: "1",
+          modoEntrada: "potencia",
+          valor: String(c.potencia_w),
+        };
+      } else if (c.corriente_a != null) {
         equipoForm = {
           ...EQUIPO_VACIO,
           nombre: c.descripcion || "Carga según documento",
@@ -94,8 +114,11 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
           modoEntrada: "corriente",
           valor: String(c.corriente_a),
         };
+        advertencias.push(
+          `El documento no da la potencia real de este circuito — se usó el amperaje del breaker (${c.corriente_a}A) como aproximación, probablemente sobreestima la carga real.`
+        );
       } else {
-        advertencias.push("Sin corriente en el documento — el circuito se crea sin carga, hay que agregarla a mano.");
+        advertencias.push("Sin potencia ni corriente en el documento — el circuito se crea sin carga, hay que agregarla a mano.");
       }
 
       const errorValidacion = App.validacion.validarFormularioCircuito(form);
@@ -106,6 +129,7 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
         descripcion: c.descripcion,
         form,
         equipoForm: errorEquipo ? null : equipoForm,
+        breakerDocumentoA: c.corriente_a,
         advertencias,
         valido: !errorValidacion,
         errorValidacion,

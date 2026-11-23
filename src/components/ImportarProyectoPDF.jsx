@@ -225,6 +225,7 @@ export default function ImportarProyectoPDF({ onConfirmar, normativaActiva }) {
                 <div key={i} style={{ border: `1px solid ${colores.border}`, borderRadius: 4, padding: 10 }}>
                   <div style={{ fontWeight: 700, fontSize: 13, color: colores.textMain, marginBottom: 6 }}>
                     {t.nombre} — {t.datos.tensionAlimentacion}V · {t.datos.fases}
+                    {t.datos.longitudAlimentador ? ` · ${t.datos.longitudAlimentador}m de alimentador` : ""}
                   </div>
                   {t.circuitos.length === 0 && <div style={{ fontSize: 11.5, color: colores.textDim }}>Sin circuitos reconocidos.</div>}
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -246,7 +247,8 @@ export default function ImportarProyectoPDF({ onConfirmar, normativaActiva }) {
                         <div>
                           <div style={{ color: colores.textMain }}>
                             {c.descripcion} — {c.form.voltaje}V · {c.form.fases}
-                            {c.equipoForm ? ` · ${c.equipoForm.valor}A` : ""}
+                            {c.equipoForm ? ` · ${c.equipoForm.valor}${c.equipoForm.modoEntrada === "corriente" ? "A" : "W"}` : ""}
+                            {c.breakerDocumentoA != null ? ` · breaker ${c.breakerDocumentoA}A (según documento)` : ""}
                           </div>
                           {!c.valido && <div style={{ color: colores.error }}>✗ {c.errorValidacion}</div>}
                           {c.advertencias.map((a, k) => (
