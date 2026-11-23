@@ -81,6 +81,24 @@ assert((await page.getByText(/I=20\.00A/).count()) === 1, "El circuito de 20A ca
 // acotado a un contenedor específico.
 assert((await page.getByText(/El circuito no tiene equipos asignados/).count()) >= 1, "El circuito sin corriente válida queda SIN equipo inventado (honesto, no se inventa una carga)");
 
+// --- 4. El diagrama unifilar se arma solo: Acometida → tablero → cada
+//     equipo importado (usuario, 2026-11-23, "etiquetado referencial
+//     para agilizar todo") — nunca para el circuito sin equipo ---
+await page.getByRole("button", { name: "Esquemas", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Diagrama unifilar", exact: true }).click();
+await page.waitForTimeout(300);
+
+const svgDiagrama = page.locator("svg").last();
+assert((await svgDiagrama.getByText("Acometida").count()) === 1, "Se creó el nodo Acometida");
+assert((await svgDiagrama.getByText("TD1").count()) === 1, "Se creó el nodo del tablero, vinculado por nombre real");
+// El SVG trunca nombres largos con "…" (ver DiagramaSvgContenido.jsx) — se
+// matchea el prefijo, no la frase completa.
+assert((await svgDiagrama.getByText(/Iluminación dor/).count()) === 1, "Nodo de carga para el equipo del primer circuito");
+assert((await svgDiagrama.getByText(/Tomacorrientes/).count()) === 1, "Nodo de carga para el equipo del segundo circuito");
+assert((await svgDiagrama.getByText(/Circuito fantasma/).count()) === 0, "El circuito SIN equipo (corriente inválida) no genera un nodo de carga inventado");
+assert((await svgDiagrama.locator("text", { hasText: "vinculado" }).count()) === 3, "Los 3 nodos (tablero + 2 equipos) quedan vinculados a su entidad real, ninguno suelto");
+
 console.log("\nErrores de página:", errores);
 assert(errores.length === 0, "Sin errores de página en todo el flujo");
 

@@ -465,14 +465,43 @@ export function useCircuitos() {
   // camino de cálculo paralelo). Un solo setState por array (mismo
   // criterio que confirmarImportacionEquipos) para no pisarse entre
   // inserciones de varios tableros/circuitos de una sola vez.
+  // También arma el diagrama unifilar de lo importado (usuario,
+  // 2026-11-23, "la IA hace un etiquetado referencial... para agilizar
+  // todo"): un nodo "Acometida" + un nodo del tablero (vinculado,
+  // mismo criterio que el resto de la app: entidadId, nunca duplica
+  // datos) + un nodo por cada equipo importado (tipo "carga_especial"
+  // — genérico a propósito, el documento solo da una descripción de
+  // texto, no alcanza para adivinar si es una luminaria, un motor o un
+  // tomacorriente real), conectados Acometida→Tablero→cada equipo.
+  // Nada de esto necesita la IA de nuevo: es mecánico, reusa las
+  // MISMAS fábricas/validación de cardinalidad que si lo armaras a
+  // mano arrastrando símbolos — por eso el nombre del nodo vinculado
+  // queda "vivo" (sigue el de la entidad real) sin código extra.
   function confirmarImportacionProyectoPDF(tablerosParaImportar) {
     const nuevosTableros = [];
     const nuevosCircuitos = [];
     const nuevosEquipos = [];
+    const nodosAcumulados = [...nodosDiagrama];
+    const conexionesAcumuladas = [...conexionesDiagrama];
+
+    function agregarNodo(datos) {
+      const nodo = App.diagrama.crearNodo(datos);
+      nodosAcumulados.push(nodo);
+      return nodo;
+    }
+
+    function conectar(origenId, destinoId) {
+      const resultado = App.diagrama.crearConexionValidada({ nodoOrigenId: origenId, nodoDestinoId: destinoId }, nodosAcumulados, conexionesAcumuladas);
+      if (resultado.ok) conexionesAcumuladas.push(resultado.conexion);
+    }
 
     tablerosParaImportar.forEach((t) => {
       const tablero = App.tablero.crear(t.datos);
       nuevosTableros.push(tablero);
+
+      const nodoAcometida = agregarNodo({ tipo: "acometida", nombre: "Red eléctrica local" });
+      const nodoTablero = agregarNodo({ tipo: "tablero_electrico", nombre: tablero.nombre, entidadId: tablero.id });
+      conectar(nodoAcometida.id, nodoTablero.id);
 
       t.circuitos
         .filter((c) => c.incluir && c.valido)
@@ -480,13 +509,21 @@ export function useCircuitos() {
           const circuito = App.validacion.formularioACircuito({ ...c.form, tableroId: tablero.id }, null);
           nuevosCircuitos.push(circuito);
           if (c.equipoForm) {
-            nuevosEquipos.push(App.validacion.formularioAEquipo(c.equipoForm, circuito.id, null));
+            const equipo = App.validacion.formularioAEquipo(c.equipoForm, circuito.id, null);
+            nuevosEquipos.push(equipo);
+            const nodoEquipo = agregarNodo({ tipo: "carga_especial", nombre: equipo.nombre, entidadId: equipo.id });
+            conectar(nodoTablero.id, nodoEquipo.id);
           }
         });
     });
 
     if (nuevosTableros.length > 0) setTableros([...tableros, ...nuevosTableros]);
     if (nuevosCircuitos.length > 0) setCircuitos([...circuitos, ...nuevosCircuitos]);
+    if (nodosAcumulados.length > nodosDiagrama.length) {
+      const posiciones = App.diagrama.autoorganizar(nodosAcumulados, conexionesAcumuladas);
+      setNodosDiagrama(nodosAcumulados.map((n) => (posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
+      setConexionesDiagrama(conexionesAcumuladas);
+    }
     if (nuevosEquipos.length > 0) setEquipos([...equipos, ...nuevosEquipos]);
 
     return { tableros: nuevosTableros.length, circuitos: nuevosCircuitos.length, equipos: nuevosEquipos.length };
