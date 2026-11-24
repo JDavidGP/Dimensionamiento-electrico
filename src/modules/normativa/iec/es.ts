@@ -87,6 +87,16 @@ export const IEC_ES: Normativa = {
   breakersComerciales: BREAKERS_IEC_ES,
   limiteCaidaTensionPct: 3.0,
   voltajesPorFase: { mono: [230], bi: [230], tri: [400] },
+  // No se ofrece "Bi" en la UI para una instalación NUEVA bajo REBT —
+  // confirmado por el usuario (electricista, 2026-11-24): España no
+  // tiene hoy una red bifásica de distribución estándar; lo que a
+  // veces se llama así es o un vestigio de redes antiguas 127/220V en
+  // desuso, o un "monofásico compuesto" (2 fases+neutro de una
+  // acometida trifásica) que es funcionalmente monofásico de 230V
+  // para el equipo — ninguno es una categoría nueva a dimensionar. Se
+  // deja voltajesPorFase.bi arriba sin tocar (no se borra el dato) por
+  // si algún día hace falta representar uno de esos casos existentes.
+  fasesDisponibles: ["mono", "tri"],
   reglasDemanda: {}, // sin reglas propias todavía — todo cae en demandaPorDefecto
   demandaPorDefecto: demanda100,
   factorDiversidad: null, // placeholder — pendiente de nivel Tablero (REBT ITC-BT-10)

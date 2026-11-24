@@ -865,8 +865,12 @@ export default function PanelTableros({
                   fasesDisponibles en FormularioCircuito.jsx (se había
                   quedado sin aplicar acá; bug reportado por el usuario
                   vía captura, 2026-11-19 — confirmado ya corregido en
-                  el circuito, pero no en el alimentador del tablero). */}
-              {(tipoInstalacion === TIPOS_INSTALACION.RESIDENCIAL_BASICO ? FASES.filter((f) => f.valor !== "tri") : FASES).map((f) => (
+                  el circuito, pero no en el alimentador del tablero).
+                  También se acota por normativa.fasesDisponibles (ver
+                  tipos.ts — REBT no ofrece "Bi", confirmado 2026-11-24). */}
+              {(tipoInstalacion === TIPOS_INSTALACION.RESIDENCIAL_BASICO ? FASES.filter((f) => f.valor !== "tri") : FASES)
+                .filter((f) => (normativa.fasesDisponibles ?? FASES.map((x) => x.valor)).includes(f.valor))
+                .map((f) => (
                 <BotonPill
                   key={f.valor}
                   activo={form.fases === f.valor}

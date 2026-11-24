@@ -42,7 +42,15 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
   // se le cambia la fase a un circuito que ya la tenía en tri si se
   // cambió el nivel después (no se inventa/corrige un dato del usuario en
   // silencio); el pill simplemente no aparece entre las opciones nuevas.
-  const fasesDisponibles = tipoInstalacion === TIPOS_INSTALACION.RESIDENCIAL_BASICO ? FASES.filter((f) => f.valor !== "tri") : FASES;
+  // Además, la normativa activa puede acotar sus propias fases (ver
+  // fasesDisponibles en tipos.ts — ej. REBT no ofrece "Bi", no existe
+  // como red de distribución estándar actual, confirmado por el
+  // usuario 2026-11-24); mismo criterio: solo oculta el pill, no toca
+  // un circuito ya guardado con esa fase.
+  const fasesPermitidasPorNormativa = normativa.fasesDisponibles ?? FASES.map((f) => f.valor);
+  const fasesDisponibles = (tipoInstalacion === TIPOS_INSTALACION.RESIDENCIAL_BASICO ? FASES.filter((f) => f.valor !== "tri") : FASES).filter((f) =>
+    fasesPermitidasPorNormativa.includes(f.valor)
+  );
 
   function elegirVoltajeEstandar(v) {
     setForm({ ...form, voltaje: String(v), voltajeManual: false });

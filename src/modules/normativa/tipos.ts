@@ -92,6 +92,22 @@ export interface Normativa {
    * alimenta una fórmula de VA directa.
    */
   cargaIluminacionGeneralVaPorM2?: number;
+  /**
+   * Fases que esta normativa ofrece como opción real en la UI (pill de
+   * Mono/Bi/Tri). Si no se define, se asumen las 3 (comportamiento
+   * histórico). Usuario, 2026-11-24, consulta de campo sobre REBT: en
+   * España no existe hoy una red "bifásica" de distribución estándar —
+   * una instalación nueva bajo REBT es monofásica (230V) o trifásica
+   * (400V/230V); lo que a veces se llama "bifásico" es o bien un
+   * vestigio de redes antiguas de 127/220V en desuso, o un "monofásico
+   * compuesto" (2 fases + neutro de una acometida trifásica) que para
+   * el equipo es funcionalmente monofásico de 230V — ninguno de los
+   * dos es una categoría nueva que DEC deba ofrecer para dimensionar
+   * una instalación nueva. "Bi" sigue teniendo sentido real para
+   * NEC/CIEN (240V bifásico típico de EE.UU./Centroamérica), por eso
+   * esto es opt-OUT por normativa, no un cambio global.
+   */
+  fasesDisponibles?: Fases[];
   validado: boolean;
   notaValidacion: string;
 }
