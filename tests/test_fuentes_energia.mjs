@@ -14,7 +14,10 @@ assert(generador.tipo === "generador" && generador.rol === "auxiliar", "crearFue
 
 // 2. normalizar() defaults — tipo/rol inválido cae a default, no inventa otro string
 const fuenteRara = App.origen.crearFuente({ nombre: "X", tipo: "fusion_nuclear", rol: "jefe" });
-assert(fuenteRara.tipo === "bateria" && fuenteRara.rol === "auxiliar", "tipo/rol inválido cae al default seguro (bateria/auxiliar)");
+// Rediseño de rol global (usuario, 2026-11-20): rol ahora es opcional
+// ("" = sin rol asignado), no uno de los 3 roles por defecto — un rol
+// inválido cae a "" (nunca inventa un rol real que el usuario no eligió).
+assert(fuenteRara.tipo === "bateria" && fuenteRara.rol === "", "tipo inválido cae a 'bateria'; rol inválido cae a '' (sin rol), no a un rol inventado");
 
 // 3. resolverOrigen (vía OrigenMediator) — null, tablero, fuente, desconocido
 const tableros = [{ id: "t1", nombre: "Principal", fases: "tri", tableroPadreId: null }];

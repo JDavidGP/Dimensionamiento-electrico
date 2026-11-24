@@ -5,10 +5,19 @@ const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_C
 const page = await browser.newPage();
 await page.goto((process.env.BASE_URL || "http://localhost:4323"), { waitUntil: "networkidle" });
 
+// "Tri" no aparece en Residencial básico (nivel por defecto) — subir
+// a un nivel que sí lo ofrezca.
+await page.getByRole("button", { name: "Normativa", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Comercial / Industrial", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Tableros", exact: true }).click();
+await page.waitForTimeout(150);
+
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("Panel B");
 await page.locator("form").getByRole("button", { name: "Tri", exact: true }).click();
-await page.getByPlaceholder("Desde el origen").fill("10");
+await page.getByPlaceholder("Desde la fuente de energía").fill("10");
 await page.getByRole("button", { name: "+ Crear tablero" }).click();
 
 async function crearCircuito(nombre) {

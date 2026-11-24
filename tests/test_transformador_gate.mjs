@@ -20,7 +20,13 @@ await page.waitForTimeout(300);
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 await page.waitForTimeout(200);
 
-assert((await page.getByText("+ Nuevo transformador").count()) === 1, "Comercial/Industrial: Transformador SÍ se ofrece como fuente de energía");
+// Ahora hay 2 entradas válidas a propósito (el link inline del form
+// de tablero + el panel dedicado "Transformadores" más abajo) — no es
+// un bug, solo creció la UI. Se acota a botones reales (role=button)
+// para no contar además la mención entre comillas del texto de ayuda
+// del panel vacío ("Sin transformadores todavía — '+ Nuevo
+// transformador' acá...").
+assert((await page.getByRole("button", { name: "+ Nuevo transformador", exact: true }).count()) >= 1, "Comercial/Industrial: Transformador SÍ se ofrece como fuente de energía");
 
 const fasesAlimentador = page.locator("label").filter({ hasText: "Fases del alimentador" }).locator("xpath=following-sibling::div[1]");
 assert((await fasesAlimentador.getByRole("button", { name: "Tri", exact: true }).count()) === 1, "Comercial/Industrial: 'Tri' SÍ aparece en Fases del alimentador");

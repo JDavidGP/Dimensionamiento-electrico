@@ -29,7 +29,7 @@ await page.waitForTimeout(300);
 
 const [download] = await Promise.all([
   page.waitForEvent("download"),
-  page.getByRole("button", { name: "↓ Guardar (.pdf)", exact: true }).click(),
+  page.getByRole("button", { name: ".json", exact: true }).click(),
 ]);
 const ruta = await download.path();
 const fs = await import("fs");
@@ -39,7 +39,7 @@ console.log("tableroPadreId del tablero 'Casa' apunta a la fuente:", json.tabler
 
 // Recargar y abrir el archivo
 await page.reload({ waitUntil: "networkidle" });
-await page.locator('input[type="file"]').setInputFiles(ruta);
+await page.getByLabel("↑ Abrir").setInputFiles(ruta);
 await page.waitForTimeout(400);
 
 // Tras abrir un proyecto, el tablero queda colapsado (solo se auto-expande al CREARLO) — lo expandimos a mano.

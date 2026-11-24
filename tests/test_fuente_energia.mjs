@@ -48,31 +48,27 @@ await page
   .selectOption({ label: "Banco solar 5kWh (Batería)" });
 await page.waitForTimeout(150);
 
-assert((await page.locator("label").filter({ hasText: "Distancia de la fuente de energía" }).count()) === 1, "El campo de distancia dice 'Distancia de la fuente de energía (m)'");
+// En Residencial básico, la distancia/material de la fuente NO se
+// configuran en el form del tablero (ese bloque está oculto en este
+// nivel) — se relocalizaron a "Configurar características", el panel
+// propio de cada fuente en "Declarar fuente de energía" (usuario,
+// 2026-11-20). Hay que expandir la fuente ahí para verlos.
+await page.locator("div").filter({ hasText: "Banco solar 5kWh" }).filter({ hasText: "Batería" }).last().click();
+await page.waitForTimeout(150);
+assert((await page.locator("label").filter({ hasText: "Distancia donde se conecta" }).count()) === 1, "El campo de distancia de la fuente dice 'Distancia donde se conecta (m)'");
 assert((await page.locator("label").filter({ hasText: "Material del conductor" }).count()) >= 1, "El campo de material dice 'Material del conductor' (aparece también en el form de circuito)");
 
 await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("TD-Hibrido");
 await page.getByRole("button", { name: "+ Crear tablero" }).click();
 await page.waitForTimeout(300);
 
-// --- 5. Expandir el tablero: "Alimenta desde" refleja la fuente creada,
-//     y el bloque de fuentes secundaria/auxiliar muestra la principal
-//     derivada (de solo lectura) sin pedirla de nuevo ---
-await page.getByText("▸").click();
-await page.waitForTimeout(200);
-assert((await page.getByText(/Banco solar 5kWh/).count()) >= 1, "'Alimenta desde' muestra la fuente de energía creada");
-
-await page.getByText("+ Agregar fuente secundaria / auxiliar").click();
-await page.waitForTimeout(150);
-assert((await page.getByText("Fuente principal:").count()) === 1, "El bloque de fuentes muestra 'Fuente principal' de solo lectura");
-assert((await page.locator("div").filter({ hasText: /^Banco solar 5kWh/ }).count()) >= 1, "La fuente principal mostrada coincide con la elegida arriba (sin selector duplicado)");
-
-// Elegir una fuente secundaria: red eléctrica local
-const selectSecundaria = page.locator("select").filter({ has: page.locator('option:has-text("Red eléctrica local")') }).first();
-await selectSecundaria.selectOption({ label: "Red eléctrica local" });
-await page.getByRole("button", { name: "Guardar", exact: true }).click().catch(() => {});
-await page.waitForTimeout(150);
-assert((await page.getByText(/principal\)/).count()) >= 1, "Tras guardar, el resumen de fuentes muestra '(principal)' correctamente derivado");
+// --- 5. El tablero queda expandido automáticamente al crearlo (no hace
+//     falta clickear nada) — "Alimenta desde" refleja la fuente creada.
+//     La configuración de secundaria/auxiliar/conmutación ya NO vive acá
+//     como un bloque aparte — se eliminó ese flujo; ahora son selects
+//     propios del form del tablero, solo visibles fuera de Residencial
+//     básico (ver test_conmutacion_ui.mjs para esa cobertura completa). ---
+assert((await page.getByText(/Banco solar 5kWh/).count()) >= 1, "'Alimenta desde' muestra la fuente de energía creada, ya expandido automáticamente");
 
 console.log("\nErrores de página:", errores);
 assert(errores.length === 0, "Sin errores de página en todo el flujo");

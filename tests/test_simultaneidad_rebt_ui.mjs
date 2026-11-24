@@ -37,6 +37,10 @@ await page.getByRole("button", { name: "NEC ▾" }).click();
 await page.getByRole("button", { name: "IEC", exact: true }).click();
 await page.getByRole("button", { name: "Validar", exact: true }).click();
 await page.waitForTimeout(200);
+// "Tri" no aparece en Residencial básico (nivel por defecto,
+// independiente de la normativa) — subir a un nivel que sí lo ofrezca.
+await page.getByRole("button", { name: "Comercial / Industrial", exact: true }).click();
+await page.waitForTimeout(150);
 
 await page.getByRole("button", { name: "Tableros", exact: true }).click();
 await page.waitForTimeout(300);
@@ -48,8 +52,8 @@ assert(
 // --- 2. Crear el tablero "edificio" y activar el modo REBT ---
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("Edificio Las Flores");
-await page.getByRole("button", { name: "Tri", exact: true }).click();
-await page.getByPlaceholder("Desde el origen").fill("20");
+await page.locator("form").getByRole("button", { name: "Tri", exact: true }).click();
+await page.getByPlaceholder("Desde la fuente de energía").fill("20");
 await page.getByRole("button", { name: "+ Crear tablero" }).click();
 await page.waitForTimeout(200);
 

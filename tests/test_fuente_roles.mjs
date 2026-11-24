@@ -14,6 +14,12 @@ function assert(cond, msg) {
 
 // --- 1. Crear 2 fuentes de energía (batería + generador) desde el
 //     panel dedicado, para que estén disponibles en los 3 selectores ---
+// Secundaria/Auxiliar solo aparecen fuera de Residencial básico.
+await page.getByRole("button", { name: "Normativa", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Comercial / Industrial", exact: true }).click();
+await page.waitForTimeout(150);
+
 await page.getByRole("button", { name: "Tableros", exact: true }).click();
 await page.waitForTimeout(300);
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
@@ -60,10 +66,8 @@ await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("TD-R
 await page.getByRole("button", { name: "+ Crear tablero" }).click();
 await page.waitForTimeout(300);
 
-// --- 6. Verificar persistencia: reabrir edición y confirmar los
-//     valores quedaron guardados ---
-await page.getByText("▸").click();
-await page.waitForTimeout(200);
+// --- 6. Verificar persistencia: el tablero ya queda expandido
+//     automáticamente al crearlo (no hace falta clickear nada) ---
 assert((await page.getByText(/Banco solar 5kWh.*principal/).count()) >= 1, "Resumen de fuentes muestra la principal correctamente");
 assert((await page.getByText(/Red eléctrica local.*secundaria/).count()) >= 1, "Resumen de fuentes muestra la secundaria sugerida");
 

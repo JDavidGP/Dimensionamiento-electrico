@@ -12,7 +12,7 @@ await page.waitForTimeout(200);
 
 const [download] = await Promise.all([
   page.waitForEvent("download"),
-  page.getByRole("button", { name: /Guardar/ }).click(),
+  page.getByRole("button", { name: ".json", exact: true }).click(),
 ]);
 const ruta = await download.path();
 const fs = await import("fs");

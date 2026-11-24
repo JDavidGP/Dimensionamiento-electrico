@@ -1,21 +1,35 @@
+// Conmutación entre fuentes de energía — reescrito 2026-11-24 tras el
+// rediseño de rol global (usuario, 2026-11-20, "ejemplo de las 3
+// casas"): ya no existe un botón separado "+ Configurar conmutación
+// entre fuentes" — el rol (principal/secundaria/auxiliar) se declara
+// como propiedad GLOBAL de la fuente en "Declarar fuente de energía",
+// y cada TABLERO elige (en su propio form de creación/edición) cuál
+// fuente ya declarada juega de secundaria/auxiliar PARA ÉL, más el
+// modo de conmutación y el horario — todo dentro del mismo form de
+// "+ Nuevo tablero" / editar tablero, ver PanelTableros.jsx.
 import { chromium } from "playwright";
 import { fileURLToPath } from "url";
 const DIR = fileURLToPath(new URL(".", import.meta.url));
+
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined, args: ["--no-sandbox"] });
-const page = await browser.newPage();
+const page = await browser.newPage({ viewport: { width: 1280, height: 1400 } });
 const errores = [];
 page.on("pageerror", (e) => errores.push(String(e)));
 await page.goto((process.env.BASE_URL || "http://localhost:4328"), { waitUntil: "networkidle" });
 
-// 1. Crear tablero y dos fuentes (batería + generador) para tener algo que conmutar.
-// Ya no hay mini-formulario inline en el form de tablero (usuario,
-// 2026-11-22: lo eliminó por duplicado/confuso) — se crean en el panel
-// "Declarar fuente de energía", identificado acá por su input de Nombre
-// (único con ese placeholder: el form de "Configurar características"
-// de una fuente ya creada usa el mismo input pero SIN placeholder).
-await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
-await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("Casa");
+function assert(cond, msg) {
+  if (!cond) { console.error("FALLO:", msg); process.exitCode = 1; } else { console.log("OK:", msg); }
+}
 
+// Secundaria/auxiliar de un tablero solo aparece fuera de Residencial básico.
+await page.getByRole("button", { name: "Normativa", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Comercial / Industrial", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Tableros", exact: true }).click();
+await page.waitForTimeout(300);
+
+// --- 1. Declarar 2 fuentes con su rol global ---
 const formCrearFuente = page.locator("form").filter({ has: page.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW") });
 
 await formCrearFuente.getByPlaceholder("Ej: Red eléctrica local, Generador diesel 10kW").fill("Banco solar");
@@ -29,51 +43,52 @@ await formCrearFuente.getByRole("button", { name: "Generador", exact: true }).cl
 await formCrearFuente.getByRole("button", { name: "Auxiliar", exact: true }).click();
 await formCrearFuente.getByRole("button", { name: "+ Crear fuente" }).click();
 await page.waitForTimeout(200);
+console.log("2 fuentes declaradas (Banco solar/secundaria, Generador diesel/auxiliar): OK");
 
-await page.getByRole("button", { name: "+ Crear tablero" }).click();
-await page.waitForTimeout(300);
+// --- 2. Crear el tablero "Casa", eligiendo esas 2 fuentes para SU conmutación ---
+await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
+await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("Casa");
 
-// 2. Configurar conmutación
-await page.getByText("+ Configurar conmutación entre fuentes").click();
-await page.locator("form, div").getByRole("button", { name: "Por horario", exact: true }).click();
-
-// Seleccionar fuente secundaria = Banco solar, auxiliar = Generador diesel
-const selects = page.locator("select");
-const count = await selects.count();
-console.log("Cantidad de <select> visibles en la página:", count);
-
-// Los selects de conmutación son los últimos 3 (principal/secundaria/auxiliar), en ese orden dentro del bloque.
-const selectPrincipal = page.locator("select").filter({ has: page.locator('option:has-text("Red eléctrica local")') }).nth(0);
-const selectSecundaria = page.locator("select").filter({ has: page.locator('option:has-text("— Ninguna —")') }).nth(0);
-const selectAuxiliar = page.locator("select").filter({ has: page.locator('option:has-text("— Ninguna —")') }).nth(1);
+const formTablero = page.locator("form").filter({ has: page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina") });
+const selectSecundaria = formTablero.locator("label", { hasText: "Fuente de energía — Secundaria" }).locator("xpath=..").locator("select");
+const selectAuxiliar = formTablero.locator("label", { hasText: "Fuente de energía — Auxiliar" }).locator("xpath=..").locator("select");
 
 await selectSecundaria.selectOption({ label: "Banco solar" });
 await selectAuxiliar.selectOption({ label: "Generador diesel" });
+await formTablero.getByRole("button", { name: "Por horario", exact: true }).click();
 
-await page.locator('input[type="time"]').nth(0).fill("06:00");
-await page.locator('input[type="time"]').nth(1).fill("18:00");
-await page.getByPlaceholder("Notas (opcional)").fill("Red de día, batería de noche, generador si falla todo");
+const inputsHora = formTablero.locator('input[type="time"]');
+await inputsHora.nth(0).fill("06:00");
+await inputsHora.nth(1).fill("18:00");
+await formTablero.locator("label", { hasText: "Notas (opcional)" }).locator("xpath=..").locator("textarea").fill("Red de día, batería de noche, generador si falla todo");
 
-await page.getByRole("button", { name: "Guardar", exact: true }).click();
+await formTablero.getByRole("button", { name: "+ Crear tablero" }).click();
 await page.waitForTimeout(300);
+console.log("Tablero 'Casa' creado con secundaria/auxiliar/horario: OK");
 
-const resumen = await page.getByText(/Por horario/).textContent();
+// --- 3. Verificar el resumen en la tarjeta del tablero ---
+const resumen = await page.getByText(/Por horario/).first().textContent();
 console.log("Resumen de conmutación tras guardar:", resumen);
+assert(/Banco solar/.test(resumen) && /secundaria/.test(resumen), "El resumen menciona 'Banco solar' como secundaria");
+assert(/Generador diesel/.test(resumen) && /auxiliar/.test(resumen), "El resumen menciona 'Generador diesel' como auxiliar");
+assert(/06:00.{1,3}18:00/.test(resumen), "El resumen muestra el horario 06:00–18:00");
 
-// 3. Reabrir para editar y verificar que los valores se precargan
+// --- 4. Reabrir para editar y verificar que los valores se precargan ---
 await page.getByRole("button", { name: "✎ Editar" }).click();
-const valorSecundariaTrasReabrir = await selectSecundaria.inputValue();
-const nombreSecundariaTrasReabrir = await selectSecundaria.locator(`option[value="${valorSecundariaTrasReabrir}"]`).textContent();
-console.log("Fuente secundaria precargada al reeditar:", nombreSecundariaTrasReabrir);
-const horaInicioTrasReabrir = await page.locator('input[type="time"]').nth(0).inputValue();
-console.log("Hora de inicio precargada al reeditar:", horaInicioTrasReabrir);
+await page.waitForTimeout(200);
+assert((await selectSecundaria.inputValue()) === (await selectSecundaria.locator('option:has-text("Banco solar")').getAttribute("value")), "La secundaria queda precargada como 'Banco solar' al reabrir");
+const horaInicioTrasReabrir = await inputsHora.nth(0).inputValue();
+assert(horaInicioTrasReabrir === "06:00", `La hora de inicio queda precargada (real: ${horaInicioTrasReabrir})`);
 
-// 4. Desactivar
-await page.getByRole("button", { name: "Desactivar", exact: true }).click();
+// --- 5. Quitar ambas fuentes (vuelve a "— Ninguna —") para "desactivar" la conmutación ---
+await selectSecundaria.selectOption({ label: "— Ninguna —" });
+await selectAuxiliar.selectOption({ label: "— Ninguna —" });
+await formTablero.getByRole("button", { name: "Guardar cambios" }).click();
 await page.waitForTimeout(300);
-const botonConfigurar = await page.getByText("+ Configurar conmutación entre fuentes").isVisible();
-console.log("Tras desactivar, vuelve a mostrar '+ Configurar conmutación entre fuentes':", botonConfigurar);
+assert((await page.getByText(/Por horario/).count()) === 0, "Tras quitar ambas fuentes, el resumen de conmutación ya no aparece (activa=false)");
 
 console.log("\nErrores de página:", errores);
+assert(errores.length === 0, "Sin errores de página durante todo el flujo");
+
 await page.screenshot({ path: DIR + "tmp/conmutacion_screenshot.png", fullPage: true });
 await browser.close();

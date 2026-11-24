@@ -22,6 +22,12 @@ assert(await page.locator("#informe-memoria-tecnica").getByText(/orientativos/).
 assert(await page.getByRole("button", { name: /Imprimir/ }).isVisible(), "El botón de imprimir/guardar PDF está visible");
 
 // --- 2. Cargar un circuito real con un equipo, un tablero, y confirmar que aparecen en el informe ---
+// "Desde la fuente de energía" (distancia del alimentador) no aparece
+// en Residencial básico (nivel por defecto) — subir de nivel.
+await page.getByRole("button", { name: "Normativa", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Comercial / Industrial", exact: true }).click();
+await page.waitForTimeout(150);
 await page.getByRole("button", { name: "Tableros", exact: true }).click();
 await page.waitForTimeout(300);
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();

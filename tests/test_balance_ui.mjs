@@ -10,11 +10,21 @@ page.on("console", (msg) => { if (msg.type() === "error") errores.push(msg.text(
 
 await page.goto((process.env.BASE_URL || "http://localhost:4327"), { waitUntil: "networkidle" });
 
+// "Tri" no aparece por defecto — Residencial básico (nivel por
+// defecto tras el rediseño de tipo de instalación en 3 niveles) lo
+// oculta; hace falta subir a un nivel que sí lo ofrezca.
+await page.getByRole("button", { name: "Normativa", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Comercial / Industrial", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Tableros", exact: true }).click();
+await page.waitForTimeout(150);
+
 // 1. Crear tablero trifásico "Panel A"
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 await page.getByPlaceholder("Ej: Tablero principal, Subpanel cocina").fill("Panel A");
 await page.locator("form").getByRole("button", { name: "Tri", exact: true }).click();
-await page.getByPlaceholder("Desde el origen").fill("10");
+await page.getByPlaceholder("Desde la fuente de energía").fill("10");
 await page.getByRole("button", { name: "+ Crear tablero" }).click();
 console.log("Tablero 'Panel A' (tri) creado: OK");
 

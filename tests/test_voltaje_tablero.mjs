@@ -5,6 +5,16 @@ const errores = [];
 page.on("pageerror", (e) => errores.push(String(e)));
 await page.goto((process.env.BASE_URL || "http://localhost:4340"), { waitUntil: "networkidle" });
 
+// "Tri" no aparece en Residencial básico (nivel por defecto, cubre
+// ambas secciones de este test, NEC y REBT) — subir a un nivel que sí
+// lo ofrezca.
+await page.getByRole("button", { name: "Normativa", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Comercial / Industrial", exact: true }).click();
+await page.waitForTimeout(150);
+await page.getByRole("button", { name: "Tableros", exact: true }).click();
+await page.waitForTimeout(150);
+
 // 1. Normativa por defecto es NEC — abrir "+ Nuevo tablero" y chequear pills
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 let pillsTexto = await page.locator("form").getByRole("button", { name: /V$/ }).allTextContents();
@@ -31,10 +41,14 @@ console.log("Valor manual aceptado (999, fuera de estándar, con intención expl
 await page.locator("form").getByRole("button", { name: "Cancelar", exact: true }).click();
 
 // 2. Cambiar normativa activa a REBT (IEC_ES): botón de familia -> "IEC" -> "Validar"
+await page.getByRole("button", { name: "Normativa", exact: true }).click();
+await page.waitForTimeout(150);
 await page.getByRole("button", { name: /Normativa ▾|NEC ▾|CIEN ▾/ }).first().click();
 await page.getByRole("button", { name: "IEC", exact: true }).click();
 await page.getByRole("button", { name: "Validar" }).click();
 await page.waitForTimeout(200);
+await page.getByRole("button", { name: "Tableros", exact: true }).click();
+await page.waitForTimeout(150);
 
 await page.getByRole("button", { name: "+ Nuevo tablero" }).click();
 pillsTexto = await page.locator("form").getByRole("button", { name: /V$/ }).allTextContents();

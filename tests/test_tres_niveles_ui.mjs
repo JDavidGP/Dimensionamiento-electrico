@@ -66,11 +66,11 @@ const archivoViejo = {
 const rutaArchivo = DIR + "tmp/proyecto_formato_viejo.json";
 fs.writeFileSync(rutaArchivo, JSON.stringify(archivoViejo));
 
-await page.locator('input[type="file"]').setInputFiles(rutaArchivo);
+await page.getByLabel("↑ Abrir").setInputFiles(rutaArchivo);
 await page.waitForTimeout(300);
 
 assert(
-  await page.getByText(/cargado/i).isVisible(),
+  await page.getByText(/Proyecto ".*" cargado/).isVisible(),
   "El archivo con formato viejo se carga sin error"
 );
 assert(
