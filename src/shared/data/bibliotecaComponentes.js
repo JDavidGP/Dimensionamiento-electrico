@@ -63,6 +63,17 @@ export const CATALOGO_COMPONENTES = [
   // --- Distribución ---
   { id: "tablero_electrico", nombre: "Tablero eléctrico", categoria: "distribucion", puntosConexion: { entradas: 1, salidas: Infinity }, entidadVinculada: "tablero" },
   { id: "barra_distribucion", nombre: "Barra de distribución", categoria: "distribucion", puntosConexion: { entradas: Infinity, salidas: Infinity }, entidadVinculada: null },
+  // Caja de empalme — usuario, 2026-11-24: "son como referencia de
+  // donde y como se conecta cada cosa en una instalación", sobre todo
+  // en residencial (industrial/comercial trabaja más directo
+  // tablero→subtablero→consumidor). NO es un concepto eléctrico (sin
+  // carga, sin breaker) — es puramente físico/de ruteo, por eso
+  // entidadVinculada siempre null, nunca se vincula a nada. `soloPlano`
+  // la saca del editor de Diagrama unifilar (ver
+  // componentesPorCategoriaDiagrama más abajo): ahí no pidió esto el
+  // usuario y el concepto no aporta nada a la topología eléctrica que
+  // ese diagrama representa.
+  { id: "caja_empalme", nombre: "Caja de empalme", categoria: "distribucion", puntosConexion: { entradas: Infinity, salidas: Infinity }, entidadVinculada: null, soloPlano: true },
 
   // --- Carga ---
   { id: "contacto", nombre: "Contacto (tomacorriente)", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
@@ -101,6 +112,16 @@ export function obtenerComponente(tipoId) {
 export function componentesPorCategoria() {
   const mapa = {};
   for (const c of CATALOGO_COMPONENTES) {
+    (mapa[c.categoria] ??= []).push(c);
+  }
+  return mapa;
+}
+
+/** Igual que componentesPorCategoria(), pero sin los tipos `soloPlano` (ej. caja de empalme) — para el editor de Diagrama unifilar, que no los necesita. */
+export function componentesPorCategoriaDiagrama() {
+  const mapa = {};
+  for (const c of CATALOGO_COMPONENTES) {
+    if (c.soloPlano) continue;
     (mapa[c.categoria] ??= []).push(c);
   }
   return mapa;

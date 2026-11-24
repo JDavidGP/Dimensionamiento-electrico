@@ -350,7 +350,12 @@ export default function PlanoInteligente({
 
     if (modo === "equipo") {
       if (!tipoEquipoSeleccionado) return;
-      agregarMarcadorEquipoPlano(puntoImagen, tipoEquipoSeleccionado, entidadEquipoNuevo || null, nombreEquipoNuevo);
+      const marcador = agregarMarcadorEquipoPlano(puntoImagen, tipoEquipoSeleccionado, entidadEquipoNuevo || null, nombreEquipoNuevo);
+      // agregarMarcadorEquipoPlano devuelve null sin calibrar (requiere
+      // escalaMetrosPorPixel) — antes esto fallaba en silencio, un
+      // click sin efecto y sin explicación; mismo aviso que ya usa el
+      // modo "triangular" para el mismo caso.
+      if (!marcador) mostrarAviso("Calibrá el plano primero.");
       return;
     }
 

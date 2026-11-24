@@ -41,7 +41,7 @@ import {
   ZOOM_MIN,
   ZOOM_MAX,
 } from "../../modules/geometria/index.ts";
-import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
+import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoriaDiagrama } from "../../shared/data/bibliotecaComponentes.js";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
 import { OrigenMediator } from "./OrigenMediator.js";
@@ -51,7 +51,9 @@ export const DiagramaMediator = {
   CATALOGO_COMPONENTES,
   CATEGORIAS_COMPONENTE,
   obtenerComponente,
-  componentesPorCategoria,
+  // "soloPlano" (ej. caja de empalme) no es seleccionable acá —
+  // ver componentesPorCategoriaDiagrama en bibliotecaComponentes.js.
+  componentesPorCategoria: componentesPorCategoriaDiagrama,
   ZOOM_MIN,
   ZOOM_MAX,
 
