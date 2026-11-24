@@ -618,6 +618,95 @@ function BloqueBalanceFases({ balance }) {
   );
 }
 
+// Llenado de conducto (usuario, 2026-11-24: "conectar la tabla NEC") —
+// motor ya existía (App.motor.llenadoConducto, ver canalizacion.ts),
+// nunca conectado a ningún componente hasta ahora. Geométrico puro: el
+// usuario elige CUÁLES circuitos de este tablero comparten un mismo
+// tubo (checkboxes, estado solo de esta exploración — no se persiste,
+// un tablero puede tener varios tubos distintos agrupando circuitos
+// de formas distintas, modelarlo de verdad es un paso aparte) y qué
+// tipo de conducto — el calibre de cada circuito se REUSA del cálculo
+// ya hecho (resultado.seccion), nunca se reingresa a mano. Oculto por
+// completo si la normativa activa no tiene tabla de canalizaciones
+// todavía (ej. IEC_ES — ver canalizacionREBT.ts, que por ahora es un
+// método propio sin UI, no esta tabla).
+function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiva }) {
+  const normativa = App.normativa.obtener(normativaActiva);
+  const tabla = normativa.canalizaciones;
+  const [tipoConducto, setTipoConducto] = useState(tabla?.tiposDisponibles?.[0] ?? "");
+  const [seleccionados, setSeleccionados] = useState(() => new Set());
+
+  if (!tabla) return null;
+
+  const candidatos = circuitosDelTablero
+    .map((c) => {
+      const r = resultados.find((res) => res.id === c.id);
+      return r?.ok ? { id: c.id, nombre: c.nombre, seccion: r.seccion } : null;
+    })
+    .filter(Boolean);
+
+  if (candidatos.length === 0) return null;
+
+  function alternar(id) {
+    setSeleccionados((previo) => {
+      const nuevo = new Set(previo);
+      if (nuevo.has(id)) nuevo.delete(id);
+      else nuevo.add(id);
+      return nuevo;
+    });
+  }
+
+  const cantidadPorSeccion = {};
+  for (const c of candidatos) {
+    if (!seleccionados.has(c.id)) continue;
+    cantidadPorSeccion[c.seccion] = (cantidadPorSeccion[c.seccion] ?? 0) + 1;
+  }
+  const conductores = Object.entries(cantidadPorSeccion).map(([awg, cantidad]) => ({ awg, cantidad }));
+  const resultado = conductores.length > 0 ? App.motor.llenadoConducto(conductores, tipoConducto, normativa) : null;
+
+  return (
+    <div>
+      <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>
+        Llenado de conducto ({normativa.id} Cap. 9)
+      </div>
+      <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 6 }}>
+        Marcá los circuitos que comparten un mismo tubo:
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 8 }}>
+        {candidatos.map((c) => (
+          <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: colores.textMain, cursor: "pointer" }}>
+            <input type="checkbox" checked={seleccionados.has(c.id)} onChange={() => alternar(c.id)} />
+            {c.nombre} <span style={{ color: colores.textDim, fontFamily: fuentes.mono }}>— {c.seccion} AWG</span>
+          </label>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 11, color: colores.textDim }}>Tipo de conducto:</span>
+        <select value={tipoConducto} onChange={(e) => setTipoConducto(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11.5 }}>
+          {tabla.tiposDisponibles.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {resultado && (
+        resultado.disponible ? (
+          <div style={{ fontSize: 11.5, color: colores.textMain, lineHeight: 1.5 }}>
+            Tamaño mínimo: <strong>{tipoConducto} {resultado.tamanoMinimo}"</strong> — llenado real{" "}
+            <strong>{(resultado.porcentajeLlenadoReal * 100).toFixed(1)}%</strong> (máximo permitido{" "}
+            {(resultado.porcentajeMaximo * 100).toFixed(0)}% para {conductores.reduce((s, c) => s + c.cantidad, 0)} conductor
+            {conductores.reduce((s, c) => s + c.cantidad, 0) !== 1 ? "es" : ""})
+          </div>
+        ) : (
+          <div style={{ fontSize: 11.5, color: colores.warn, lineHeight: 1.5 }}>⚠ {resultado.motivo}</div>
+        )
+      )}
+    </div>
+  );
+}
+
 // Mismo patrón de acordeón que TablaResultados: lista colapsada, clic
 // despliega el detalle del tablero seleccionado (sus circuitos y su
 // alimentador ya calculado). Fase 3 (dato relacional) + Fase 4
@@ -1335,6 +1424,8 @@ export default function PanelTableros({
                     )}
 
                     <BloqueBalanceFases balance={balancesFases?.[t.id]} />
+
+                    <BloqueLlenadoConducto circuitosDelTablero={circuitosDelTablero} resultados={resultados} normativaActiva={normativaActiva} />
 
                     <ResumenFuentesEnergia
                       tablero={t}
