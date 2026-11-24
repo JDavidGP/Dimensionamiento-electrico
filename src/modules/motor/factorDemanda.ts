@@ -33,9 +33,8 @@
  *   - La simultaneidad real de REBT (España, ITC-BT-10) sí existe como
  *     tabla oficial, pero opera sobre el ALIMENTADOR/TABLERO (varias
  *     viviendas compartiendo acometida), no sobre un circuito individual
- *     — por eso normativa/iec/es.js ya la dejó como
- *     `factorDiversidad: null`, placeholder explícito a nivel Tablero,
- *     no a nivel Circuito. No es lo mismo que este campo.
+ *     — ver modules/motor/simultaneidadREBT.ts + TableroMediator.
+ *     calcularAlimentadorAgregado. No es lo mismo que este campo.
  * Mientras no exista una tabla oficial a nivel de circuito, el número lo
  * sigue poniendo el usuario (buen juicio de campo: cuántos equipos de un
  * circuito mixto realmente coinciden en uso), nunca dimensiona, y por

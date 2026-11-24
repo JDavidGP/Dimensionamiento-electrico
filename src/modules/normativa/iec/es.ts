@@ -5,11 +5,11 @@
 // límite de caída de tensión y (a futuro) diversidad de carga vía
 // REBT/ITC-BT-10.
 //
-// ⚠ Diversidad IEC pendiente A NIVEL DE CIRCUITO: la propia IEC
+// ⚠ Diversidad IEC NO existe a NIVEL DE CIRCUITO: la propia IEC
 // 60364-5-52 NO define factores de diversidad por circuito — esa lógica
-// vive en anexos nacionales (en España, REBT ITC-BT-10), y factorDiversidad
-// queda null a propósito acá (reglasDemanda vacío, todo cae en
-// demandaPorDefecto) porque ITC-BT-10 no opera a ese nivel.
+// vive en anexos nacionales (en España, REBT ITC-BT-10), por eso acá
+// reglasDemanda queda vacío (todo cae en demandaPorDefecto): no hay
+// nada que ponerle a ESTE nivel.
 //
 // CONECTADO (usuario, 2026-11-19) a nivel TABLERO, que es donde
 // ITC-BT-10 realmente calcula simultaneidad (acometida compartida por
@@ -99,7 +99,6 @@ export const IEC_ES: Normativa = {
   fasesDisponibles: ["mono", "tri"],
   reglasDemanda: {}, // sin reglas propias todavía — todo cae en demandaPorDefecto
   demandaPorDefecto: demanda100,
-  factorDiversidad: null, // placeholder — pendiente de nivel Tablero (REBT ITC-BT-10)
   limiteCaidaTensionTramoPct: limiteCaidaTensionREBT,
   limiteCaidaTensionAcumuladaPct: limiteCaidaTensionREBT,
   validado: true, // la ampacidad heredada de IEC_BASE ya está validada

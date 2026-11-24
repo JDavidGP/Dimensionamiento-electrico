@@ -4,7 +4,7 @@
 // objeto que de verdad circula por el motor de cálculo) — contrato
 // completo, igual a CAMPOS_OBLIGATORIOS de index.js más los campos
 // opcionales que alguna variante sí trae (canalizaciones, region,
-// factorDiversidad). Vive acá (no en modules/motor/) porque la
+// fasesDisponibles). Vive acá (no en modules/motor/) porque la
 // normativa es quien la DEFINE; motor/ y otros consumidores la
 // importan como tipo, nunca al revés.
 
@@ -61,8 +61,6 @@ export interface Normativa {
   demandaPorDefecto: ReglaDemanda;
   /** Llenado de conducto (NEC Cap. 9) — dato opcional del contrato, no todas las normativas lo tienen todavía. */
   canalizaciones?: TablaCanalizaciones;
-  /** Placeholder de IEC_ES, pendiente de nivel Tablero (REBT ITC-BT-10) — ver simultaneidadREBT.js. */
-  factorDiversidad?: null;
   /**
    * Override de `limiteCaidaTensionPct` para ESTE circuito en particular
    * (ITC-BT-19 §2.2.2) — si la normativa no lo define (NEC/CIEN), el
