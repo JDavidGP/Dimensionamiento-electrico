@@ -107,7 +107,7 @@ export default function PlanoInteligente({
   // antes de pasarle los datos a PlanoCanvas (que sigue sin saber nada
   // de "capas" — solo dibuja lo que recibe, mismo patrón que
   // nodoIdsTrazoActual/paredesCandidatas). Todas activas por defecto.
-  const [capasVisibles, setCapasVisibles] = useState({ pared: true, conductor: true, equipos: true });
+  const [capasVisibles, setCapasVisibles] = useState({ fondo: true, pared: true, conductor: true, equipos: true });
 
   // Calibración: null, [puntoA], o [puntoA, puntoB] (ahí se muestra el
   // formulario de distancia real antes de confirmar).
@@ -635,6 +635,7 @@ export default function PlanoInteligente({
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, fontSize: 11, color: colores.textDim }}>
               <span>Mostrar:</span>
               {[
+                { clave: "fondo", label: "Imagen de fondo" },
                 { clave: "pared", label: "Paredes" },
                 { clave: "conductor", label: "Conductores" },
                 { clave: "equipos", label: "Equipos" },
@@ -858,6 +859,7 @@ export default function PlanoInteligente({
         <PlanoCanvas
           ref={canvasRef}
           imagen={planoImagen}
+          mostrarImagenFondo={capasVisibles.fondo}
           nodos={nodosPlano}
           segmentos={segmentosPlano.filter((s) => capasVisibles[s.tipo])}
           marcadoresEquipo={capasVisibles.equipos ? marcadoresEquipoPlano : []}

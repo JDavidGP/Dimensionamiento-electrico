@@ -29,6 +29,27 @@ function esModoArrastreRectangulo(modo) {
   return modo === "rectangulo" || modo === "area_paredes";
 }
 
+// Escalar el símbolo de equipo al tamaño real del plano (usuario,
+// 2026-11-24: "se escale al tamaño del plano para una mejor
+// presentación") — antes era un ícono de tamaño fijo en pantalla
+// (22px, SIEMPRE igual sin importar el zoom), lo que lo hacía ver
+// "pegado" en vez de parte del dibujo cuando las paredes/ambientes sí
+// escalaban con el zoom. 0,3 m es un tamaño de PRESENTACIÓN (no la
+// medida eléctrica real de ningún equipo puntual — una caja de
+// empalme, un interruptor y un tablero no miden lo mismo) — se acota
+// entre 14 y 48px en pantalla para que nunca sea invisible al alejar
+// ni gigante al acercar demasiado. Sin calibrar, no hay "tamaño real"
+// que escalar — se mantiene el tamaño fijo de siempre.
+const TAMANO_REAL_EQUIPO_M = 0.3;
+const TAMANO_MIN_PANTALLA_PX = 14;
+const TAMANO_MAX_PANTALLA_PX = 48;
+function tamanoMarcadorPx(escalaMetrosPorPixel, zoom) {
+  if (!escalaMetrosPorPixel) return 22 / zoom;
+  const enPantalla = (TAMANO_REAL_EQUIPO_M / escalaMetrosPorPixel) * zoom;
+  const acotado = Math.max(TAMANO_MIN_PANTALLA_PX, Math.min(TAMANO_MAX_PANTALLA_PX, enPantalla));
+  return acotado / zoom;
+}
+
 // Motor de renderizado — ver PLANO_INTELIGENTE_DISENO.md §2. Es el
 // ÚNICO componente que sabe de `transformVista` (zoom/pan, efímero) y
 // de SVG/DOM; NO sabe qué significa un click (calibrar/trazar pared/
@@ -46,6 +67,7 @@ function esModoArrastreRectangulo(modo) {
 const PlanoCanvas = forwardRef(function PlanoCanvas(
   {
     imagen,
+    mostrarImagenFondo = true,
     nodos = [],
     segmentos = [],
     marcadoresEquipo = [],
@@ -361,7 +383,14 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
               </marker>
             </defs>
             <g transform={`translate(${transformVista.panX},${transformVista.panY}) scale(${transformVista.zoom})`}>
-              <image href={imagen.dataUrl} x={0} y={0} width={imagen.anchoPx} height={imagen.altoPx} />
+              {/* Ocultar la imagen de fondo (usuario, 2026-11-24: "una
+                  vez realizado el trazado y calibrado... quitarlo...
+                  para tener una imagen más nítida y profesional") —
+                  solo visual, el dato sigue ahí (recalibrar, exportar
+                  DXF, etc. no dependen de que esté mostrándose). */}
+              {mostrarImagenFondo && (
+                <image href={imagen.dataUrl} x={0} y={0} width={imagen.anchoPx} height={imagen.altoPx} />
+              )}
 
               {/* Conexiones del diagrama unifilar superpuestas sobre el plano
                   (usuario, 2026-11-22: "continuemos con diagrama unifilar y
@@ -433,7 +462,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
 
               {marcadoresEquipo.map((marcador) => {
                 const p = px(marcador.punto);
-                const tamano = 22 / transformVista.zoom;
+                const tamano = tamanoMarcadorPx(escalaMetrosPorPixel, transformVista.zoom);
                 // Solo intercepta el click (y detiene su propagación) en los
                 // modos que de verdad hacen algo con un marcador —
                 // "triangular" (usarlo de referencia) y "eliminar" (borrarlo).
