@@ -93,7 +93,11 @@ export const IEC_ES: Normativa = {
   limiteCaidaTensionTramoPct: limiteCaidaTensionREBT,
   limiteCaidaTensionAcumuladaPct: limiteCaidaTensionREBT,
   validado: true, // la ampacidad heredada de IEC_BASE ya está validada
-  notaValidacion:
-    IEC_BASE.notaValidacion +
-    " Diversidad/simultaneidad REBT (ITC-BT-10) pendiente de implementar: es un cálculo de alimentador compartido entre varias viviendas, no de circuito individual, y requiere el nivel Tablero.",
+  // notaValidacion desactualizada hasta 2026-11-24: decía "pendiente de
+  // implementar" sobre la simultaneidad REBT (ITC-BT-10), pero eso se
+  // conectó el 2026-11-19 a nivel Tablero (ver comentario arriba,
+  // TableroMediator.calcularAlimentadorAgregado + PanelTableros.jsx,
+  // "Edificio de viviendas") — texto corregido para que no contradiga
+  // lo que el programa ya hace.
+  notaValidacion: IEC_BASE.notaValidacion as string,
 };
