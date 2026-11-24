@@ -1077,6 +1077,47 @@ export function useCircuitos() {
     );
   }
 
+  // "Mover equipo" (usuario, 2026-11-24) — hasta ahora un marcador de
+  // equipo, una vez colocado, solo se podía borrar y volver a crear
+  // para reubicarlo (ver "Mover ambiente", que sí existía para
+  // habitaciones pero no para equipos). deltaM ya viene en METROS
+  // (espacio modelo) — mismo contrato que moverHabitacionPlano.
+  function moverMarcadorEquipoPlano(marcadorId, deltaM) {
+    const marcador = marcadoresEquipoPlano.find((m) => m.id === marcadorId);
+    if (!marcador) return;
+    const puntoNuevo = { x: marcador.punto.x + deltaM.x, y: marcador.punto.y + deltaM.y };
+    setMarcadoresEquipoPlano(
+      marcadoresEquipoPlano.map((m) => (m.id === marcadorId ? App.plano.editarMarcadorEquipo(m, { punto: puntoNuevo }) : m))
+    );
+  }
+
+  // "Generar grupo" (usuario, 2026-11-24: "elegí la cantidad de
+  // interruptores y luces que quiere, genera un grupo con esa cantidad
+  // de equipo que puedes mover a placer, además se puede numerar y
+  // etiquetar") — crea VARIOS marcadores del mismo tipo de una vez, en
+  // vez de repetir "Colocar equipo" uno por uno. Arrancan apilados en
+  // diagonal cerca del click (para que cada uno sea clickeable de
+  // entrada, no exactamente superpuestos) — el usuario los arrastra
+  // después a su posición real con "Mover equipo". Numerados en el
+  // nombre ("Luz 1", "Luz 2"...) para que sean distinguibles de
+  // entrada; renombrables igual que cualquier marcador ya existente.
+  const SEPARACION_GRUPO_PX = 18;
+  const CANTIDAD_MAXIMA_GRUPO = 50;
+  function generarGrupoMarcadoresEquipoPlano(puntoImagen, tipo, cantidad, nombreBase = "") {
+    if (!planoCalibracion) return null;
+    if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > CANTIDAD_MAXIMA_GRUPO) return null;
+    const comp = App.plano.obtenerComponente(tipo);
+    const base = nombreBase.trim() || comp?.nombre || "Equipo";
+    const nuevos = [];
+    for (let i = 1; i <= cantidad; i++) {
+      const puntoImagenI = { x: puntoImagen.x + i * SEPARACION_GRUPO_PX, y: puntoImagen.y + i * SEPARACION_GRUPO_PX };
+      const puntoModelo = App.plano.imagenAModelo(puntoImagenI, planoCalibracion.escalaMetrosPorPixel);
+      nuevos.push(App.plano.crearMarcadorEquipo(puntoModelo, tipo, null, `${base} ${i}`));
+    }
+    setMarcadoresEquipoPlano([...marcadoresEquipoPlano, ...nuevos]);
+    return nuevos;
+  }
+
   function eliminarMarcadorEquipoPlano(marcadorId) {
     setMarcadoresEquipoPlano(App.plano.eliminarMarcadorEquipo(marcadorId, marcadoresEquipoPlano));
   }
@@ -1389,6 +1430,8 @@ export function useCircuitos() {
     agregarMarcadorEquipoPlano,
     editarMarcadorEquipoPlano,
     eliminarMarcadorEquipoPlano,
+    moverMarcadorEquipoPlano,
+    generarGrupoMarcadoresEquipoPlano,
     corregirPerspectivaPlano,
     exportarDXFPlano,
     listaIntegridad,

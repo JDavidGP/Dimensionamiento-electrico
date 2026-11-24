@@ -138,6 +138,8 @@ export default function App() {
     agregarMarcadorEquipoPlano,
     editarMarcadorEquipoPlano,
     eliminarMarcadorEquipoPlano,
+    moverMarcadorEquipoPlano,
+    generarGrupoMarcadoresEquipoPlano,
     corregirPerspectivaPlano,
     exportarDXFPlano,
     listaIntegridad,
@@ -420,6 +422,8 @@ export default function App() {
                           agregarMarcadorEquipoPlano={agregarMarcadorEquipoPlano}
                           editarMarcadorEquipoPlano={editarMarcadorEquipoPlano}
                           eliminarMarcadorEquipoPlano={eliminarMarcadorEquipoPlano}
+                          moverMarcadorEquipoPlano={moverMarcadorEquipoPlano}
+                          generarGrupoMarcadoresEquipoPlano={generarGrupoMarcadoresEquipoPlano}
                           corregirPerspectivaPlano={corregirPerspectivaPlano}
                           exportarDXFPlano={exportarDXFPlano}
                           tableros={tableros}

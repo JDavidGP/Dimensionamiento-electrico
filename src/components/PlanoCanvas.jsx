@@ -62,6 +62,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     onClickImagen,
     onClickMarcador,
     onArrastrarHabitacion,
+    onArrastrarMarcador,
     onClickParedCandidata,
     onTrazarRectangulo,
   },
@@ -76,6 +77,13 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   // del de arriba (uno mueve la VISTA, este mueve DATOS del proyecto).
   // { habitacionId, x, y, seMovio }.
   const arrastreAmbienteRef = useRef(null);
+  // Arrastre de un equipo ya colocado — modo "mover-equipo" (usuario,
+  // 2026-11-24: "genera un grupo... que puedes mover a placer").
+  // { marcadorId, x, y, seMovio } — mismo contrato que arrastreAmbienteRef,
+  // pero arranca en el onPointerDown del propio marcador (necesita
+  // acertarle al ícono, no "cualquier punto del ambiente" como una
+  // habitación) en vez del contenedor entero.
+  const arrastreMarcadorRef = useRef(null);
   // Arrastre de un rectángulo nuevo — modo "rectangulo" (usuario,
   // 2026-11-23: "click en una esquina... estiramos hacia la otra
   // esquina"). `inicio`/`actual` en espacio IMAGEN (mismo contrato que
@@ -219,8 +227,8 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   }
 
   function alClick(e) {
-    if (!imagen || !onClickImagen || arrastreRef.current?.seMovio || arrastreAmbienteRef.current?.seMovio) return;
-    if (modo === "mover-ambiente" || esModoArrastreRectangulo(modo)) return; // esos modos son solo para arrastrar, un click sin arrastre no hace nada
+    if (!imagen || !onClickImagen || arrastreRef.current?.seMovio || arrastreAmbienteRef.current?.seMovio || arrastreMarcadorRef.current?.seMovio) return;
+    if (modo === "mover-ambiente" || modo === "mover-equipo" || esModoArrastreRectangulo(modo)) return; // esos modos son solo para arrastrar, un click sin arrastre no hace nada
     let puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
     if (asistenciaBordes && (modo === "pared" || modo === "conductor" || modo === "calibrar-perimetro" || modo === "espesor")) puntoImagen = ajustarABorde(puntoImagen);
     onClickImagen(puntoImagen);
@@ -276,6 +284,18 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
         arrastreAmbienteRef.current.y = e.clientY;
       }
     }
+    if (arrastreMarcadorRef.current && modo === "mover-equipo" && escalaMetrosPorPixel) {
+      const dx = e.clientX - arrastreMarcadorRef.current.x;
+      const dy = e.clientY - arrastreMarcadorRef.current.y;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        arrastreMarcadorRef.current.seMovio = true;
+        const deltaImagen = { x: dx / transformVista.zoom, y: dy / transformVista.zoom };
+        const deltaModelo = App.plano.imagenAModelo(deltaImagen, escalaMetrosPorPixel);
+        onArrastrarMarcador(arrastreMarcadorRef.current.marcadorId, deltaModelo);
+        arrastreMarcadorRef.current.x = e.clientX;
+        arrastreMarcadorRef.current.y = e.clientY;
+      }
+    }
     if (rectanguloArrastre && esModoArrastreRectangulo(modo)) {
       const puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
       setRectanguloArrastre({ inicio: rectanguloArrastre.inicio, actual: puntoImagen });
@@ -284,6 +304,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
 
   function alPointerUp() {
     arrastreRef.current = null;
+    arrastreMarcadorRef.current = null;
     arrastreAmbienteRef.current = null;
     if (rectanguloArrastre && esModoArrastreRectangulo(modo) && onTrazarRectangulo) {
       onTrazarRectangulo(rectanguloArrastre.inicio, rectanguloArrastre.actual);
@@ -313,7 +334,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     <div style={{ position: "relative" }}>
       <div
         ref={contenedorRef}
-        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" || modo === "mover-ambiente" || esModoArrastreRectangulo(modo) ? "none" : "pan-y" }}
+        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" || modo === "mover-ambiente" || modo === "mover-equipo" || esModoArrastreRectangulo(modo) ? "none" : "pan-y" }}
       >
         {!imagen ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: colores.textDim, fontSize: 13 }}>
@@ -425,15 +446,28 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                 // él (mismo problema latente para "pared"/"ambiente", no
                 // solo para conductor).
                 const marcadorInterceptaClick = onClickMarcador && (modo === "triangular" || modo === "eliminar");
+                // "Mover equipo" (usuario, 2026-11-24) — arranca el
+                // arrastre JUSTO en el ícono del marcador (a diferencia
+                // de "mover-ambiente", que acepta un click en cualquier
+                // punto dentro del polígono): un marcador es un punto,
+                // no tiene "adentro". stopPropagation para que el
+                // onPointerDown genérico del lienzo (modo "mover", pan
+                // de vista) no también dispare.
+                const marcadorArrastrable = modo === "mover-equipo" && onArrastrarMarcador;
                 return (
                   <g
                     key={marcador.id}
                     transform={`translate(${p.x - tamano / 2},${p.y - tamano / 2})`}
-                    style={{ cursor: marcadorInterceptaClick ? "pointer" : undefined }}
+                    style={{ cursor: marcadorInterceptaClick ? "pointer" : marcadorArrastrable ? "grab" : undefined }}
                     onClick={(e) => {
                       if (!marcadorInterceptaClick) return;
                       e.stopPropagation();
                       onClickMarcador(marcador);
+                    }}
+                    onPointerDown={(e) => {
+                      if (!marcadorArrastrable) return;
+                      e.stopPropagation();
+                      arrastreMarcadorRef.current = { marcadorId: marcador.id, x: e.clientX, y: e.clientY, seMovio: false };
                     }}
                   >
                     <circle cx={tamano / 2} cy={tamano / 2} r={tamano / 2 + 3 / transformVista.zoom} fill={colores.panel} opacity={0.85} />

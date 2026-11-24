@@ -28,6 +28,8 @@ const MODOS = [
   { valor: "area_paredes", label: "Reconocer paredes (área)", ayuda: "Arrastrá un rectángulo sobre la zona que querés analizar — se buscan líneas candidatas SOLO ahí, con menos ruido que sobre el plano completo." },
   { valor: "mover-ambiente", label: "Mover ambiente", ayuda: "Arrastrá un ambiente ya trazado (manual o generado) para reposicionarlo, manteniendo su forma y medida exactas." },
   { valor: "equipo", label: "Colocar equipo", ayuda: "Elegí el tipo abajo y hacé click en el plano donde va ubicado." },
+  { valor: "grupo_equipo", label: "Generar grupo", ayuda: "Elegí el tipo y la cantidad abajo, y hacé click en el plano — aparecen todos apilados ahí cerca, listos para arrastrar cada uno a su lugar con \"Mover equipo\"." },
+  { valor: "mover-equipo", label: "Mover equipo", ayuda: "Arrastrá un equipo ya colocado (individual o de un grupo) para reposicionarlo." },
   { valor: "triangular", label: "Triangular equipo", ayuda: "Elegí el tipo arriba. Click en 2 puntos de referencia ya existentes (nodo de pared/conductor o equipo), escribí las 2 distancias medidas con cinta métrica, y confirmá con un click aproximado en el lugar real." },
   { valor: "eliminar", label: "Borrar", ayuda: "Click sobre un nodo, una pared/conductor o un equipo para eliminarlo." },
 ];
@@ -67,6 +69,8 @@ export default function PlanoInteligente({
   agregarMarcadorEquipoPlano,
   editarMarcadorEquipoPlano,
   eliminarMarcadorEquipoPlano,
+  moverMarcadorEquipoPlano,
+  generarGrupoMarcadoresEquipoPlano,
   corregirPerspectivaPlano,
   exportarDXFPlano,
   tableros = [],
@@ -145,6 +149,10 @@ export default function PlanoInteligente({
   const [tipoEquipoSeleccionado, setTipoEquipoSeleccionado] = useState(categoriasEquipo[primeraCategoriaEquipo]?.[0]?.id ?? "");
   const [nombreEquipoNuevo, setNombreEquipoNuevo] = useState("");
   const [entidadEquipoNuevo, setEntidadEquipoNuevo] = useState("");
+
+  // Modo "grupo_equipo" (usuario, 2026-11-24) — mismo tipo/nombre-base
+  // que "equipo", más la cantidad a generar de una vez.
+  const [cantidadGrupoEquipo, setCantidadGrupoEquipo] = useState("1");
 
   // Triangulación por recorrido (usuario, 2026-11-21): ubicar un
   // equipo sin tocar la imagen directamente — click en 2 puntos de
@@ -357,6 +365,18 @@ export default function PlanoInteligente({
       // click sin efecto y sin explicación; mismo aviso que ya usa el
       // modo "triangular" para el mismo caso.
       if (!marcador) mostrarAviso("Calibrá el plano primero.");
+      return;
+    }
+
+    if (modo === "grupo_equipo") {
+      if (!tipoEquipoSeleccionado) return;
+      const cantidad = parseInt(cantidadGrupoEquipo, 10);
+      const nuevos = generarGrupoMarcadoresEquipoPlano(puntoImagen, tipoEquipoSeleccionado, cantidad, nombreEquipoNuevo);
+      if (!nuevos) {
+        mostrarAviso(planoCalibracion ? "Cantidad inválida — usá un número entero entre 1 y 50." : "Calibrá el plano primero.");
+        return;
+      }
+      mostrarAviso(`${nuevos.length} equipo(s) generado(s), apilados cerca del click — arrastrá cada uno a su lugar real con "Mover equipo".`);
       return;
     }
 
@@ -655,7 +675,7 @@ export default function PlanoInteligente({
             <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10, lineHeight: 1.4 }}>
               {MODOS.find((m) => m.valor === modo)?.ayuda}
               {modo === "perspectiva" && puntosPerspectiva.length > 0 && puntosPerspectiva.length < 4 && ` (van ${puntosPerspectiva.length} de 4)`}
-              {(modo === "pared" || modo === "conductor" || modo === "ambiente" || modo === "rectangulo") && !planoCalibracion && " — primero calibrá la escala."}
+              {(modo === "pared" || modo === "conductor" || modo === "ambiente" || modo === "rectangulo" || modo === "equipo" || modo === "grupo_equipo") && !planoCalibracion && " — primero calibrá la escala."}
               {modo === "pared" && trazoActual.length > 0 && (
                 <>
                   {" "}·{" "}
@@ -745,7 +765,7 @@ export default function PlanoInteligente({
               </form>
             )}
 
-            {(modo === "equipo" || modo === "triangular") && (
+            {(modo === "equipo" || modo === "triangular" || modo === "grupo_equipo") && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
                 <select
                   value={tipoEquipoSeleccionado}
@@ -768,10 +788,25 @@ export default function PlanoInteligente({
                 <input
                   value={nombreEquipoNuevo}
                   onChange={(e) => setNombreEquipoNuevo(e.target.value)}
-                  placeholder="Nombre (opcional)"
-                  style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, width: 140 }}
+                  placeholder={modo === "grupo_equipo" ? "Nombre base (opcional, ej: Luz)" : "Nombre (opcional)"}
+                  style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, width: modo === "grupo_equipo" ? 190 : 140 }}
                 />
-                {App.plano.obtenerComponente(tipoEquipoSeleccionado)?.entidadVinculada && (
+                {modo === "grupo_equipo" && (
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={cantidadGrupoEquipo}
+                    onChange={(e) => setCantidadGrupoEquipo(e.target.value)}
+                    style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, width: 70 }}
+                    title="Cantidad a generar"
+                  />
+                )}
+                {/* Vincular a una entidad no aplica a un GRUPO (serían N
+                    marcadores compartiendo 1 solo vínculo) — cada uno se
+                    vincula después, individualmente, desde la lista
+                    "Equipos en el plano". */}
+                {modo !== "grupo_equipo" && App.plano.obtenerComponente(tipoEquipoSeleccionado)?.entidadVinculada && (
                   <select
                     value={entidadEquipoNuevo}
                     onChange={(e) => setEntidadEquipoNuevo(e.target.value)}
@@ -842,6 +877,7 @@ export default function PlanoInteligente({
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
           onArrastrarHabitacion={moverHabitacionPlano}
+          onArrastrarMarcador={moverMarcadorEquipoPlano}
           onTrazarRectangulo={alTrazarRectangulo}
           asistenciaBordes={asistenciaBordes}
           onClickImagen={alClickImagen}
