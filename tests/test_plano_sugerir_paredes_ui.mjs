@@ -65,11 +65,23 @@ await panelPlano.getByRole("button", { name: "Calibrar", exact: true }).last().c
 await page.waitForTimeout(200);
 assert(await panelPlano.getByText(/Calibrado:/).last().isVisible(), "Calibración de 2 puntos lista (necesaria para juzgar el ancho de puerta)");
 
-// --- 2. Sugerir paredes ---
-// Nota: el aviso-toast (5s) y el estado persistente del panel comparten
-// la palabra "candidata(s)" — se usa una frase exclusiva del estado
-// persistente ("...del lienzo para confirmarla") para no ambigüar.
-await panelPlano.getByRole("button", { name: "◫ Sugerir paredes" }).click();
+// --- 2. Reconocer paredes (área) — arrastrar un rectángulo que cubra
+// TODA la imagen (400x300), con margen, en vez del viejo botón
+// "Sugerir paredes" (que siempre leía el plano completo sin elegir
+// zona — reemplazado 2026-11-24 por este modo de arrastre, mismo
+// gesto que "Trazar rectángulo"). Nota: el aviso-toast (5s) y el
+// estado persistente del panel comparten la palabra "candidata(s)" —
+// se usa una frase exclusiva del estado persistente ("...del lienzo
+// para confirmarla") para no ambigüar.
+await panelPlano.getByRole("button", { name: "Reconocer paredes (área)", exact: true }).click();
+await page.waitForTimeout(150);
+let pA = await puntoPantallaDesdeImagen({ x: 10, y: 10 });
+let pB = await puntoPantallaDesdeImagen({ x: 390, y: 290 });
+await page.mouse.move(pA.x, pA.y);
+await page.mouse.down();
+await page.mouse.move((pA.x + pB.x) / 2, (pA.y + pB.y) / 2, { steps: 5 });
+await page.mouse.move(pB.x, pB.y, { steps: 5 });
+await page.mouse.up();
 await page.waitForTimeout(300);
 const estadoSugerencias = panelPlano.getByText(/del lienzo para confirmarla/);
 assert(await estadoSugerencias.isVisible(), "Aparece el estado persistente de sugerencias");
@@ -100,6 +112,23 @@ assert(totalNodosDespues === totalNodosAntes + 2, `Aceptar una sugerencia crea l
 await panelPlano.getByRole("button", { name: "Descartar", exact: true }).click();
 await page.waitForTimeout(150);
 assert((await panelPlano.getByText(/del lienzo para confirmarla/).count()) === 0, "Descartar quita el resto de las sugerencias sin crear nada más");
+
+// --- 5. Acotar a una zona chica que EXCLUYE la pared derecha (y su
+// puerta) — prueba real de que el área de arrastre de verdad recorta
+// qué se analiza, no solo re-etiqueta el viejo comportamiento de leer
+// SIEMPRE el plano completo bajo un gatillo distinto. ---
+pA = await puntoPantallaDesdeImagen({ x: 10, y: 10 });
+pB = await puntoPantallaDesdeImagen({ x: 300, y: 290 }); // corta antes de la pared derecha (~x=350)
+await page.mouse.move(pA.x, pA.y);
+await page.mouse.down();
+await page.mouse.move((pA.x + pB.x) / 2, (pA.y + pB.y) / 2, { steps: 5 });
+await page.mouse.move(pB.x, pB.y, { steps: 5 });
+await page.mouse.up();
+await page.waitForTimeout(300);
+const textoAcotado = await panelPlano.getByText(/del lienzo para confirmarla/).textContent();
+assert(!/posible\(s\) puerta\(s\)/.test(textoAcotado), `Acotando el área SIN la pared derecha, ya no detecta la puerta que está ahí (real: '${textoAcotado}')`);
+await panelPlano.getByRole("button", { name: "Descartar", exact: true }).click();
+await page.waitForTimeout(150);
 
 console.log("\nErrores de página:", errores);
 assert(errores.length === 0, "Sin errores de página durante todo el flujo");

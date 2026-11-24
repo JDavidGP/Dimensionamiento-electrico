@@ -20,6 +20,15 @@ function colorDeEquipo(tipo) {
   return COLOR_POR_CATEGORIA[comp?.categoria] ?? colores.border;
 }
 
+// Modos que arrastran un rectángulo de esquina a esquina — mismo gesto
+// visual (vista previa punteada + onTrazarRectangulo al soltar), el
+// PADRE decide qué hacer con las 2 esquinas según cuál de los dos
+// modos esté activo (crear un ambiente, o acotar "Reconocer paredes"
+// a esa zona — usuario, 2026-11-24).
+function esModoArrastreRectangulo(modo) {
+  return modo === "rectangulo" || modo === "area_paredes";
+}
+
 // Motor de renderizado — ver PLANO_INTELIGENTE_DISENO.md §2. Es el
 // ÚNICO componente que sabe de `transformVista` (zoom/pan, efímero) y
 // de SVG/DOM; NO sabe qué significa un click (calibrar/trazar pared/
@@ -87,16 +96,33 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   // sigue siendo el ÚNICO componente que toca el DOM/canvas (ver nota
   // de cabecera del archivo).
   useImperativeHandle(ref, () => ({
-    detectarParedesCandidatas() {
+    // `region` opcional (usuario, 2026-11-24: "seleccione una área
+    // determinada arrastrando... que se quiere reconocer" — acotar la
+    // detección a una zona, en vez de siempre la imagen completa, da
+    // menos ruido/falsos positivos en un plano grande) — {x, y, ancho,
+    // alto} en espacio IMAGEN, ya recortado/clampeado por el padre. Se
+    // recorta el ImageData ahí mismo (más simple que enseñarle región
+    // al algoritmo de deteccionLineas.ts) y se devuelven las
+    // coordenadas YA desplazadas de vuelta a espacio imagen completo,
+    // para que el resto del código (aceptarParedCandidata, etc.) no
+    // necesite saber que hubo un recorte.
+    detectarParedesCandidatas(region) {
       const ctx = contextoPixelesRef.current;
       if (!ctx) return { paredes: [], puertas: [] };
-      const { width: ancho, height: alto } = ctx.canvas;
-      const datos = ctx.getImageData(0, 0, ancho, alto).data;
+      const origenX = region?.x ?? 0;
+      const origenY = region?.y ?? 0;
+      const ancho = region?.ancho ?? ctx.canvas.width;
+      const alto = region?.alto ?? ctx.canvas.height;
+      if (ancho <= 0 || alto <= 0) return { paredes: [], puertas: [] };
+      const datos = ctx.getImageData(origenX, origenY, ancho, alto).data;
       const grises = new Float32Array(ancho * alto);
       for (let i = 0; i < ancho * alto; i++) {
         grises[i] = 0.299 * datos[i * 4] + 0.587 * datos[i * 4 + 1] + 0.114 * datos[i * 4 + 2];
       }
-      return App.plano.detectarParedesCandidatas(grises, ancho, alto, { escalaMetrosPorPixel });
+      const resultado = App.plano.detectarParedesCandidatas(grises, ancho, alto, { escalaMetrosPorPixel });
+      if (!origenX && !origenY) return resultado;
+      const desplazar = (l) => ({ ...l, x1: l.x1 + origenX, y1: l.y1 + origenY, x2: l.x2 + origenX, y2: l.y2 + origenY });
+      return { paredes: resultado.paredes.map(desplazar), puertas: resultado.puertas.map(desplazar) };
     },
   }));
 
@@ -194,7 +220,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
 
   function alClick(e) {
     if (!imagen || !onClickImagen || arrastreRef.current?.seMovio || arrastreAmbienteRef.current?.seMovio) return;
-    if (modo === "mover-ambiente" || modo === "rectangulo") return; // esos modos son solo para arrastrar, un click sin arrastre no hace nada
+    if (modo === "mover-ambiente" || esModoArrastreRectangulo(modo)) return; // esos modos son solo para arrastrar, un click sin arrastre no hace nada
     let puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
     if (asistenciaBordes && (modo === "pared" || modo === "conductor" || modo === "calibrar-perimetro" || modo === "espesor")) puntoImagen = ajustarABorde(puntoImagen);
     onClickImagen(puntoImagen);
@@ -220,7 +246,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
         arrastreAmbienteRef.current = { habitacionId: habitacion.id, x: e.clientX, y: e.clientY, seMovio: false };
       }
     }
-    if (modo === "rectangulo") {
+    if (esModoArrastreRectangulo(modo)) {
       const puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
       setRectanguloArrastre({ inicio: puntoImagen, actual: puntoImagen });
     }
@@ -250,7 +276,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
         arrastreAmbienteRef.current.y = e.clientY;
       }
     }
-    if (rectanguloArrastre && modo === "rectangulo") {
+    if (rectanguloArrastre && esModoArrastreRectangulo(modo)) {
       const puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
       setRectanguloArrastre({ inicio: rectanguloArrastre.inicio, actual: puntoImagen });
     }
@@ -259,7 +285,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   function alPointerUp() {
     arrastreRef.current = null;
     arrastreAmbienteRef.current = null;
-    if (rectanguloArrastre && modo === "rectangulo" && onTrazarRectangulo) {
+    if (rectanguloArrastre && esModoArrastreRectangulo(modo) && onTrazarRectangulo) {
       onTrazarRectangulo(rectanguloArrastre.inicio, rectanguloArrastre.actual);
     }
     setRectanguloArrastre(null);
@@ -287,7 +313,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     <div style={{ position: "relative" }}>
       <div
         ref={contenedorRef}
-        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" || modo === "mover-ambiente" || modo === "rectangulo" ? "none" : "pan-y" }}
+        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" || modo === "mover-ambiente" || esModoArrastreRectangulo(modo) ? "none" : "pan-y" }}
       >
         {!imagen ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: colores.textDim, fontSize: 13 }}>

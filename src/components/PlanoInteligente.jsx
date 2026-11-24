@@ -25,6 +25,7 @@ const MODOS = [
   { valor: "conductor", label: "Trazar conductor", ayuda: "Click para ir agregando el recorrido de un conductor. No hace falta cerrarlo — terminalo con el botón." },
   { valor: "ambiente", label: "Generar ambiente", ayuda: "Completá el nombre y la medida abajo, y hacé click en el plano donde va el CENTRO del ambiente." },
   { valor: "rectangulo", label: "Trazar rectángulo", ayuda: "Hacé click en una esquina del ambiente y arrastrá hasta la esquina opuesta — soltá para crearlo con la medida real." },
+  { valor: "area_paredes", label: "Reconocer paredes (área)", ayuda: "Arrastrá un rectángulo sobre la zona que querés analizar — se buscan líneas candidatas SOLO ahí, con menos ruido que sobre el plano completo." },
   { valor: "mover-ambiente", label: "Mover ambiente", ayuda: "Arrastrá un ambiente ya trazado (manual o generado) para reposicionarlo, manteniendo su forma y medida exactas." },
   { valor: "equipo", label: "Colocar equipo", ayuda: "Elegí el tipo abajo y hacé click en el plano donde va ubicado." },
   { valor: "triangular", label: "Triangular equipo", ayuda: "Elegí el tipo arriba. Click en 2 puntos de referencia ya existentes (nodo de pared/conductor o equipo), escribí las 2 distancias medidas con cinta métrica, y confirmá con un click aproximado en el lugar real." },
@@ -390,6 +391,10 @@ export default function PlanoInteligente({
   // arrastre/vista previa en vivo, acá solo llega el resultado final
   // (las 2 esquinas, en espacio imagen) al soltar.
   function alTrazarRectangulo(puntoImagenA, puntoImagenB) {
+    if (modo === "area_paredes") {
+      reconocerParedesEnArea(puntoImagenA, puntoImagenB);
+      return;
+    }
     const nombre = window.prompt("Nombre del ambiente (opcional):", "") ?? "";
     const habitacion = generarHabitacionPorArrastre(puntoImagenA, puntoImagenB, nombre);
     if (!habitacion) {
@@ -397,6 +402,34 @@ export default function PlanoInteligente({
       return;
     }
     mostrarAviso(`"${habitacion.nombre}" generado — ${habitacion.areaM2.toFixed(2)} m². Podés reposicionarlo con "Mover ambiente".`);
+  }
+
+  // "Reconocer paredes (área)" — usuario, 2026-11-24: arrastrar un
+  // rectángulo sobre la zona a analizar, en vez del botón "Sugerir
+  // paredes" de antes (que siempre leía el plano COMPLETO — mucho más
+  // ruido/falsos positivos en un plano grande). Mismo gesto de
+  // arrastre que "Trazar rectángulo" (PlanoCanvas.jsx ya lo resuelve),
+  // acá solo se decide qué hacer con las 2 esquinas.
+  const AREA_MINIMA_DETECCION_PX = 20;
+  function reconocerParedesEnArea(puntoImagenA, puntoImagenB) {
+    const x = Math.max(0, Math.round(Math.min(puntoImagenA.x, puntoImagenB.x)));
+    const y = Math.max(0, Math.round(Math.min(puntoImagenA.y, puntoImagenB.y)));
+    const ancho = Math.round(Math.abs(puntoImagenB.x - puntoImagenA.x));
+    const alto = Math.round(Math.abs(puntoImagenB.y - puntoImagenA.y));
+    if (ancho < AREA_MINIMA_DETECCION_PX || alto < AREA_MINIMA_DETECCION_PX) {
+      mostrarAviso("El área fue demasiado chica — probá estirar más el rectángulo.");
+      return;
+    }
+    const resultado = canvasRef.current?.detectarParedesCandidatas({ x, y, ancho, alto }) ?? { paredes: [], puertas: [] };
+    setParedesCandidatas(resultado.paredes);
+    setPuertasCandidatas(resultado.puertas);
+    if (resultado.paredes.length === 0) {
+      mostrarAviso("No se encontraron líneas rectas candidatas en esa área (solo detecta horizontales/verticales).");
+    } else {
+      mostrarAviso(
+        `${resultado.paredes.length} pared(es) candidata(s)${resultado.puertas.length > 0 ? ` y ${resultado.puertas.length} posible(s) puerta(s)` : ""} en el área elegida — hacé click en una línea naranja para confirmarla como pared real.`
+      );
+    }
   }
 
   // Compartida entre alClickImagen (click en vacío, busca el nodo/equipo
@@ -459,19 +492,6 @@ export default function PlanoInteligente({
 
   function terminarTrazo() {
     setTrazoActual([]);
-  }
-
-  function sugerirParedes() {
-    const resultado = canvasRef.current?.detectarParedesCandidatas() ?? { paredes: [], puertas: [] };
-    setParedesCandidatas(resultado.paredes);
-    setPuertasCandidatas(resultado.puertas);
-    if (resultado.paredes.length === 0) {
-      mostrarAviso("No se encontraron líneas rectas candidatas en esta imagen (solo detecta horizontales/verticales).");
-    } else {
-      mostrarAviso(
-        `${resultado.paredes.length} pared(es) candidata(s)${resultado.puertas.length > 0 ? ` y ${resultado.puertas.length} posible(s) puerta(s)` : ""} — hacé click en una línea naranja para confirmarla como pared real.`
-      );
-    }
   }
 
   function descartarSugerencias() {
@@ -610,34 +630,28 @@ export default function PlanoInteligente({
               ))}
             </div>
 
-            {/* "Sugerir paredes" (usuario, 2026-11-20) — no es un modo de
-                trazado, es una acción puntual: analiza la imagen YA
-                cargada y ofrece líneas candidatas, que se aceptan de a
-                una con un click (ver aceptarParedCandidata). Nada se crea
-                solo. */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
-              <button
-                type="button"
-                onClick={sugerirParedes}
-                style={{ padding: "5px 10px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.copper, fontWeight: 600, fontSize: 11.5, cursor: "pointer" }}
-              >
-                ◫ Sugerir paredes
-              </button>
-              {(paredesCandidatas.length > 0 || puertasCandidatas.length > 0) && (
-                <>
-                  <span style={{ fontSize: 11, color: colores.textDim }}>
-                    {paredesCandidatas.length} candidata(s){puertasCandidatas.length > 0 ? `, ${puertasCandidatas.length} posible(s) puerta(s)` : ""} — click en una línea naranja del lienzo para confirmarla.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={descartarSugerencias}
-                    style={{ padding: "5px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11, cursor: "pointer" }}
-                  >
-                    Descartar
-                  </button>
-                </>
-              )}
-            </div>
+            {/* Estado de "Reconocer paredes (área)" (modo arriba) — no es un
+                botón de acción, el gesto de arrastre ya dispara el
+                análisis (ver reconocerParedesEnArea). Esto solo muestra
+                el resultado: líneas candidatas que se aceptan de a una
+                con un click (ver aceptarParedCandidata), o se descartan
+                todas. Reemplaza al viejo botón "Sugerir paredes"
+                (2026-11-20, analizaba SIEMPRE el plano completo —
+                simplificado/acotado a una zona, usuario 2026-11-24). */}
+            {(paredesCandidatas.length > 0 || puertasCandidatas.length > 0) && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: colores.textDim }}>
+                  {paredesCandidatas.length} candidata(s){puertasCandidatas.length > 0 ? `, ${puertasCandidatas.length} posible(s) puerta(s)` : ""} — click en una línea naranja del lienzo para confirmarla.
+                </span>
+                <button
+                  type="button"
+                  onClick={descartarSugerencias}
+                  style={{ padding: "5px 10px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontSize: 11, cursor: "pointer" }}
+                >
+                  Descartar
+                </button>
+              </div>
+            )}
             <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10, lineHeight: 1.4 }}>
               {MODOS.find((m) => m.valor === modo)?.ayuda}
               {modo === "perspectiva" && puntosPerspectiva.length > 0 && puntosPerspectiva.length < 4 && ` (van ${puntosPerspectiva.length} de 4)`}
