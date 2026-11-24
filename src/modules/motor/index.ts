@@ -13,6 +13,7 @@ export { combinarCargas, potenciaDeEquipo } from "./cargaCombinada.ts";
 export { calcularCargasDemanda } from "./factorDemanda.ts";
 export { claseCircuitoREBT } from "./claseCircuitoREBT.ts";
 export { calcularLlenadoConducto } from "./canalizacion.ts";
+export { diametroMinimoTuboREBT } from "./canalizacionREBT.ts";
 export {
   calcularCortocircuitoTrifasico,
   calcularCortocircuitoMonofasico,

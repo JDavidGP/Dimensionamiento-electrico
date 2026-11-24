@@ -14,6 +14,7 @@ import {
   combinarCargas,
   calcularCargasDemanda,
   calcularLlenadoConducto,
+  diametroMinimoTuboREBT,
   calcularCortocircuitoTrifasico,
   calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
@@ -82,6 +83,11 @@ export const MotorCalculoMediator = {
   combinarCargas,
   cargasDemanda: calcularCargasDemanda,
   llenadoConducto: calcularLlenadoConducto,
+  // Diámetro mínimo de tubo REBT (ITC-BT-21) — expuesto en el mismo
+  // nivel que llenadoConducto (NEC): creado y probado, ningún hook ni
+  // componente lo llama todavía. Método distinto a NEC (tabla directa
+  // por sección+cantidad, no % de área) — ver canalizacionREBT.ts.
+  diametroTuboREBT: diametroMinimoTuboREBT,
   cortocircuitoTrifasico: calcularCortocircuitoTrifasico,
   cortocircuitoMonofasico: calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
