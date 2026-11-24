@@ -141,6 +141,7 @@ export default function App() {
     moverMarcadorEquipoPlano,
     generarGrupoMarcadoresEquipoPlano,
     corregirPerspectivaPlano,
+    crearPlanoSinImagen,
     exportarDXFPlano,
     listaIntegridad,
   } = useCircuitos();
@@ -425,6 +426,7 @@ export default function App() {
                           moverMarcadorEquipoPlano={moverMarcadorEquipoPlano}
                           generarGrupoMarcadoresEquipoPlano={generarGrupoMarcadoresEquipoPlano}
                           corregirPerspectivaPlano={corregirPerspectivaPlano}
+                          crearPlanoSinImagen={crearPlanoSinImagen}
                           exportarDXFPlano={exportarDXFPlano}
                           tableros={tableros}
                           equipos={equipos}

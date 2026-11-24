@@ -72,6 +72,7 @@ export default function PlanoInteligente({
   moverMarcadorEquipoPlano,
   generarGrupoMarcadoresEquipoPlano,
   corregirPerspectivaPlano,
+  crearPlanoSinImagen,
   exportarDXFPlano,
   tableros = [],
   equipos = [],
@@ -82,6 +83,13 @@ export default function PlanoInteligente({
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
   const [aviso, setAviso] = useState("");
+
+  // "Plano sin imagen" (usuario, 2026-11-24) — el marco inicial del
+  // rompecabezas: ancho×alto reales de la casa, sin foto de fondo.
+  const [sinImagenAbierto, setSinImagenAbierto] = useState(false);
+  const [sinImagenAncho, setSinImagenAncho] = useState("");
+  const [sinImagenAlto, setSinImagenAlto] = useState("");
+  const [sinImagenNombre, setSinImagenNombre] = useState("");
 
   // "Sugerir paredes" (usuario, 2026-11-20, "asistencia mejorada, no
   // automática") — PlanoCanvas.jsx expone la detección vía ref porque
@@ -240,6 +248,25 @@ export default function PlanoInteligente({
       candidatos.length === 1
         ? "Un único punto posible — hacé click cerca de él en el plano para confirmarlo."
         : "2 puntos posibles (uno de cada lado) — hacé click cerca del que sabés que es el correcto."
+    );
+  }
+
+  function alCrearPlanoSinImagen(e) {
+    e.preventDefault();
+    const ancho = parseFloat(sinImagenAncho);
+    const alto = parseFloat(sinImagenAlto);
+    const resultado = crearPlanoSinImagen(ancho, alto, sinImagenNombre);
+    if (!resultado) {
+      mostrarAviso("El ancho y el alto deben ser mayores a 0.");
+      return;
+    }
+    setSinImagenAbierto(false);
+    setSinImagenAncho("");
+    setSinImagenAlto("");
+    setSinImagenNombre("");
+    cambiarModo("rectangulo");
+    mostrarAviso(
+      `Marco de ${ancho}m × ${alto}m creado y ya calibrado — usá "Trazar rectángulo" o "Generar ambiente" para ir agregando cada habitación por su medida, y "Mover ambiente" para acomodarlas dentro del marco.`
     );
   }
 
@@ -583,6 +610,14 @@ export default function PlanoInteligente({
               {cargando ? "Cargando…" : planoImagen ? "↻ Cambiar plano" : "↑ Cargar plano (imagen o PDF)"}
               <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={alSeleccionarArchivo} disabled={cargando} />
             </label>
+            <button
+              type="button"
+              onClick={() => setSinImagenAbierto((v) => !v)}
+              style={{ padding: "6px 12px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.copper, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+              title="Para instalaciones sin foto ni plano escaneado: armá uno simple a partir de las medidas reales, como un rompecabezas."
+            >
+              + Crear plano sin imagen
+            </button>
             {segmentosPlano.length > 0 && (
               <button
                 type="button"
@@ -609,6 +644,62 @@ export default function PlanoInteligente({
             )}
           </div>
         </div>
+
+        {sinImagenAbierto && (
+          <form
+            onSubmit={alCrearPlanoSinImagen}
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 10, padding: 10, border: `1px solid ${colores.border}`, borderRadius: 3 }}
+          >
+            <div style={{ fontSize: 11, color: colores.textDim, flexBasis: "100%", lineHeight: 1.4 }}>
+              El marco de la casa — las habitaciones se agregan después, cada una por su propia medida.
+              {planoImagen && " Esto reemplaza el plano actual."}
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Ancho total (m)</div>
+              <input
+                type="number"
+                step="0.01"
+                value={sinImagenAncho}
+                onChange={(e) => setSinImagenAncho(e.target.value)}
+                placeholder="Ej: 10"
+                style={{ ...inputStyle(), width: 90 }}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Alto total (m)</div>
+              <input
+                type="number"
+                step="0.01"
+                value={sinImagenAlto}
+                onChange={(e) => setSinImagenAlto(e.target.value)}
+                placeholder="Ej: 8"
+                style={{ ...inputStyle(), width: 90 }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Nombre (opcional)</div>
+              <input
+                value={sinImagenNombre}
+                onChange={(e) => setSinImagenNombre(e.target.value)}
+                placeholder="Ej: Casa Familia Pérez"
+                style={inputStyle()}
+              />
+            </div>
+            <button
+              type="submit"
+              style={{ padding: "8px 14px", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}
+            >
+              + Crear marco
+            </button>
+            <button
+              type="button"
+              onClick={() => setSinImagenAbierto(false)}
+              style={{ padding: "8px 14px", background: "transparent", color: colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}
+            >
+              Cancelar
+            </button>
+          </form>
+        )}
 
         {aviso && (
           <div style={{ fontSize: 12, color: colores.warn, marginBottom: 10, padding: "6px 10px", border: `1px solid ${colores.warn}`, borderRadius: 3 }}>

@@ -1144,6 +1144,48 @@ export function useCircuitos() {
   // (aunque la puede rehacer si quiere, "Recalibrar" sigue ahí).
   const PX_POR_METRO_RECTIFICADO = 120;
 
+  // "Plano sin imagen" (usuario, 2026-11-24: "muchas instalaciones no
+  // tiene plano... primero ingresado la área total de la casa que
+  // sería como el marco del rompecabezas") — en vez de pedir un
+  // número de área suelto (no alcanza para definir una forma: un
+  // mismo m² admite infinitos rectángulos), se pide ancho×alto reales
+  // del marco, igual criterio que "Generar ambiente" (que ya existe,
+  // mismo patrón de nombre+ancho+alto). El "marco" acá es sencillamente
+  // una imagen de fondo SINTÉTICA (un rectángulo liso, sin foto real
+  // detrás) del tamaño exacto pedido, ya calibrada de entrada —
+  // mismo PX_POR_METRO_RECTIFICADO que la corrección de perspectiva,
+  // para no inventar una segunda convención de escala sintética. De
+  // ahí en más es EXACTAMENTE el mismo Plano de siempre: "Generar
+  // ambiente"/"Trazar rectángulo" para las piezas (habitaciones),
+  // "Mover ambiente" para acomodarlas — sin enganche automático
+  // todavía (confirmado con el usuario: v1 es arrastre libre, igual
+  // que ya funciona; el motor de alineación para que no queden huecos
+  // es una mejora aparte, a propósito no construida acá).
+  function crearPlanoSinImagen(anchoM, altoM, nombre = "") {
+    if (!(anchoM > 0) || !(altoM > 0)) return null;
+    const anchoPx = Math.round(anchoM * PX_POR_METRO_RECTIFICADO);
+    const altoPx = Math.round(altoM * PX_POR_METRO_RECTIFICADO);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${anchoPx}" height="${altoPx}"><rect width="100%" height="100%" fill="#f1ede6" stroke="#8a8578" stroke-width="3"/></svg>`;
+    setPlanoImagen({
+      dataUrl: `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`,
+      anchoPx,
+      altoPx,
+      nombreArchivo: nombre.trim() || `Plano sin imagen (${anchoM}m × ${altoM}m)`,
+    });
+    setPlanoCalibracion({
+      puntoA: { x: 0, y: 0 },
+      puntoB: { x: anchoPx, y: 0 },
+      distanciaRealM: anchoM,
+      escalaMetrosPorPixel: 1 / PX_POR_METRO_RECTIFICADO,
+    });
+    setNodosPlano([]);
+    setSegmentosPlano([]);
+    setHabitacionesPlano([]);
+    setRutasConductorPlano([]);
+    setMarcadoresEquipoPlano([]);
+    return { anchoM, altoM };
+  }
+
   function corregirPerspectivaPlano(puntosImagenOrigen, anchoRealM, altoRealM) {
     if (!(anchoRealM > 0) || !(altoRealM > 0)) {
       return Promise.resolve({ ok: false, motivo: "El ancho y el alto reales deben ser mayores a 0." });
@@ -1433,6 +1475,7 @@ export function useCircuitos() {
     moverMarcadorEquipoPlano,
     generarGrupoMarcadoresEquipoPlano,
     corregirPerspectivaPlano,
+    crearPlanoSinImagen,
     exportarDXFPlano,
     listaIntegridad,
     resumenIntegridad: resumenInt,
