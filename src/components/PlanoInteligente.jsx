@@ -20,11 +20,11 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // de construir" — los 17 modos vivían en una sola fila plana de
 // botones, sin ningún agrupamiento, difícil de escanear de un vistazo).
 // Puramente visual: cada modo sigue siendo el mismo valor de siempre,
-// `cambiarModo` no cambia — solo se agrega `grupo` para poder
-// renderizarlos en filas separadas con una etiqueta (ver GRUPOS_MODO
-// más abajo y el render de la barra de modos).
-const GRUPOS_MODO = ["Vista y calibración", "Paredes y conductores", "Ambientes", "Equipos", "Utilidades"];
-
+// `cambiarModo` no cambia — solo se agrega `grupo`, que el render usa
+// como una pequeña etiqueta separadora INLINE (nunca fuerza su propia
+// fila — ver la nota en el render de la barra de modos, sobre por qué
+// una primera versión con una fila fija por grupo empujaba el lienzo
+// del plano fuera de la vista en pantallas bajas).
 const MODOS = [
   { valor: "mover", label: "Mover vista", grupo: "Vista y calibración", ayuda: "Arrastrá para mover, rueda del mouse (o los botones +/−) para zoom." },
   { valor: "perspectiva", label: "Corregir perspectiva", grupo: "Vista y calibración", ayuda: "Para fotos: hacé click en las 4 esquinas de un rectángulo real (ej. una habitación), en orden, dando toda la vuelta." },
@@ -880,18 +880,37 @@ export default function PlanoInteligente({
 
         {planoImagen && (
           <>
-            <div style={{ marginBottom: 6 }}>
-              {GRUPOS_MODO.map((grupo) => (
-                <div key={grupo} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 5, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 9.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", width: 118, flexShrink: 0 }}>
-                    {grupo}
-                  </span>
-                  {MODOS.filter((m) => m.grupo === grupo).map((m) => (
-                    <BotonPill key={m.valor} activo={modo === m.valor} onClick={() => cambiarModo(m.valor)} flex="0 0 auto">
-                      {m.label}
-                    </BotonPill>
-                  ))}
-                </div>
+            {/* Una sola fila que se acomoda sola (igual que la versión
+                original, sin grupo) — una primera versión forzaba 5
+                filas fijas (una por grupo), lo que empujaba el lienzo
+                del plano hacia abajo lo suficiente como para que,
+                en un plano alto, quedara parcialmente fuera de la
+                vista (regresión real encontrada con Playwright, no
+                solo un detalle de la prueba: cualquier usuario con
+                una ventana más baja hubiera tenido que scrollear de
+                más). Las etiquetas de grupo son solo un separador
+                chico inline, nunca fuerzan un salto de línea propio. */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
+              {MODOS.map((m, i) => (
+                <React.Fragment key={m.valor}>
+                  {(i === 0 || MODOS[i - 1].grupo !== m.grupo) && (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        color: colores.textDim,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.03em",
+                        paddingLeft: i === 0 ? 0 : 8,
+                        borderLeft: i === 0 ? "none" : `1px solid ${colores.border}`,
+                      }}
+                    >
+                      {m.grupo}
+                    </span>
+                  )}
+                  <BotonPill activo={modo === m.valor} onClick={() => cambiarModo(m.valor)} flex="0 0 auto">
+                    {m.label}
+                  </BotonPill>
+                </React.Fragment>
               ))}
             </div>
 
