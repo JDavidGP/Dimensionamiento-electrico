@@ -799,6 +799,18 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
 // larga en shared/data/canalizacionREBT.js) — si el grupo marcado
 // mezcla secciones distintas, se avisa en vez de forzar un cálculo que
 // la norma no tabula.
+//
+// Etiquetas del selector "Tipo de instalación" — "al_aire" (Tabla 7)
+// tiene un alcance angosto a propósito (usuario, 2026-11-25): es
+// SOLO el tramo de tubo flexible que alimenta una máquina, no tubo
+// rígido sobre estructura/falso techo (eso cae en "superficial"). El
+// title del <option> lo aclara para que no se use mal.
+const ETIQUETA_TIPO_INSTALACION_REBT = {
+  superficial: "superficial",
+  empotrada: "empotrada",
+  al_aire: "al aire (tubo flexible a máquina)",
+};
+
 function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActiva }) {
   const [tipoInstalacion, setTipoInstalacion] = useState(App.motor.tiposInstalacionTuboREBT[0]);
   const [seleccionados, setSeleccionados] = useState(() => new Set());
@@ -870,7 +882,9 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
           <span style={{ fontSize: 11, color: colores.textDim }}>Tipo de instalación:</span>
           <select value={tipoInstalacion} onChange={(e) => setTipoInstalacion(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11.5 }}>
             {App.motor.tiposInstalacionTuboREBT.map((t) => (
-              <option key={t} value={t}>{t}</option>
+              <option key={t} value={t} title={t === "al_aire" ? "Solo el tramo de tubo flexible a una máquina — un tubo rígido sobre estructura o falso techo es 'superficial'." : undefined}>
+                {ETIQUETA_TIPO_INSTALACION_REBT[t] ?? t}
+              </option>
             ))}
           </select>
         </div>
@@ -884,7 +898,7 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
       {resultadoTubo && (
         resultadoTubo.disponible ? (
           <div style={{ fontSize: 11.5, color: colores.textMain, lineHeight: 1.5 }}>
-            Diámetro exterior mínimo: <strong>{resultadoTubo.diametroExteriorMm} mm</strong> ({enterradoAbierto ? "enterrado, Tabla 9" : tipoInstalacion}, {seleccionadosArr.length} conductor{seleccionadosArr.length !== 1 ? "es" : ""} de {seleccionadosArr[0].seccion} mm²)
+            Diámetro exterior mínimo: <strong>{resultadoTubo.diametroExteriorMm} mm</strong> ({enterradoAbierto ? "enterrado, Tabla 9" : ETIQUETA_TIPO_INSTALACION_REBT[tipoInstalacion] ?? tipoInstalacion}, {seleccionadosArr.length} conductor{seleccionadosArr.length !== 1 ? "es" : ""} de {seleccionadosArr[0].seccion} mm²)
           </div>
         ) : (
           <div style={{ fontSize: 11.5, color: colores.warn, lineHeight: 1.5 }}>⚠ {resultadoTubo.motivo}</div>

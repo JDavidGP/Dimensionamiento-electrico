@@ -65,6 +65,26 @@ export const TABLA_DIAMETRO_TUBO_REBT = {
     "185": [50, 75, null, null, null],
     "240": [63, 75, null, null, null],
   },
+  // Tabla 7 de ITC-BT-21 (1.2.3, "al aire") — usuario, 2026-11-25,
+  // aportó el documento con los valores reales. OJO con el alcance: a
+  // diferencia de "superficial"/"empotrada", este NO es un método
+  // general de tendido — es específicamente el tramo de TUBO FLEXIBLE
+  // que alimenta una máquina o un elemento de movilidad restringida
+  // (el "latiguillo" entre una bandeja/tubo fijo y el equipo). Un tubo
+  // RÍGIDO corriendo sobre una estructura metálica o un falso techo
+  // abierto NO es este caso — la norma lo trata como "superficial"
+  // (1.2.1, Tabla 2, ya arriba). Por eso la tabla solo llega a 16mm²
+  // (las secciones típicas de un latiguillo a una máquina, nunca un
+  // alimentador grande) — no es que falten filas, el método en sí no
+  // se usa para secciones mayores.
+  al_aire: {
+    "1.5": [12, 12, 16, 16, 20],
+    "2.5": [12, 16, 20, 20, 20],
+    "4": [12, 16, 20, 20, 25],
+    "6": [12, 16, 25, 25, 25],
+    "10": [16, 25, 25, 32, 32],
+    "16": [20, 25, 32, 32, 40],
+  },
 };
 
 // Orden real de la tabla (coincide con las filas del texto oficial) —
@@ -81,6 +101,7 @@ export const ORDEN_SECCIONES_REBT = ["1.5", "2.5", "4", "6", "10", "16", "25", "
 export const MULTIPLICADOR_SECCION_INTERIOR_MINIMO = {
   superficial: 2.5,
   empotrada: 3,
+  al_aire: 4,
 };
 
 export const TIPOS_INSTALACION_TUBO_REBT = Object.keys(TABLA_DIAMETRO_TUBO_REBT);
@@ -101,10 +122,10 @@ export const TIPOS_INSTALACION_TUBO_REBT = Object.keys(TABLA_DIAMETRO_TUBO_REBT)
 // superficial/empotrada (1.2.1/1.2.2, >5, con sus propios multiplicadores
 // 2,5×/3×) — cada apartado de la ITC tiene su propio par umbral/
 // multiplicador, no es "la misma regla, otro número":
-//   1.2.1 Superficial: >5 conductores → 2,5×
-//   1.2.2 Empotrada:   >5 conductores → 3×
-//   1.2.3 Al aire:     >5 conductores → 4× (sin tabla base propia acá — no se fabricó, ver canalizacionREBT.ts)
-//   1.2.4 Enterrada:   >10 conductores → 4× (la Tabla 9 ya tabula hasta 10, por eso el umbral es más alto que los demás)
+//   1.2.1 Superficial: >5 conductores → 2,5× (Tabla 2, hasta 240mm²)
+//   1.2.2 Empotrada:   >5 conductores → 3×   (Tabla 5, hasta 240mm²)
+//   1.2.3 Al aire:     >5 conductores → 4×   (Tabla 7, arriba, hasta 16mm² — alcance angosto a propósito, ver su nota)
+//   1.2.4 Enterrada:   >10 conductores → 4×  (Tabla 9, abajo, hasta 10 conductores — por eso el umbral es más alto que los demás)
 export const TABLA_DIAMETRO_TUBO_ENTERRADO_REBT = {
   "1.5": { hasta6: 25, de7a10: 32 },
   "2.5": { hasta6: 32, de7a10: 40 },

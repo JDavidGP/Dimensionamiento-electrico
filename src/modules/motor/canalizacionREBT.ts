@@ -2,13 +2,15 @@
 //
 // Diámetro mínimo de tubo por ITC-BT-21 (REBT) — ver la nota larga en
 // shared/data/canalizacionREBT.js para la fuente y el porqué de NO
-// calcular el caso de >5 (superficial/empotrada) o >10 (enterrado)
-// conductores (depende de un diámetro interior que el fabricante
-// declara, no la norma). Geométrico puro, igual criterio que
-// canalizacion.ts: no sabe de Tablero/topología. Dos funciones: la de
-// superficial/empotrada (Tabla 2/5) y, más abajo, la de enterrado
-// (Tabla 9) — tablas con estructura distinta, no la misma función con
-// un parámetro más.
+// calcular el caso de >5 (superficial/empotrada/al aire) o >10
+// (enterrado) conductores (depende de un diámetro interior que el
+// fabricante declara, no la norma). Geométrico puro, igual criterio
+// que canalizacion.ts: no sabe de Tablero/topología. Dos funciones: la
+// de superficial/empotrada/al aire (Tabla 2/5/7, misma estructura —
+// un array de 5 diámetros por sección, 1 función sirve para las 3) y,
+// más abajo, la de enterrado (Tabla 9, estructura DISTINTA — 2 bandas,
+// no 5 columnas — por eso es una función separada, no un 4to valor de
+// tipoInstalacion acá).
 import {
   TABLA_DIAMETRO_TUBO_REBT,
   MULTIPLICADOR_SECCION_INTERIOR_MINIMO,
@@ -18,16 +20,23 @@ import {
 
 export { TIPOS_INSTALACION_TUBO_REBT };
 
-export type TipoInstalacionTuboREBT = "superficial" | "empotrada";
+export type TipoInstalacionTuboREBT = "superficial" | "empotrada" | "al_aire";
+
+/** Tabla de ITC-BT-21 que da cada tipo de instalación — solo para el mensaje de error, no afecta el cálculo. */
+const NUMERO_TABLA_POR_TIPO: Record<TipoInstalacionTuboREBT, string> = {
+  superficial: "2",
+  empotrada: "5",
+  al_aire: "7",
+};
 
 export type ResultadoDiametroTuboREBT =
   | { disponible: true; diametroExteriorMm: number }
   | { disponible: false; motivo: string };
 
 /**
- * @param seccionMm2 - sección nominal del conductor unipolar (mm²), ej. "2.5" o 2.5 — debe ser una de las filas de la Tabla 2/5.
+ * @param seccionMm2 - sección nominal del conductor unipolar (mm²), ej. "2.5" o 2.5 — debe ser una de las filas de la Tabla 2/5/7 (la de "al_aire" solo llega a 16mm², ver su nota en shared/data).
  * @param numeroConductores - cantidad de conductores de ESA MISMA sección en el mismo tubo (entero, 1 a 5).
- * @param tipoInstalacion - "superficial" (Tabla 2) o "empotrada" (Tabla 5) — dan diámetros distintos, no intercambiables.
+ * @param tipoInstalacion - "superficial" (Tabla 2), "empotrada" (Tabla 5) o "al_aire" (Tabla 7 — SOLO el tramo de tubo flexible a una máquina, NO tubo rígido sobre estructura/falso techo, eso es "superficial") — dan diámetros distintos, no intercambiables.
  */
 export function diametroMinimoTuboREBT(
   seccionMm2: number | string,
@@ -36,7 +45,7 @@ export function diametroMinimoTuboREBT(
 ): ResultadoDiametroTuboREBT {
   const tabla = TABLA_DIAMETRO_TUBO_REBT[tipoInstalacion];
   if (!tabla) {
-    return { disponible: false, motivo: `Tipo de instalación de tubo "${tipoInstalacion}" no reconocido (usar "superficial" o "empotrada").` };
+    return { disponible: false, motivo: `Tipo de instalación de tubo "${tipoInstalacion}" no reconocido (usar "superficial", "empotrada" o "al_aire").` };
   }
 
   if (!Number.isInteger(numeroConductores) || numeroConductores < 1) {
@@ -54,7 +63,7 @@ export function diametroMinimoTuboREBT(
   const clave = String(seccionMm2);
   const fila = (tabla as Record<string, Array<number | null>>)[clave];
   if (!fila) {
-    return { disponible: false, motivo: `Sección ${seccionMm2} mm² no está en la Tabla ${tipoInstalacion === "superficial" ? "2" : "5"} de ITC-BT-21.` };
+    return { disponible: false, motivo: `Sección ${seccionMm2} mm² no está en la Tabla ${NUMERO_TABLA_POR_TIPO[tipoInstalacion]} de ITC-BT-21.` };
   }
 
   const diametroExteriorMm = fila[numeroConductores - 1];

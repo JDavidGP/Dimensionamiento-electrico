@@ -91,6 +91,16 @@ assert((await page.getByText(/Diámetro exterior mínimo:/).count()) === 0, "Con
 await checkboxes.nth(2).uncheck();
 await page.waitForTimeout(200);
 
+// --- Tabla 7 ("al aire", 1.2.3) — alcance angosto: solo tubo flexible a máquina, no tendido general ---
+const selectTipo = page.locator("select").filter({ hasText: "superficial" });
+const opcionesTipo = await selectTipo.locator("option").allTextContents();
+assert(opcionesTipo.includes("al aire (tubo flexible a máquina)"), `La opción 'al aire' aparece con su etiqueta completa, no el valor crudo (real: ${JSON.stringify(opcionesTipo)})`);
+await selectTipo.selectOption("al_aire");
+await page.waitForTimeout(150);
+assert((await page.getByText("Diámetro exterior mínimo: 12 mm (al aire (tubo flexible a máquina), 2 conductores de 1.5 mm²)").count()) === 1, "Calcula con la Tabla 7 (12mm para 2 conductores de 1.5mm²) y muestra la etiqueta correcta en el resultado");
+await selectTipo.selectOption("superficial");
+await page.waitForTimeout(150);
+
 // --- Agrupación de tubos enterrados (ITC-BT-19 Tabla B) ---
 await page.getByPlaceholder("Cantidad").fill("3");
 await page.waitForTimeout(150);

@@ -77,5 +77,22 @@ assert(/fabricante/.test(mas10.motivo), `El motivo explica que hace falta el dat
 assert(App.motor.diametroTuboEnterradoREBT(999, 1).disponible === false, "Sección no tabulada (999mm²) en Tabla 9 no se inventa");
 assert(App.motor.diametroTuboEnterradoREBT(2.5, 0).disponible === false, "Cantidad de conductores 0 se rechaza explícito (Tabla 9)");
 
+// --- 8. Tabla 7 de ITC-BT-21 ("al aire", 1.2.3) — usuario, 2026-11-25, documento aparte: SOLO tubo flexible a máquina, alcance angosto (hasta 16mm²/5 conductores) ---
+assert(App.motor.diametroTuboREBT(1.5, 1, "al_aire").diametroExteriorMm === 12, "Al aire, 1.5mm² × 1 conductor: 12mm");
+assert(App.motor.diametroTuboREBT(1.5, 5, "al_aire").diametroExteriorMm === 20, "Al aire, 1.5mm² × 5 conductores: 20mm");
+assert(App.motor.diametroTuboREBT(16, 5, "al_aire").diametroExteriorMm === 40, "Al aire, 16mm² × 5 conductores: 40mm (fila más grande de la Tabla 7)");
+
+const alAireMas5 = App.motor.diametroTuboREBT(1.5, 6, "al_aire");
+assert(alAireMas5.disponible === false, "Al aire, más de 5 conductores no se calcula (igual criterio que superficial/empotrada)");
+assert(/4 veces/.test(alAireMas5.motivo), `El motivo cita el multiplicador correcto de 1.2.3 (4×, no 2,5× ni 3×) (real: '${alAireMas5.motivo}')`);
+
+const alAireSeccionGrande = App.motor.diametroTuboREBT(25, 1, "al_aire");
+assert(alAireSeccionGrande.disponible === false, "Al aire, 25mm² no está tabulado (la Tabla 7 solo llega a 16mm² — no es un alimentador grande, es un latiguillo a máquina)");
+assert(/Tabla 7/.test(alAireSeccionGrande.motivo), `El motivo señala la Tabla 7 específicamente, no la 2 ni la 5 (real: '${alAireSeccionGrande.motivo}')`);
+
+assert(App.motor.diametroTuboREBT(2.5, 3, "al_aire").diametroExteriorMm === 20, "Al aire, 2.5mm² × 3 conductores: 20mm");
+assert(App.motor.diametroTuboREBT(2.5, 3, "empotrada").diametroExteriorMm === 20, "Mismo valor que empotrada para este caso puntual — las tablas pueden coincidir en algunas celdas sin ser la misma tabla");
+assert(App.motor.diametroTuboREBT(2.5, 3, "superficial").diametroExteriorMm === 16, "...pero NO con superficial, que sigue dando 16mm — confirma que son 3 tablas independientes, no una reetiquetada");
+
 console.log(fallos === 0 ? "\nTODOS LOS CHECKS PASARON" : `\n${fallos} CHECK(S) FALLARON`);
 process.exit(fallos === 0 ? 0 : 1);
