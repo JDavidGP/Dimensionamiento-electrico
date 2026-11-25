@@ -94,13 +94,17 @@ export const TIPOS_INSTALACION_TUBO_REBT = Object.keys(TABLA_DIAMETRO_TUBO_REBT)
 // bandas ("hasta 6 conductores" / "7 a 10"), y la tabla llega hasta 10
 // conductores (no 5). Diámetro EXTERIOR mínimo, en mm.
 //
-// Nota sobre una posible inconsistencia entre los dos documentos que
-// aportó el usuario: el primero (shared/data, instalacionEnterradaREBT)
-// decía "> 10 conductores → sección interior ≥ 4×"; el segundo (que
-// trae esta tabla) dice "> 5 conductores → ≥ 4×", citando el mismo
-// punto 1.2.4. Se usa el umbral de >10: la Tabla 9 misma ya tabula
-// hasta 10 conductores (columna "7-10"), así que el caso "no tabulado"
-// lógicamente empieza DESPUÉS de donde la tabla termina, no antes.
+// Umbral de la regla de respaldo (ITC-BT-21, pto. 1.2.4) — CONFIRMADO
+// por el usuario contra el texto literal de la norma, 2026-11-25: "para
+// más de 10 conductores por tubo... su sección interior será como
+// mínimo 4 veces la sección ocupada". Es DISTINTO del umbral de
+// superficial/empotrada (1.2.1/1.2.2, >5, con sus propios multiplicadores
+// 2,5×/3×) — cada apartado de la ITC tiene su propio par umbral/
+// multiplicador, no es "la misma regla, otro número":
+//   1.2.1 Superficial: >5 conductores → 2,5×
+//   1.2.2 Empotrada:   >5 conductores → 3×
+//   1.2.3 Al aire:     >5 conductores → 4× (sin tabla base propia acá — no se fabricó, ver canalizacionREBT.ts)
+//   1.2.4 Enterrada:   >10 conductores → 4× (la Tabla 9 ya tabula hasta 10, por eso el umbral es más alto que los demás)
 export const TABLA_DIAMETRO_TUBO_ENTERRADO_REBT = {
   "1.5": { hasta6: 25, de7a10: 32 },
   "2.5": { hasta6: 32, de7a10: 40 },
