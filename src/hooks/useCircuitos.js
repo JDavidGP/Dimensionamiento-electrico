@@ -889,6 +889,90 @@ export function useCircuitos() {
   // resultado real de la anterior.
   const nodosPlanoRef = useRef(nodosPlano);
   nodosPlanoRef.current = nodosPlano;
+
+  // Deshacer / Restablecer (usuario, 2026-11-25: "hace falta dos
+  // botones importantes en plano, el de restablecer y regresar de una
+  // acción"). Pila de snapshots del trazado (nodos/segmentos/
+  // habitaciones/rutas/marcadores) — NO incluye planoImagen/
+  // planoCalibracion/alturaTechoPlanoM (cargar otra imagen o
+  // recalibrar son acciones deliberadas y raras, no un "me equivoqué
+  // de click"; deshacerlas queda fuera de este alcance). Guardar un
+  // snapshot es barato: los arrays nunca se mutan in-place en este
+  // archivo (siempre setX([...spread]) o .map/.filter), así que un
+  // snapshot es solo guardar las referencias actuales, no clonar nada.
+  //
+  // Cada función que MUTA alguna de estas 5 piezas de estado de forma
+  // ESTRUCTURAL (crear/borrar/medir — una sola acción discreta por
+  // click) llama guardarPuntoDeshacerPlano() justo antes de mutar, con
+  // dos tipos de excepción deliberada:
+  //   - moverHabitacionPlano/moverMarcadorEquipoPlano: arrastre
+  //     continuo, se llaman una vez POR EVENTO de puntero durante un
+  //     solo gesto; snapshotear en cada una deshacería solo el último
+  //     pixel movido, no el arrastre completo. El snapshot se guarda
+  //     UNA vez al INICIO del arrastre vía iniciarArrastrePlano(),
+  //     llamado desde PlanoCanvas.jsx en el pointerdown.
+  //   - Edición de TEXTO libre (renombrar ambiente/ruta, altura,
+  //     nombre de un marcador): dispara por cada tecla tipeada — si
+  //     cada una guardara un punto de deshacer, "Deshacer" solo
+  //     revertiría UN CARÁCTER a la vez. Esas funciones no participan
+  //     del historial a propósito (deshacer un nombre mal tipeado se
+  //     corrige escribiendo de nuevo, no con el botón de deshacer).
+  //
+  // Caso conocido sin resolver del todo: "aceptar pared candidata"
+  // llama agregarNodoPlano DOS veces en el mismo tick (ver nota de
+  // nodosPlanoRef arriba) — cada llamada guarda su propio punto de
+  // deshacer, así que esa UNA acción visible puede necesitar deshacer
+  // dos veces para revertirse del todo. Aceptable: nunca se pierde
+  // nada ni se corrompe el historial, solo un click de más ocasional.
+  const historialPlanoRef = useRef([]);
+  const LIMITE_HISTORIAL_PLANO = 50;
+  const [puedeDeshacerPlano, setPuedeDeshacerPlano] = useState(false);
+
+  function guardarPuntoDeshacerPlano() {
+    historialPlanoRef.current = [
+      ...historialPlanoRef.current.slice(-(LIMITE_HISTORIAL_PLANO - 1)),
+      {
+        nodosPlano: nodosPlanoRef.current,
+        segmentosPlano,
+        habitacionesPlano,
+        rutasConductorPlano,
+        marcadoresEquipoPlano,
+      },
+    ];
+    setPuedeDeshacerPlano(true);
+  }
+
+  function iniciarArrastrePlano() {
+    guardarPuntoDeshacerPlano();
+  }
+
+  function deshacerPlano() {
+    const historial = historialPlanoRef.current;
+    if (historial.length === 0) return;
+    const anterior = historial[historial.length - 1];
+    historialPlanoRef.current = historial.slice(0, -1);
+    setPuedeDeshacerPlano(historialPlanoRef.current.length > 0);
+    setNodosPlano(anterior.nodosPlano);
+    setSegmentosPlano(anterior.segmentosPlano);
+    setHabitacionesPlano(anterior.habitacionesPlano);
+    setRutasConductorPlano(anterior.rutasConductorPlano);
+    setMarcadoresEquipoPlano(anterior.marcadoresEquipoPlano);
+  }
+
+  // "Restablecer" (usuario, 2026-11-25) — limpia el trazado (nodos,
+  // paredes, ambientes, rutas, equipos) para volver a empezar SIN
+  // perder la imagen/calibración ya cargada (distinto de "× Quitar",
+  // que borra todo, imagen incluida, y obliga a recalibrar). Guarda un
+  // punto de deshacer ANTES de limpiar, así un "Deshacer" inmediato
+  // después de un "Restablecer" por error trae todo de vuelta.
+  function restablecerPlano() {
+    guardarPuntoDeshacerPlano();
+    setNodosPlano([]);
+    setSegmentosPlano([]);
+    setHabitacionesPlano([]);
+    setRutasConductorPlano([]);
+    setMarcadoresEquipoPlano([]);
+  }
   // `pegarAEquipo` (usuario, 2026-11-22, "pegar una ruta de conductor a
   // la posición EXACTA de un equipo marcado" — el último de los 3
   // puntos diferidos de PLANO_INTELIGENTE_DISENO.md §12): al trazar un
@@ -909,6 +993,7 @@ export function useCircuitos() {
     if (existente) return existente;
     const marcadorCercano = pegarAEquipo ? App.plano.nodoCercano(puntoModelo, marcadoresEquipoPlano) : null;
     const nodo = App.plano.crearNodo(marcadorCercano ? marcadorCercano.punto : puntoModelo);
+    guardarPuntoDeshacerPlano();
     nodosPlanoRef.current = [...nodosPlanoRef.current, nodo];
     setNodosPlano(nodosPlanoRef.current);
     return nodo;
@@ -920,10 +1005,12 @@ export function useCircuitos() {
       (s) => (s.nodoAId === nodoAId && s.nodoBId === nodoBId) || (s.nodoAId === nodoBId && s.nodoBId === nodoAId)
     );
     if (yaExiste) return;
+    guardarPuntoDeshacerPlano();
     setSegmentosPlano([...segmentosPlano, App.plano.crearSegmento(nodoAId, nodoBId, tipo)]);
   }
 
   function eliminarNodoPlano(nodoId) {
+    guardarPuntoDeshacerPlano();
     const resultado = App.plano.eliminarNodo(nodoId, nodosPlano, segmentosPlano, habitacionesPlano, rutasConductorPlano);
     setNodosPlano(resultado.nodos);
     setSegmentosPlano(resultado.segmentos);
@@ -932,12 +1019,14 @@ export function useCircuitos() {
   }
 
   function eliminarSegmentoPlano(segmentoId) {
+    guardarPuntoDeshacerPlano();
     setSegmentosPlano(App.plano.eliminarSegmento(segmentoId, segmentosPlano));
   }
 
   function editarSegmentoPlano(segmentoId, cambios) {
     const segmento = segmentosPlano.find((s) => s.id === segmentoId);
     if (!segmento) return;
+    guardarPuntoDeshacerPlano();
     setSegmentosPlano(segmentosPlano.map((s) => (s.id === segmentoId ? App.plano.editarSegmento(segmento, cambios) : s)));
   }
 
@@ -948,11 +1037,13 @@ export function useCircuitos() {
   function cerrarHabitacionPlano(nodoIds, nombre = "") {
     const habitacion = App.plano.crearHabitacion(nodoIds, nodosPlano, nombre);
     if (!habitacion) return null;
+    guardarPuntoDeshacerPlano();
     setHabitacionesPlano([...habitacionesPlano, habitacion]);
     return habitacion;
   }
 
   function eliminarHabitacionPlano(habitacionId) {
+    guardarPuntoDeshacerPlano();
     setHabitacionesPlano(habitacionesPlano.filter((h) => h.id !== habitacionId));
   }
 
@@ -980,6 +1071,7 @@ export function useCircuitos() {
   // Un equipo colocado adentro hereda la condición al leerla (ver
   // habitacionQueContiene), no se copia a cada marcador.
   function editarExteriorHabitacionPlano(habitacionId, exterior) {
+    guardarPuntoDeshacerPlano();
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, exterior: Boolean(exterior) } : h)));
   }
 
@@ -1006,6 +1098,7 @@ export function useCircuitos() {
     const centroModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
     const resultado = App.plano.crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre);
     if (!resultado) return null;
+    guardarPuntoDeshacerPlano();
     setNodosPlano([...nodosPlano, ...resultado.nodos]);
     setSegmentosPlano([...segmentosPlano, ...resultado.segmentos]);
     setHabitacionesPlano([...habitacionesPlano, resultado.habitacion]);
@@ -1035,6 +1128,7 @@ export function useCircuitos() {
     const centroModelo = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const resultado = App.plano.crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre);
     if (!resultado) return null;
+    guardarPuntoDeshacerPlano();
     setNodosPlano([...nodosPlano, ...resultado.nodos]);
     setSegmentosPlano([...segmentosPlano, ...resultado.segmentos]);
     setHabitacionesPlano([...habitacionesPlano, resultado.habitacion]);
@@ -1093,11 +1187,13 @@ export function useCircuitos() {
   function cerrarRutaConductorPlano(nodoIds, nombre = "") {
     const ruta = App.plano.crearRutaConductor(nodoIds, nodosPlano, nombre);
     if (!ruta) return null;
+    guardarPuntoDeshacerPlano();
     setRutasConductorPlano([...rutasConductorPlano, ruta]);
     return ruta;
   }
 
   function eliminarRutaConductorPlano(rutaId) {
+    guardarPuntoDeshacerPlano();
     setRutasConductorPlano(App.plano.eliminarRutaConductor(rutaId, rutasConductorPlano));
   }
 
@@ -1112,6 +1208,7 @@ export function useCircuitos() {
   // permanente (el campo sigue siendo la fuente editable de siempre,
   // igual que antes de vincular nada).
   function vincularRutaConductorPlano(rutaId, entidadId, entidadTipo) {
+    guardarPuntoDeshacerPlano();
     setRutasConductorPlano(
       rutasConductorPlano.map((r) => (r.id === rutaId ? App.plano.vincularRutaConductor(r, entidadId, entidadTipo) : r))
     );
@@ -1145,6 +1242,7 @@ export function useCircuitos() {
     if (!planoCalibracion) return null;
     const puntoModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
     const marcador = App.plano.crearMarcadorEquipo(puntoModelo, tipo, entidadId, nombre);
+    guardarPuntoDeshacerPlano();
     setMarcadoresEquipoPlano([...marcadoresEquipoPlano, marcador]);
     return marcador;
   }
@@ -1192,11 +1290,13 @@ export function useCircuitos() {
       const puntoModelo = App.plano.imagenAModelo(puntoImagenI, planoCalibracion.escalaMetrosPorPixel);
       nuevos.push(App.plano.crearMarcadorEquipo(puntoModelo, tipo, null, `${base} ${i}`));
     }
+    guardarPuntoDeshacerPlano();
     setMarcadoresEquipoPlano([...marcadoresEquipoPlano, ...nuevos]);
     return nuevos;
   }
 
   function eliminarMarcadorEquipoPlano(marcadorId) {
+    guardarPuntoDeshacerPlano();
     setMarcadoresEquipoPlano(App.plano.eliminarMarcadorEquipo(marcadorId, marcadoresEquipoPlano));
   }
 
@@ -1529,6 +1629,10 @@ export function useCircuitos() {
     planoImagen,
     cargarImagenPlano,
     quitarImagenPlano,
+    restablecerPlano,
+    deshacerPlano,
+    puedeDeshacerPlano,
+    iniciarArrastrePlano,
     planoCalibracion,
     calibrarPlano,
     calibrarPlanoPorPerimetro,

@@ -111,6 +111,10 @@ export default function App() {
     planoImagen,
     cargarImagenPlano,
     quitarImagenPlano,
+    restablecerPlano,
+    deshacerPlano,
+    puedeDeshacerPlano,
+    iniciarArrastrePlano,
     planoCalibracion,
     calibrarPlano,
     calibrarPlanoPorPerimetro,
@@ -400,6 +404,10 @@ export default function App() {
                           planoImagen={planoImagen}
                           cargarImagenPlano={cargarImagenPlano}
                           quitarImagenPlano={quitarImagenPlano}
+                          restablecerPlano={restablecerPlano}
+                          deshacerPlano={deshacerPlano}
+                          puedeDeshacerPlano={puedeDeshacerPlano}
+                          iniciarArrastrePlano={iniciarArrastrePlano}
                           planoCalibracion={planoCalibracion}
                           calibrarPlano={calibrarPlano}
                           calibrarPlanoPorPerimetro={calibrarPlanoPorPerimetro}

@@ -85,6 +85,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     onClickMarcador,
     onArrastrarHabitacion,
     onArrastrarMarcador,
+    onIniciarArrastre,
     onClickParedCandidata,
     onTrazarRectangulo,
   },
@@ -273,6 +274,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
       const puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
       const habitacion = habitacionEn(puntoImagen);
       if (habitacion) {
+        onIniciarArrastre?.();
         arrastreAmbienteRef.current = { habitacionId: habitacion.id, x: e.clientX, y: e.clientY, seMovio: false };
       }
     }
@@ -496,6 +498,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                     onPointerDown={(e) => {
                       if (!marcadorArrastrable) return;
                       e.stopPropagation();
+                      onIniciarArrastre?.();
                       arrastreMarcadorRef.current = { marcadorId: marcador.id, x: e.clientX, y: e.clientY, seMovio: false };
                     }}
                   >

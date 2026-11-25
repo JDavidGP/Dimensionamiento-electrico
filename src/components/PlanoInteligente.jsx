@@ -42,6 +42,10 @@ export default function PlanoInteligente({
   planoImagen,
   cargarImagenPlano,
   quitarImagenPlano,
+  restablecerPlano,
+  deshacerPlano,
+  puedeDeshacerPlano,
+  iniciarArrastrePlano,
   planoCalibracion,
   calibrarPlano,
   calibrarPlanoPorPerimetro,
@@ -634,6 +638,31 @@ export default function PlanoInteligente({
             >
               + Crear plano sin imagen
             </button>
+            {planoImagen && (
+              <button
+                type="button"
+                onClick={deshacerPlano}
+                disabled={!puedeDeshacerPlano}
+                style={{ padding: "6px 12px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: puedeDeshacerPlano ? colores.copper : colores.textDim, fontWeight: 700, fontSize: 11.5, cursor: puedeDeshacerPlano ? "pointer" : "not-allowed" }}
+                title="Deshace la última acción de trazado (crear/borrar/mover pared, ambiente o equipo)."
+              >
+                ↶ Deshacer
+              </button>
+            )}
+            {planoImagen && (nodosPlano.length > 0 || marcadoresEquipoPlano.length > 0) && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("¿Restablecer el trazado? Se borran las paredes, ambientes, rutas y equipos ya colocados — la imagen y la calibración NO se tocan.")) {
+                    restablecerPlano();
+                  }
+                }}
+                style={{ padding: "6px 12px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.error, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+                title="Borra todo lo trazado (paredes, ambientes, rutas, equipos) y empieza de nuevo sobre la misma imagen ya calibrada."
+              >
+                ↺ Restablecer
+              </button>
+            )}
             {segmentosPlano.length > 0 && (
               <button
                 type="button"
@@ -1007,6 +1036,7 @@ export default function PlanoInteligente({
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
           onArrastrarHabitacion={(habitacionId, deltaM) => moverHabitacionPlano(habitacionId, deltaM, engancheAutomatico)}
+          onIniciarArrastre={iniciarArrastrePlano}
           onArrastrarMarcador={moverMarcadorEquipoPlano}
           onTrazarRectangulo={alTrazarRectangulo}
           asistenciaBordes={asistenciaBordes}
