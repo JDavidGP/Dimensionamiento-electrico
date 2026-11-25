@@ -100,10 +100,14 @@ await page.getByRole("combobox").filter({ hasText: "En contacto" }).selectOption
 await page.waitForTimeout(150);
 assert((await page.getByText("factor de corrección: 1.00").count()) === 1, "3 tubos a ≥1m de separación: sin corrección (1,00)");
 
-// --- Instalación enterrada (ITC-BT-07) ---
+// --- Instalación enterrada (ITC-BT-07) — también cambia la tabla de diámetro (Tabla 9, no Tabla 2/5) ---
+const panelRebt = page.locator("div", { hasText: "Diámetro de tubo (ITC-BT-21)" }).filter({ has: page.getByText(/Tubos enterrados agrupados/) }).last();
+assert((await panelRebt.getByText("Tipo de instalación:").count()) === 1, "Antes de marcar enterrado, el selector superficial/empotrada está visible (Tabla 2/5)");
 assert((await page.getByText("¿Este tubo va enterrado? (ITC-BT-07)").count()) === 1, "Existe el toggle de instalación enterrada REBT, en el mismo bloque");
 await page.getByText("¿Este tubo va enterrado? (ITC-BT-07)").click();
 await page.waitForTimeout(150);
+assert((await panelRebt.getByText("Tipo de instalación:").count()) === 0, "Al marcar enterrado, el selector superficial/empotrada desaparece (ya no aplica, rige la Tabla 9)");
+assert((await page.getByText("Diámetro exterior mínimo: 25 mm (enterrado, Tabla 9, 2 conductores de 1.5 mm²)").count()) === 1, "Al marcar enterrado, el diámetro cambia a la Tabla 9 (25mm), no sigue en la Tabla 2 (12mm)");
 assert((await page.getByText("Profundidad mínima exigida: 0.60 m").count()) === 1, "Por defecto (acera): exige 0,60m — ITC-BT-07");
 
 await page.getByPlaceholder("Profundidad real (m)").fill("0.4");

@@ -63,5 +63,19 @@ assert(App.motor.diametroTuboREBT(2.5, 2.5, "empotrada").disponible === false, "
 // --- 6. Normativa IEC_ES/CIEN/NEC no se ven afectadas por este módulo nuevo (import limpio) ---
 assert(typeof App.motor.llenadoConducto === "function", "El llenado de conducto NEC (ya existente) sigue expuesto sin cambios");
 
+// --- 7. Tabla 9 de ITC-BT-21 (enterrado) — usuario, 2026-11-25, documento aparte con los valores reales ---
+assert(App.motor.diametroTuboEnterradoREBT(1.5, 1).diametroExteriorMm === 25, "Enterrado, 1.5mm² × 1 conductor (≤6): 25mm");
+assert(App.motor.diametroTuboEnterradoREBT(1.5, 6).diametroExteriorMm === 25, "Enterrado, 1.5mm² × 6 conductores (límite de la banda ≤6): sigue en 25mm");
+assert(App.motor.diametroTuboEnterradoREBT(1.5, 7).diametroExteriorMm === 32, "Enterrado, 1.5mm² × 7 conductores (banda 7-10): salta a 32mm");
+assert(App.motor.diametroTuboEnterradoREBT(70, 10).diametroExteriorMm === 160, "Enterrado, 70mm² × 10 conductores: 160mm (máximo de la tabla)");
+assert(App.motor.diametroTuboEnterradoREBT(16, 1).diametroExteriorMm === 63, "Enterrado, 16mm² × 1 conductor: 63mm (misma que 10mm², la tabla no siempre sube por sección)");
+
+const mas10 = App.motor.diametroTuboEnterradoREBT(2.5, 11);
+assert(mas10.disponible === false, "Más de 10 conductores enterrados no se calcula (Tabla 9 no lo tabula)");
+assert(/fabricante/.test(mas10.motivo), `El motivo explica que hace falta el dato del fabricante (real: '${mas10.motivo}')`);
+
+assert(App.motor.diametroTuboEnterradoREBT(999, 1).disponible === false, "Sección no tabulada (999mm²) en Tabla 9 no se inventa");
+assert(App.motor.diametroTuboEnterradoREBT(2.5, 0).disponible === false, "Cantidad de conductores 0 se rechaza explícito (Tabla 9)");
+
 console.log(fallos === 0 ? "\nTODOS LOS CHECKS PASARON" : `\n${fallos} CHECK(S) FALLARON`);
 process.exit(fallos === 0 ? 0 : 1);

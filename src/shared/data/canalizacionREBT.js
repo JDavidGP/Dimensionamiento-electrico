@@ -85,6 +85,37 @@ export const MULTIPLICADOR_SECCION_INTERIOR_MINIMO = {
 
 export const TIPOS_INSTALACION_TUBO_REBT = Object.keys(TABLA_DIAMETRO_TUBO_REBT);
 
+// --- Tabla 9 de ITC-BT-21 — canalizaciones ENTERRADAS (usuario,
+// 2026-11-25, aportó el documento con los valores reales que faltaban
+// el día que se construyó la instalación enterrada — antes de esto no
+// había con qué calcular este caso, ver la nota vieja en
+// instalacionEnterradaREBT.ts). Estructura DISTINTA a las Tablas 2/5 de
+// arriba: en vez de una columna por cada cantidad 1-5, son solo 2
+// bandas ("hasta 6 conductores" / "7 a 10"), y la tabla llega hasta 10
+// conductores (no 5). Diámetro EXTERIOR mínimo, en mm.
+//
+// Nota sobre una posible inconsistencia entre los dos documentos que
+// aportó el usuario: el primero (shared/data, instalacionEnterradaREBT)
+// decía "> 10 conductores → sección interior ≥ 4×"; el segundo (que
+// trae esta tabla) dice "> 5 conductores → ≥ 4×", citando el mismo
+// punto 1.2.4. Se usa el umbral de >10: la Tabla 9 misma ya tabula
+// hasta 10 conductores (columna "7-10"), así que el caso "no tabulado"
+// lógicamente empieza DESPUÉS de donde la tabla termina, no antes.
+export const TABLA_DIAMETRO_TUBO_ENTERRADO_REBT = {
+  "1.5": { hasta6: 25, de7a10: 32 },
+  "2.5": { hasta6: 32, de7a10: 40 },
+  "4": { hasta6: 40, de7a10: 50 },
+  "6": { hasta6: 50, de7a10: 63 },
+  "10": { hasta6: 63, de7a10: 75 },
+  "16": { hasta6: 63, de7a10: 90 },
+  "25": { hasta6: 90, de7a10: 110 },
+  "35": { hasta6: 90, de7a10: 125 },
+  "50": { hasta6: 110, de7a10: 140 },
+  "70": { hasta6: 125, de7a10: 160 },
+};
+
+export const ORDEN_SECCIONES_ENTERRADO_REBT = ["1.5", "2.5", "4", "6", "10", "16", "25", "35", "50", "70"];
+
 // --- Instalación enterrada (usuario, 2026-11-25, "canalizaciones
 // aéreas y subterráneas") — ITC-BT-07 (redes subterráneas) + ITC-BT-19
 // Tabla B (factor de agrupación de tubos enterrados). Datos tomados

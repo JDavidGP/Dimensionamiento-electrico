@@ -15,6 +15,7 @@ import {
   calcularCargasDemanda,
   calcularLlenadoConducto,
   diametroMinimoTuboREBT,
+  diametroMinimoTuboEnterradoREBT,
   TIPOS_INSTALACION_TUBO_REBT,
   factorAjusteConductoresPortadoresNEC,
   conductoresPortadoresCorriente,
@@ -98,6 +99,7 @@ export const MotorCalculoMediator = {
   // componente lo llama todavía. Método distinto a NEC (tabla directa
   // por sección+cantidad, no % de área) — ver canalizacionREBT.ts.
   diametroTuboREBT: diametroMinimoTuboREBT,
+  diametroTuboEnterradoREBT: diametroMinimoTuboEnterradoREBT,
   tiposInstalacionTuboREBT: TIPOS_INSTALACION_TUBO_REBT,
   // Instalación enterrada/agrupamiento (usuario, 2026-11-25, "canalizaciones
   // aéreas y subterráneas") — mismo nivel que diametroTuboREBT arriba.

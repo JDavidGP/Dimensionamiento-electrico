@@ -831,9 +831,15 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
 
   const seleccionadosArr = candidatos.filter((c) => seleccionados.has(c.id));
   const seccionesDistintas = new Set(seleccionadosArr.map((c) => c.seccion));
+  // Enterrado usa la Tabla 9 (otra estructura, otro tope de conductores
+  // — ver canalizacionREBT.ts) en vez de la Tabla 2/5 de
+  // superficial/empotrada: "Tipo de instalación" deja de aplicar una
+  // vez que el tubo va bajo tierra.
   const resultadoTubo =
     seleccionadosArr.length > 0 && seccionesDistintas.size === 1
-      ? App.motor.diametroTuboREBT(seleccionadosArr[0].seccion, seleccionadosArr.length, tipoInstalacion)
+      ? enterradoAbierto
+        ? App.motor.diametroTuboEnterradoREBT(seleccionadosArr[0].seccion, seleccionadosArr.length)
+        : App.motor.diametroTuboREBT(seleccionadosArr[0].seccion, seleccionadosArr.length, tipoInstalacion)
       : null;
 
   const cantidadTubosNum = parseInt(cantidadTubosAgrupados, 10);
@@ -859,14 +865,16 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
           </label>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-        <span style={{ fontSize: 11, color: colores.textDim }}>Tipo de instalación:</span>
-        <select value={tipoInstalacion} onChange={(e) => setTipoInstalacion(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11.5 }}>
-          {App.motor.tiposInstalacionTuboREBT.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-      </div>
+      {!enterradoAbierto && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+          <span style={{ fontSize: 11, color: colores.textDim }}>Tipo de instalación:</span>
+          <select value={tipoInstalacion} onChange={(e) => setTipoInstalacion(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11.5 }}>
+            {App.motor.tiposInstalacionTuboREBT.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {seleccionadosArr.length > 0 && seccionesDistintas.size > 1 && (
         <div style={{ fontSize: 11.5, color: colores.warn, lineHeight: 1.5 }}>
@@ -876,7 +884,7 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
       {resultadoTubo && (
         resultadoTubo.disponible ? (
           <div style={{ fontSize: 11.5, color: colores.textMain, lineHeight: 1.5 }}>
-            Diámetro exterior mínimo: <strong>{resultadoTubo.diametroExteriorMm} mm</strong> ({tipoInstalacion}, {seleccionadosArr.length} conductor{seleccionadosArr.length !== 1 ? "es" : ""} de {seleccionadosArr[0].seccion} mm²)
+            Diámetro exterior mínimo: <strong>{resultadoTubo.diametroExteriorMm} mm</strong> ({enterradoAbierto ? "enterrado, Tabla 9" : tipoInstalacion}, {seleccionadosArr.length} conductor{seleccionadosArr.length !== 1 ? "es" : ""} de {seleccionadosArr[0].seccion} mm²)
           </div>
         ) : (
           <div style={{ fontSize: 11.5, color: colores.warn, lineHeight: 1.5 }}>⚠ {resultadoTubo.motivo}</div>
