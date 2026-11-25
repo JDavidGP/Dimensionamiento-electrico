@@ -635,13 +635,23 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
   const tabla = normativa.canalizaciones;
   const [tipoConducto, setTipoConducto] = useState(tabla?.tiposDisponibles?.[0] ?? "");
   const [seleccionados, setSeleccionados] = useState(() => new Set());
+  // Instalación enterrada (usuario, 2026-11-25) — NEC 300.5. Es un
+  // dato de la ZANJA (dónde pasa, qué va adentro), no de cada circuito
+  // por separado, así que vive en este mismo bloque junto al grupo ya
+  // seleccionado, no repetido por circuito.
+  const [enterradoAbierto, setEnterradoAbierto] = useState(false);
+  const [categoriaEnterrado, setCategoriaEnterrado] = useState(App.motor.categoriasConductoEnterradoNEC[0].valor);
+  const [ubicacionEnterrado, setUbicacionEnterrado] = useState(App.motor.ubicacionesEnterradoNEC[0].valor);
+  const [profundidadRealIn, setProfundidadRealIn] = useState("");
 
   if (!tabla) return null;
 
   const candidatos = circuitosDelTablero
     .map((c) => {
       const r = resultados.find((res) => res.id === c.id);
-      return r?.ok ? { id: c.id, nombre: c.nombre, seccion: r.seccion } : null;
+      return r?.ok
+        ? { id: c.id, nombre: c.nombre, seccion: r.seccion, fases: c.fases, ampacidadCorregida: r.ampacidadCorregida, corrienteDiseno: r.corrienteDiseno }
+        : null;
     })
     .filter(Boolean);
 
@@ -663,6 +673,20 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
   }
   const conductores = Object.entries(cantidadPorSeccion).map(([awg, cantidad]) => ({ awg, cantidad }));
   const resultado = conductores.length > 0 ? App.motor.llenadoConducto(conductores, tipoConducto, normativa) : null;
+
+  // Factor de ajuste por agrupamiento (NEC 310.15(B)(2)(a)) — distinto
+  // del llenado físico de arriba: ESTE reduce la ampacidad de cada
+  // conductor, no el tamaño de tubo. Solo tiene sentido para NEC/CIEN
+  // (normativa.id !== "IEC_ES"), que es justo para lo que `tabla` ya
+  // existe acá (ver nota de cabecera del componente).
+  const seleccionadosArr = candidatos.filter((c) => seleccionados.has(c.id));
+  const cccTotal = seleccionadosArr.reduce((s, c) => s + App.motor.conductoresPortadoresCorriente(c.fases), 0);
+  const factorCCC = cccTotal > 0 ? App.motor.factorAjusteCCCNec(cccTotal) : null;
+  const circuitosEnRiesgo = factorCCC != null && factorCCC < 1 ? seleccionadosArr.filter((c) => c.ampacidadCorregida * factorCCC < c.corrienteDiseno) : [];
+
+  const profundidadMinimaIn = App.motor.profundidadMinimaEnterradoNEC(categoriaEnterrado, ubicacionEnterrado);
+  const profundidadRealNum = parseFloat(profundidadRealIn);
+  const profundidadOk = profundidadMinimaIn != null && profundidadRealNum >= 0 ? profundidadRealNum >= profundidadMinimaIn : null;
 
   return (
     <div>
@@ -703,6 +727,65 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
           <div style={{ fontSize: 11.5, color: colores.warn, lineHeight: 1.5 }}>⚠ {resultado.motivo}</div>
         )
       )}
+
+      {factorCCC != null && (
+        <div style={{ fontSize: 11.5, color: circuitosEnRiesgo.length > 0 ? colores.error : colores.textDim, lineHeight: 1.5, marginTop: 6 }}>
+          {cccTotal} conductor{cccTotal !== 1 ? "es" : ""} portador{cccTotal !== 1 ? "es" : ""} de corriente agrupado{cccTotal !== 1 ? "s" : ""} (NEC 310.15(B)(2)(a))
+          {factorCCC < 1 ? (
+            <>
+              {" "}— factor de ajuste de ampacidad: <strong>{(factorCCC * 100).toFixed(0)}%</strong>
+            </>
+          ) : (
+            " — sin reducción (regla recién aplica con 4 o más)."
+          )}
+          {circuitosEnRiesgo.length > 0 && (
+            <>
+              {" "}⚠ Con este agrupamiento, {circuitosEnRiesgo.map((c) => c.nombre).join(", ")} ya no alcanza la ampacidad necesaria con el calibre actual — subí de calibre o separá en otro tubo.
+            </>
+          )}
+        </div>
+      )}
+
+      <div style={{ marginTop: 10 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: colores.textMain, cursor: "pointer" }}>
+          <input type="checkbox" checked={enterradoAbierto} onChange={() => setEnterradoAbierto((v) => !v)} />
+          ¿Este tubo va enterrado? (NEC 300.5)
+        </label>
+        {enterradoAbierto && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6, paddingLeft: 4 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <select value={categoriaEnterrado} onChange={(e) => setCategoriaEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+                {App.motor.categoriasConductoEnterradoNEC.map((o) => (
+                  <option key={o.valor} value={o.valor}>{o.label}</option>
+                ))}
+              </select>
+              <select value={ubicacionEnterrado} onChange={(e) => setUbicacionEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+                {App.motor.ubicacionesEnterradoNEC.map((o) => (
+                  <option key={o.valor} value={o.valor}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            {profundidadMinimaIn != null && (
+              <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.5 }}>
+                Profundidad mínima exigida: <strong>{profundidadMinimaIn}"</strong>.{" "}
+                <input
+                  type="number"
+                  step="0.5"
+                  value={profundidadRealIn}
+                  onChange={(e) => setProfundidadRealIn(e.target.value)}
+                  placeholder="Profundidad real (in)"
+                  style={{ ...inputStyle(), width: 110, padding: "3px 6px", fontSize: 11 }}
+                />
+                {profundidadOk === true && <span style={{ color: colores.ok }}> ✓ Cumple.</span>}
+                {profundidadOk === false && <span style={{ color: colores.error }}> ⚠ No alcanza la profundidad mínima.</span>}
+              </div>
+            )}
+            <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
+              Todo conducto enterrado es "wet location" (300.5(B)) → conductores THWN-2 o superior. Si queda expuesto a daño físico, usar RMC/IMC/PVC Sch.80. Cinta de advertencia a 12" por encima si la profundidad es ≥18" sin envoltura de concreto.
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
