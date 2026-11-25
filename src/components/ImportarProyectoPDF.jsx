@@ -71,6 +71,14 @@ export default function ImportarProyectoPDF({ onConfirmar, normativaActiva }) {
     setError("");
     setResultado(null);
     setAvisoFinal("");
+    // Bug reportado por el usuario (captura real, 2026-11-25): analizar
+    // un documento CORTO justo después de uno largo mostraba el aviso
+    // "el documento es largo" de la corrida ANTERIOR, pegado mientras
+    // la nueva corrida todavía estaba en curso — truncado/avisos solo
+    // se limpiaban al TERMINAR un análisis con éxito, nunca al EMPEZAR
+    // uno nuevo (a diferencia de error/resultado/avisoFinal, que sí).
+    setTruncado(false);
+    setAvisos([]);
     setCargando(true);
     try {
       setMensajeCargando("Leyendo el PDF…");
