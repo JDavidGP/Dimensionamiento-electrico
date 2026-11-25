@@ -171,7 +171,7 @@ export const PlanoMediator = {
    * un nodo del diagrama Y a un marcador del plano a la vez, son
    * aspectos distintos (topología eléctrica vs. ubicación física).
    */
-  candidatosEntidadEquipo(tipoEquipo, { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [], marcadores = [], marcadorId = null } = {}) {
+  candidatosEntidadEquipo(tipoEquipo, { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [], diferenciales = [], marcadores = [], marcadorId = null } = {}) {
     const comp = obtenerComponente(tipoEquipo);
     if (!comp?.entidadVinculada) return [];
     const vinculados = new Set(marcadores.filter((m) => m.id !== marcadorId && m.entidadId).map((m) => m.entidadId));
@@ -193,11 +193,14 @@ export const PlanoMediator = {
     if (comp.entidadVinculada === "transformador") {
       return transformadores.filter((t) => !vinculados.has(t.id));
     }
+    if (comp.entidadVinculada === "diferencial") {
+      return diferenciales.filter((d) => !vinculados.has(d.id));
+    }
     return [];
   },
 
   /** La entidad real que representa este marcador, o null si no tiene vínculo o ya no existe. */
-  resolverEntidadEquipo(marcador, { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [] } = {}) {
+  resolverEntidadEquipo(marcador, { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [], diferenciales = [] } = {}) {
     if (!marcador?.entidadId) return null;
     const comp = obtenerComponente(marcador.tipo);
     if (comp?.entidadVinculada === "tablero") return tableros.find((t) => t.id === marcador.entidadId) ?? null;
@@ -205,6 +208,7 @@ export const PlanoMediator = {
     if (comp?.entidadVinculada === "circuito") return circuitos.find((c) => c.id === marcador.entidadId) ?? null;
     if (comp?.entidadVinculada === "fuenteEnergia") return fuentesEnergia.find((f) => f.id === marcador.entidadId) ?? null;
     if (comp?.entidadVinculada === "transformador") return transformadores.find((t) => t.id === marcador.entidadId) ?? null;
+    if (comp?.entidadVinculada === "diferencial") return diferenciales.find((d) => d.id === marcador.entidadId) ?? null;
     return null;
   },
 

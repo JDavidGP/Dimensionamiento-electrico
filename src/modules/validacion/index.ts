@@ -23,7 +23,7 @@ export {
 
 import { validarIntegridadReferencial, ESTADOS } from "./referencial.ts";
 import { validarIntegridadElectrica } from "./electrica.ts";
-import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, NodoDiagrama, MarcadorEquipoPlano, Proyecto } from "./tipos.ts";
+import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, NodoDiagrama, MarcadorEquipoPlano, Proyecto } from "./tipos.ts";
 import type { OpcionesValidarCircuitoElectrico } from "./electrica.ts";
 import type { Entrada } from "./referencial.ts";
 
@@ -35,9 +35,10 @@ export function obtenerListaIntegridad(
   fuentesEnergia: FuenteEnergia[] = [],
   nodosDiagrama: NodoDiagrama[] = [],
   transformadores: Transformador[] = [],
-  marcadoresEquipoPlano: MarcadorEquipoPlano[] = []
+  marcadoresEquipoPlano: MarcadorEquipoPlano[] = [],
+  diferenciales: Diferencial[] = []
 ): Entrada[] {
-  return validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano);
+  return validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales);
 }
 
 export function obtenerDetalleElectrico(
@@ -58,9 +59,10 @@ export function resumenIntegridad(
   fuentesEnergia: FuenteEnergia[] = [],
   nodosDiagrama: NodoDiagrama[] = [],
   transformadores: Transformador[] = [],
-  marcadoresEquipoPlano: MarcadorEquipoPlano[] = []
+  marcadoresEquipoPlano: MarcadorEquipoPlano[] = [],
+  diferenciales: Diferencial[] = []
 ): Record<"ok" | "advertencia" | "error", number> {
-  const lista = validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano);
+  const lista = validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales);
   return lista.reduce(
     (acc, entrada) => {
       acc[entrada.estado] = (acc[entrada.estado] || 0) + 1;
@@ -71,7 +73,7 @@ export function resumenIntegridad(
 }
 
 export { ESTADOS };
-export type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, NodoDiagrama, MarcadorEquipoPlano, Proyecto, Estado } from "./tipos.ts";
+export type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, NodoDiagrama, MarcadorEquipoPlano, Proyecto, Estado } from "./tipos.ts";
 export type { Entrada } from "./referencial.ts";
 export type { ReporteElectrico, OpcionesValidarCircuitoElectrico, NodoLocalizado } from "./electrica.ts";
 export type { FormularioCircuito, FormularioEquipo } from "./formularios.ts";

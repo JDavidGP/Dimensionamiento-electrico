@@ -91,6 +91,7 @@ export default function PlanoInteligente({
   circuitos = [],
   fuentesEnergia = [],
   transformadores = [],
+  diferenciales = [],
 }) {
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
@@ -257,6 +258,10 @@ export default function PlanoInteligente({
       const tablero = tableros.find((t) => t.id === entidad.tableroId);
       const etiqueta = entidad.etiqueta ? `${entidad.etiqueta} — ` : "";
       return tablero ? `${etiqueta}${entidad.nombre || "Circuito sin nombre"} (${tablero.nombre})` : `${etiqueta}${entidad.nombre || "Circuito sin nombre"}`;
+    }
+    if (comp?.entidadVinculada === "diferencial") {
+      const cantidad = circuitos.filter((c) => c.diferencialId === entidad.id).length;
+      return `${entidad.nombre || "Diferencial sin nombre"} (${entidad.sensibilidadMA ?? 30}mA · ${cantidad} circuito${cantidad === 1 ? "" : "s"})`;
     }
     return entidad.nombre || "(sin nombre)";
   }
@@ -1083,7 +1088,7 @@ export default function PlanoInteligente({
                   >
                     <option value="">— Vincular a (opcional) —</option>
                     {App.plano
-                      .candidatosEntidadEquipo(tipoEquipoSeleccionado, { tableros, equipos, circuitos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano })
+                      .candidatosEntidadEquipo(tipoEquipoSeleccionado, { tableros, equipos, circuitos, fuentesEnergia, transformadores, diferenciales, marcadores: marcadoresEquipoPlano })
                       .map((c) => (
                         <option key={c.id} value={c.id}>
                           {etiquetaEntidadEquipo(tipoEquipoSeleccionado, c)}
@@ -1579,8 +1584,8 @@ export default function PlanoInteligente({
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {marcadoresEquipoPlano.map((m) => {
                 const comp = App.plano.obtenerComponente(m.tipo);
-                const entidad = App.plano.resolverEntidadEquipo(m, { tableros, equipos, circuitos, fuentesEnergia, transformadores });
-                const candidatos = App.plano.candidatosEntidadEquipo(m.tipo, { tableros, equipos, circuitos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano, marcadorId: m.id });
+                const entidad = App.plano.resolverEntidadEquipo(m, { tableros, equipos, circuitos, fuentesEnergia, transformadores, diferenciales });
+                const candidatos = App.plano.candidatosEntidadEquipo(m.tipo, { tableros, equipos, circuitos, fuentesEnergia, transformadores, diferenciales, marcadores: marcadoresEquipoPlano, marcadorId: m.id });
                 // Interior/exterior (usuario, 2026-11-25): se DERIVA del
                 // ambiente que contiene al marcador, nunca se guarda
                 // aparte en el equipo — si el ambiente cambia, el

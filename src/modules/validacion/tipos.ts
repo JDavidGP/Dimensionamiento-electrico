@@ -24,6 +24,8 @@ export interface Circuito extends CircuitoMotor {
   funcion?: string;
   representacion?: string;
   tableroId?: string | null;
+  /** REBT ITC-BT-25 — diferencial (ID) que agrupa este circuito, opcional. */
+  diferencialId?: string | null;
   lineas?: unknown[];
   voltajeManual?: boolean;
   /** No se persiste en el modelo real (se calcula) — algunos llamadores igual lo pasan de largo como dato ya resuelto. */
@@ -57,6 +59,10 @@ export interface Transformador extends EntidadConId {
   fases?: string;
   tensionPrimariaV?: number | string;
   tensionSecundariaV?: number | string;
+}
+
+export interface Diferencial extends EntidadConId {
+  sensibilidadMA?: number | string;
 }
 
 export interface NodoDiagrama {

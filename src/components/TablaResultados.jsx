@@ -103,6 +103,8 @@ export default function TablaResultados({
   tableros = [],
   onAsignarTablero,
   onAsignarLineas,
+  diferenciales = [],
+  onAsignarDiferencial,
   listaIntegridad = [],
 }) {
   if (circuitos.length === 0) {
@@ -183,6 +185,33 @@ export default function TablaResultados({
                   {tableros.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.nombre}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {/* Diferencial (ID, REBT ITC-BT-25) — solo cuando App.jsx lo
+                  pasa (gateado a IEC_ES, ver nota ahí): mismo patrón exacto
+                  que el select de tablero arriba. */}
+              {onAsignarDiferencial && (
+                <select
+                  value={circuito.diferencialId ?? ""}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => onAsignarDiferencial(circuito.id, e.target.value || null)}
+                  style={{
+                    background: colores.bg,
+                    border: `1px solid ${colores.border}`,
+                    borderRadius: 3,
+                    color: circuito.diferencialId ? colores.textMain : colores.textDim,
+                    fontSize: 11,
+                    padding: "4px 6px",
+                    maxWidth: 120,
+                  }}
+                  aria-label={`Diferencial de ${circuito.nombre}`}
+                >
+                  <option value="">— sin diferencial —</option>
+                  {diferenciales.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.nombre}
                     </option>
                   ))}
                 </select>

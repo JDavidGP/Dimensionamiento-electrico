@@ -19,6 +19,11 @@ export function useCircuitos() {
   const [tableros, setTableros] = useState([]);
   const [fuentesEnergia, setFuentesEnergia] = useState([]);
   const [transformadores, setTransformadores] = useState([]);
+  // Diferencial (ID) — REBT ITC-BT-25, agrupa hasta MAX_CIRCUITOS_POR_DIFERENCIAL
+  // circuitos (ver modules/diferencial/index.ts). Mismo patrón exacto
+  // que transformadores/fuentesEnergia: array plano propio, el circuito
+  // guarda `diferencialId` (FK opcional).
+  const [diferenciales, setDiferenciales] = useState([]);
   const [nodosDiagrama, setNodosDiagrama] = useState([]);
   const [conexionesDiagrama, setConexionesDiagrama] = useState([]);
   // --- Plano inteligente (Fase 1, 2026-11-20) — ver
@@ -125,13 +130,14 @@ export function useCircuitos() {
       tableros,
       fuentesEnergia,
       transformadores,
+      diferenciales,
       nodosDiagrama,
       conexionesDiagrama,
       normativaActiva,
       tipoInstalacion,
       resultados,
     });
-  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, normativaActiva, tipoInstalacion, resultados]);
+  }, [proyecto, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, normativaActiva, tipoInstalacion, resultados]);
 
   const totales = useMemo(() => {
     const potenciaTotal = resultados.reduce(
@@ -231,13 +237,13 @@ export function useCircuitos() {
 
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
-    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano),
-    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano]
+    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales]
   );
 
   const resumenInt = useMemo(
-    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano),
-    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano]
+    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales]
   );
 
   const detalleElectrico = useCallback(
@@ -738,6 +744,37 @@ export function useCircuitos() {
     // Idem para su marcador del plano — ver nota en eliminarCircuito.
     setMarcadoresEquipoPlano(App.plano.liberarMarcadoresDeEntidad(id, marcadoresEquipoPlano));
     setTransformadores(transformadores.filter((t) => t.id !== id));
+  }
+
+  // --- DIFERENCIAL (ID, REBT ITC-BT-25 — agrupa hasta 5 circuitos) ---
+  function crearDiferencial(datos) {
+    const diferencial = App.diferencial.crear(datos);
+    setDiferenciales([...diferenciales, diferencial]);
+    return diferencial;
+  }
+
+  function editarDiferencial(id, cambios) {
+    const diferencial = diferenciales.find((d) => d.id === id);
+    if (!diferencial) return;
+    const actualizado = App.diferencial.editar(diferencial, cambios);
+    setDiferenciales(diferenciales.map((d) => (d.id === id ? actualizado : d)));
+  }
+
+  function eliminarDiferencial(id) {
+    // Libera (no rompe) los circuitos que agrupaba — mismo criterio que
+    // eliminarTablero/eliminarFuenteEnergia/eliminarTransformador. Un
+    // diferencial no tiene nodo propio en el diagrama (soloPlano, ver
+    // bibliotecaComponentes.js), solo su marcador del plano.
+    setCircuitos(App.diferencial.liberarCircuitos(id, circuitos));
+    setMarcadoresEquipoPlano(App.plano.liberarMarcadoresDeEntidad(id, marcadoresEquipoPlano));
+    setDiferenciales(diferenciales.filter((d) => d.id !== id));
+  }
+
+  function asignarCircuitoADiferencial(circuitoId, diferencialId) {
+    const circuito = circuitos.find((c) => c.id === circuitoId);
+    if (!circuito) return;
+    const actualizado = App.diferencial.asignar(circuito, diferencialId);
+    setCircuitos(circuitos.map((c) => (c.id === circuitoId ? actualizado : c)));
   }
 
   // --- DIAGRAMA UNIFILAR (Fase 1: modelo de datos — nodos y conexiones) ---
@@ -1605,6 +1642,7 @@ export function useCircuitos() {
       tableros,
       fuentesEnergia,
       transformadores,
+      diferenciales,
       nodosDiagrama,
       conexionesDiagrama,
       plano: {
@@ -1639,6 +1677,7 @@ export function useCircuitos() {
       tableros,
       fuentesEnergia,
       transformadores,
+      diferenciales,
       nodosDiagrama,
       conexionesDiagrama,
       plano: {
@@ -1667,6 +1706,7 @@ export function useCircuitos() {
         setTableros(cargado.tableros ?? []);
         setFuentesEnergia(cargado.fuentesEnergia ?? []);
         setTransformadores(cargado.transformadores ?? []);
+        setDiferenciales(cargado.diferenciales ?? []);
         setNodosDiagrama(cargado.nodosDiagrama ?? []);
         setConexionesDiagrama(cargado.conexionesDiagrama ?? []);
         setPlanoImagen(cargado.plano?.imagen ?? null);
@@ -1694,6 +1734,7 @@ export function useCircuitos() {
     setTableros([]);
     setFuentesEnergia([]);
     setTransformadores([]);
+    setDiferenciales([]);
     setNodosDiagrama([]);
     setConexionesDiagrama([]);
     setPlanoImagen(null);
@@ -1779,6 +1820,11 @@ export function useCircuitos() {
     crearTransformador,
     editarTransformador,
     eliminarTransformador,
+    diferenciales,
+    crearDiferencial,
+    editarDiferencial,
+    eliminarDiferencial,
+    asignarCircuitoADiferencial,
     nodosDiagrama,
     crearNodoDiagrama,
     editarNodoDiagrama,

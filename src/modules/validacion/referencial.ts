@@ -13,7 +13,8 @@
  *
  * No calcula nada eléctrico aquí — solo estructura y referencias.
  */
-import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, NodoDiagrama, MarcadorEquipoPlano, Proyecto, Estado } from "./tipos.ts";
+import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, NodoDiagrama, MarcadorEquipoPlano, Proyecto, Estado } from "./tipos.ts";
+import { MAX_CIRCUITOS_POR_DIFERENCIAL } from "../diferencial/index.ts";
 
 const ESTADOS: Record<"OK" | "ADVERTENCIA" | "ERROR", Estado> = { OK: "ok", ADVERTENCIA: "advertencia", ERROR: "error" };
 
@@ -24,7 +25,7 @@ function peorEstado(a: Estado, b: Estado): Estado {
 
 export interface Entrada {
   id: string;
-  tipo: "tablero" | "circuito" | "equipo" | "fuenteEnergia" | "transformador";
+  tipo: "tablero" | "circuito" | "equipo" | "fuenteEnergia" | "transformador" | "diferencial";
   nombre: string;
   parentId: string | null | undefined;
   estado: Estado;
@@ -111,7 +112,8 @@ function validarCircuito(
   idsVistos: Set<string>,
   tableros: Tablero[] = [],
   nodosDiagrama: NodoDiagrama[] = [],
-  marcadoresEquipoPlano: MarcadorEquipoPlano[] = []
+  marcadoresEquipoPlano: MarcadorEquipoPlano[] = [],
+  diferenciales: Diferencial[] = []
 ): Entrada[] {
   const problemas: string[] = [];
   let estado: Estado = ESTADOS.OK;
@@ -128,6 +130,15 @@ function validarCircuito(
     const tableroExiste = tableros.some((t) => t.id === circuito.tableroId);
     if (!tableroExiste) {
       problemas.push(`Referencia a tablero inexistente (${circuito.tableroId})`);
+      estado = ESTADOS.ERROR;
+    }
+  }
+
+  // diferencialId es opcional (REBT ITC-BT-25) — mismo criterio que tableroId.
+  if (circuito.diferencialId) {
+    const diferencialExiste = diferenciales.some((d) => d.id === circuito.diferencialId);
+    if (!diferencialExiste) {
+      problemas.push(`Referencia a diferencial inexistente (${circuito.diferencialId})`);
       estado = ESTADOS.ERROR;
     }
   }
@@ -381,6 +392,48 @@ function validarTransformador(transformador: Transformador, idsVistos: Set<strin
 }
 
 /**
+ * Diferencial (ID) como entrada propia de integridad — REBT ITC-BT-25.
+ * Mismo criterio que validarTransformador (ID duplicado, representación
+ * en el diagrama) + el chequeo propio de esta entidad: más de
+ * MAX_CIRCUITOS_POR_DIFERENCIAL (5, cita exacta "garantizando un máximo
+ * de cinco circuitos por cada diferencial") es ADVERTENCIA, no error —
+ * un dato a corregir, no un dato roto (el proyecto sigue siendo válido
+ * mientras se reparte en más diferenciales).
+ */
+function validarDiferencial(diferencial: Diferencial, circuitos: Circuito[], idsVistos: Set<string>, proyectoId: string | undefined): Entrada {
+  const problemas: string[] = [];
+  let estado: Estado = ESTADOS.OK;
+
+  if (idsVistos.has(diferencial.id)) {
+    problemas.push("ID duplicado en el proyecto");
+    estado = ESTADOS.ERROR;
+  }
+  idsVistos.add(diferencial.id);
+
+  const circuitosAsociados = circuitos.filter((c) => c.diferencialId === diferencial.id);
+  if (circuitosAsociados.length > MAX_CIRCUITOS_POR_DIFERENCIAL) {
+    problemas.push(
+      `Agrupa ${circuitosAsociados.length} circuitos — ITC-BT-25 garantiza un máximo de ${MAX_CIRCUITOS_POR_DIFERENCIAL} circuitos por diferencial, repartir en más de uno`
+    );
+    estado = peorEstado(estado, ESTADOS.ADVERTENCIA);
+  }
+
+  // Sin chequeo de "representado en el diagrama unifilar" a propósito
+  // — mismo criterio que el propio Circuito (soloPlano, ver bibliotecaComponentes.js):
+  // ninguno de los dos tiene un tipo de nodo en el diagrama, solo marcador en el Plano.
+
+  return crearEntrada({
+    id: diferencial.id,
+    tipo: "diferencial",
+    nombre: diferencial.nombre || diferencial.id,
+    parentId: proyectoId,
+    estado,
+    resumen: `${circuitosAsociados.length} circuito(s) · ${diferencial.sensibilidadMA ?? 30}mA`,
+    problemas,
+  });
+}
+
+/**
  * Punto de entrada de Fase 1 (+ Fase 3, Tablero).
  * @param proyecto - metadatos del proyecto ({ id, nombre, ... })
  * @param circuitos - array plano de circuitos
@@ -390,6 +443,7 @@ function validarTransformador(transformador: Transformador, idsVistos: Set<strin
  * @param nodosDiagrama - array plano de nodos del diagrama unifilar (con entidadId) — caso inverso de la sincronización, ver ARCHITECTURE.md §9
  * @param transformadores - array plano de transformadores (ver modules/motor/transformador.js) — origen seleccionable solo en instalaciones industriales
  * @param marcadoresEquipoPlano - marcadores de equipo del plano (con entidadId) — caso inverso simétrico al de nodosDiagrama, ver modules/plano/index.js
+ * @param diferenciales - array plano de diferenciales (REBT ITC-BT-25, ver modules/diferencial/index.ts) — agrupación opcional de hasta 5 circuitos
  * @returns lista plana de entradas para la UI
  */
 export function validarIntegridadReferencial(
@@ -400,7 +454,8 @@ export function validarIntegridadReferencial(
   fuentesEnergia: FuenteEnergia[] = [],
   nodosDiagrama: NodoDiagrama[] = [],
   transformadores: Transformador[] = [],
-  marcadoresEquipoPlano: MarcadorEquipoPlano[] = []
+  marcadoresEquipoPlano: MarcadorEquipoPlano[] = [],
+  diferenciales: Diferencial[] = []
 ): Entrada[] {
   const idsVistos = new Set<string>();
   const entradas: Entrada[] = [];
@@ -421,9 +476,13 @@ export function validarIntegridadReferencial(
     entradas.push(validarTransformador(tr, idsVistos, proj.id, nodosDiagrama));
   });
 
+  diferenciales.forEach((d) => {
+    entradas.push(validarDiferencial(d, circuitos, idsVistos, proj.id));
+  });
+
   circuitos.forEach((c) => {
     const equiposDelCircuito = equipos.filter((e) => e.circuitoId === c.id);
-    entradas.push(...validarCircuito(c, equiposDelCircuito, proj, idsVistos, listaTableros, nodosDiagrama, marcadoresEquipoPlano));
+    entradas.push(...validarCircuito(c, equiposDelCircuito, proj, idsVistos, listaTableros, nodosDiagrama, marcadoresEquipoPlano, diferenciales));
   });
 
   // Equipos huérfanos (circuitoId que no existe)

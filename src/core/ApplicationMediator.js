@@ -20,6 +20,7 @@ import {
   DocumentoMediator,
   DiagramaMediator,
   TableroMediator,
+  DiferencialMediator,
   OrigenMediator,
   EtiquetadoMediator,
   PlanoMediator,
@@ -40,6 +41,7 @@ export const ApplicationMediator = {
   documento: DocumentoMediator,
   diagrama: DiagramaMediator,
   tablero: TableroMediator,
+  diferencial: DiferencialMediator,
   origen: OrigenMediator,
   etiquetado: EtiquetadoMediator,
   plano: PlanoMediator,
@@ -56,6 +58,7 @@ export const ApplicationMediator = {
     tableros,
     fuentesEnergia,
     transformadores,
+    diferenciales,
     nodosDiagrama,
     conexionesDiagrama,
     normativaActiva,
@@ -69,6 +72,7 @@ export const ApplicationMediator = {
     if (tableros !== undefined) partial.tableros = tableros;
     if (fuentesEnergia !== undefined) partial.fuentesEnergia = fuentesEnergia;
     if (transformadores !== undefined) partial.transformadores = transformadores;
+    if (diferenciales !== undefined) partial.diferenciales = diferenciales;
     if (nodosDiagrama !== undefined) partial.nodosDiagrama = nodosDiagrama;
     if (conexionesDiagrama !== undefined) partial.conexionesDiagrama = conexionesDiagrama;
     if (normativaActiva !== undefined) partial.normativaActiva = normativaActiva;

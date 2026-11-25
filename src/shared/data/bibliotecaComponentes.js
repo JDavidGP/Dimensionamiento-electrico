@@ -57,6 +57,19 @@ export const CATALOGO_COMPONENTES = [
   { id: "interruptor_principal", nombre: "Interruptor principal", categoria: "medicion_proteccion", puntosConexion: { entradas: 1, salidas: 1 }, entidadVinculada: null },
   { id: "interruptor_termomagnetico", nombre: "Interruptor termomagnético", categoria: "medicion_proteccion", puntosConexion: { entradas: 1, salidas: 1 }, entidadVinculada: null },
   { id: "interruptor_diferencial", nombre: "Interruptor diferencial", categoria: "medicion_proteccion", puntosConexion: { entradas: 1, salidas: 1 }, entidadVinculada: null },
+  // Diferencial (ID) — usuario, 2026-11-25 (REBT ITC-BT-25): "El
+  // diferencial se supone que agrupa x cantidad de PIA según
+  // normativa... así que supongo que si debería tener su propio
+  // marcador en el plano". Distinto de "interruptor_diferencial" arriba
+  // (ese es puramente decorativo, sin entidad, pensado para dibujar un
+  // diferencial cualquiera en el Diagrama unifilar): ESTE representa el
+  // diferencial REAL (ver modules/diferencial/index.ts), vinculado por
+  // `entidadId` — mismo patrón que "circuito" (soloPlano, se coloca y
+  // mueve como pieza propia). Agrupa hasta MAX_CIRCUITOS_POR_DIFERENCIAL
+  // circuitos. REBT únicamente — la entidad en sí (y su UI de creación)
+  // queda gateada a IEC_ES, NEC/CIEN no tienen este concepto de
+  // agrupación.
+  { id: "diferencial", nombre: "Diferencial (ID)", categoria: "medicion_proteccion", puntosConexion: { entradas: 1, salidas: Infinity }, entidadVinculada: "diferencial", soloPlano: true },
   { id: "spd", nombre: "Protector contra sobretensiones (SPD)", categoria: "medicion_proteccion", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: null },
   { id: "fusible", nombre: "Fusible", categoria: "medicion_proteccion", puntosConexion: { entradas: 1, salidas: 1 }, entidadVinculada: null },
 

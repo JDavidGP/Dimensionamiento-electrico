@@ -9,7 +9,7 @@
 // este módulo nunca lee su contenido interno — solo lo empaqueta/
 // desempaqueta tal cual, de ida y de vuelta.
 
-import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador } from "../validacion/tipos.ts";
+import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial } from "../validacion/tipos.ts";
 
 export interface ProyectoMeta {
   id?: string;
@@ -39,6 +39,7 @@ export interface DatosSerializarProyecto {
   tableros?: Tablero[];
   fuentesEnergia?: FuenteEnergia[];
   transformadores?: Transformador[];
+  diferenciales?: Diferencial[];
   nodosDiagrama?: unknown[];
   conexionesDiagrama?: unknown[];
   plano?: Partial<PlanoProyecto> | null;
@@ -55,6 +56,7 @@ export interface ProyectoSerializado {
   tableros: Tablero[];
   fuentesEnergia: FuenteEnergia[];
   transformadores: Transformador[];
+  diferenciales: Diferencial[];
   nodosDiagrama: unknown[];
   conexionesDiagrama: unknown[];
   plano: PlanoProyecto;

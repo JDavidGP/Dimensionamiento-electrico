@@ -12,6 +12,7 @@ import PanelBreakers from "./components/PanelBreakers";
 import PanelTableros from "./components/PanelTableros";
 import PanelFuentesEnergia from "./components/PanelFuentesEnergia";
 import PanelTransformadores from "./components/PanelTransformadores";
+import PanelDiferenciales from "./components/PanelDiferenciales";
 import SelectorNormativa from "./components/SelectorNormativa";
 import DiagramaUnifilar from "./components/DiagramaUnifilar";
 import InformeTecnico from "./components/InformeTecnico";
@@ -100,6 +101,11 @@ export default function App() {
     crearTransformador,
     editarTransformador,
     eliminarTransformador,
+    diferenciales,
+    crearDiferencial,
+    editarDiferencial,
+    eliminarDiferencial,
+    asignarCircuitoADiferencial,
     nodosDiagrama,
     crearNodoDiagrama,
     editarNodoDiagrama,
@@ -307,6 +313,22 @@ export default function App() {
                     />
                   </div>
                 )}
+
+                {/* Diferencial (ID): REBT ITC-BT-25 únicamente — NEC/CIEN
+                    no tienen este concepto de agrupación (GFCI/AFCI van
+                    por circuito, no por bloque de 5 PIA), mismo gateo que
+                    el resto de los bloques REBT (BloqueSimultaneidadREBT, etc.). */}
+                {normativaActiva === "IEC_ES" && (
+                  <div style={{ marginTop: 16 }}>
+                    <PanelDiferenciales
+                      diferenciales={diferenciales}
+                      crearDiferencial={crearDiferencial}
+                      editarDiferencial={editarDiferencial}
+                      eliminarDiferencial={eliminarDiferencial}
+                      listaIntegridad={listaIntegridad}
+                    />
+                  </div>
+                )}
               </div>
             ),
           },
@@ -373,6 +395,8 @@ export default function App() {
                     tableros={tableros}
                     onAsignarTablero={asignarCircuitoATablero}
                     onAsignarLineas={asignarLineasCircuito}
+                    diferenciales={normativaActiva === "IEC_ES" ? diferenciales : []}
+                    onAsignarDiferencial={normativaActiva === "IEC_ES" ? asignarCircuitoADiferencial : undefined}
                     listaIntegridad={listaIntegridad}
                   />
 
@@ -467,6 +491,7 @@ export default function App() {
                           circuitos={circuitos}
                           fuentesEnergia={fuentesEnergia}
                           transformadores={transformadores}
+                          diferenciales={diferenciales}
                         />
                       ),
                     },

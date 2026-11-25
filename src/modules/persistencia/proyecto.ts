@@ -52,6 +52,7 @@ export function serializarProyecto({
   tableros,
   fuentesEnergia,
   transformadores,
+  diferenciales,
   nodosDiagrama,
   conexionesDiagrama,
   plano,
@@ -66,6 +67,7 @@ export function serializarProyecto({
     tableros: tableros ?? [],
     fuentesEnergia: fuentesEnergia ?? [],
     transformadores: transformadores ?? [],
+    diferenciales: diferenciales ?? [],
     nodosDiagrama: nodosDiagrama ?? [],
     conexionesDiagrama: conexionesDiagrama ?? [],
     plano: (plano as PlanoProyecto) ?? planoVacio(),
@@ -101,6 +103,9 @@ export function deserializarProyecto(data: unknown): ProyectoSerializado {
     // Compatibilidad: archivos guardados antes de conectar Transformador
     // como origen seleccionable no traen transformadores.
     transformadores: Array.isArray(d.transformadores) ? d.transformadores : [],
+    // Compatibilidad: archivos guardados antes del Diferencial (REBT
+    // ITC-BT-25, 2026-11-25) no traen diferenciales.
+    diferenciales: Array.isArray(d.diferenciales) ? d.diferenciales : [],
     // Compatibilidad: archivos guardados antes del diagrama unifilar
     // (Fase 1) no traen nodos/conexiones.
     nodosDiagrama: Array.isArray(d.nodosDiagrama) ? d.nodosDiagrama : [],

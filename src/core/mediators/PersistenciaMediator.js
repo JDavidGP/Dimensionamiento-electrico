@@ -25,7 +25,7 @@ export const PersistenciaMediator = {
   planoVacio,
   nombreArchivo,
 
-  serializar({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, plano }) {
+  serializar({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }) {
     const data = serializarProyecto({
       proyecto,
       normativaActiva,
@@ -35,6 +35,7 @@ export const PersistenciaMediator = {
       tableros,
       fuentesEnergia,
       transformadores,
+      diferenciales,
       nodosDiagrama,
       conexionesDiagrama,
       plano,
@@ -53,7 +54,7 @@ export const PersistenciaMediator = {
   },
 
   /** Descarga el proyecto como archivo .json en el navegador. */
-  descargarJson({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, plano }) {
+  descargarJson({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }) {
     const datos = this.serializar({
       proyecto,
       normativaActiva,
@@ -63,6 +64,7 @@ export const PersistenciaMediator = {
       tableros,
       fuentesEnergia,
       transformadores,
+      diferenciales,
       nodosDiagrama,
       conexionesDiagrama,
       plano,
@@ -80,7 +82,7 @@ export const PersistenciaMediator = {
   },
 
   /** Descarga el proyecto como archivo .pdf (ficha legible + datos completos incrustados). */
-  async descargarPdf({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, nodosDiagrama, conexionesDiagrama, plano }) {
+  async descargarPdf({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }) {
     const datos = this.serializar({
       proyecto,
       normativaActiva,
@@ -90,6 +92,7 @@ export const PersistenciaMediator = {
       tableros,
       fuentesEnergia,
       transformadores,
+      diferenciales,
       nodosDiagrama,
       conexionesDiagrama,
       plano,

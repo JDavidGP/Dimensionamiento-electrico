@@ -5,6 +5,7 @@ export { PersistenciaMediator } from "./PersistenciaMediator.js";
 export { DocumentoMediator } from "./DocumentoMediator.js";
 export { DiagramaMediator } from "./DiagramaMediator.js";
 export { TableroMediator } from "./TableroMediator.js";
+export { DiferencialMediator } from "./DiferencialMediator.js";
 export { OrigenMediator } from "./OrigenMediator.js";
 export { EtiquetadoMediator } from "./EtiquetadoMediator.js";
 export { PlanoMediator } from "./PlanoMediator.js";
