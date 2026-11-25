@@ -14,6 +14,9 @@ export { calcularCargasDemanda } from "./factorDemanda.ts";
 export { claseCircuitoREBT } from "./claseCircuitoREBT.ts";
 export { calcularLlenadoConducto } from "./canalizacion.ts";
 export { diametroMinimoTuboREBT } from "./canalizacionREBT.ts";
+export { factorAjusteConductoresPortadoresNEC, conductoresPortadoresCorriente } from "./ajusteAgrupamientoNEC.ts";
+export { profundidadMinimaEnterradoNEC, CATEGORIAS_CONDUCTO_ENTERRADO_NEC, UBICACIONES_ENTERRADO_NEC } from "./profundidadEnterradoNEC.ts";
+export { profundidadMinimaEnterradaREBT, separacionMinimaOtrasCanalizacionesREBT, factorAgrupacionTubosREBT, separacionABucket } from "./instalacionEnterradaREBT.ts";
 export {
   calcularCortocircuitoTrifasico,
   calcularCortocircuitoMonofasico,

@@ -84,3 +84,50 @@ export const MULTIPLICADOR_SECCION_INTERIOR_MINIMO = {
 };
 
 export const TIPOS_INSTALACION_TUBO_REBT = Object.keys(TABLA_DIAMETRO_TUBO_REBT);
+
+// --- Instalación enterrada (usuario, 2026-11-25, "canalizaciones
+// aéreas y subterráneas") — ITC-BT-07 (redes subterráneas) + ITC-BT-19
+// Tabla B (factor de agrupación de tubos enterrados). Datos tomados
+// directamente del resumen normativo que aportó el usuario, no de la
+// tabla 2/5 de arriba (esas son para tubo superficial/empotrado, no
+// enterrado — ITC-BT-21 enumera una Tabla 9 propia para enterrado, pero
+// sin los valores de diámetro en mano no se fabrica esa tabla: por eso
+// acá NO hay un diametroMinimoTuboEnterradoREBT, solo lo que sigue, que
+// sí tiene dato real detrás.
+
+/** ITC-BT-07, condiciones generales — profundidad mínima según dónde pasa la zanja, en metros. */
+export const PROFUNDIDAD_MINIMA_ENTERRADA_REBT_M = {
+  acera: 0.6,
+  calzada: 0.8,
+};
+
+/** ITC-BT-07 — protección mecánica (losetas o cinta de señalización) exigida a esta altura sobre el cable directamente enterrado, en metros. */
+export const PROTECCION_MECANICA_ALTURA_REBT_M = 0.25;
+
+/** ITC-BT-07 — separación mínima con otras canalizaciones de servicios, en metros. */
+export const SEPARACION_MINIMA_OTRAS_CANALIZACIONES_REBT_M = {
+  general: 0.2,
+  gas_alta_presion: 0.4,
+};
+
+// ITC-BT-19, Tabla B — factor de corrección por agrupación de tubos
+// enterrados (un cable por tubo), según cantidad de cables y separación
+// entre tubos. A partir de 1 m de separación, factor 1,00 (sin
+// corrección) — por eso esa columna no hace falta tabularla aparte,
+// alcanza con tratar "≥1m" como el propio 1,00 en el código que la lee.
+// Filas EXACTAMENTE las que publica la norma (no están todos los
+// enteros 2-20, hay saltos a 12/16/20) — un conteo intermedio se
+// resuelve en el código que la usa, nunca interpolando acá.
+export const TABLA_FACTOR_AGRUPACION_TUBOS_REBT = [
+  { cables: 2, contacto: 0.8, m025: 0.88, m050: 0.95, m100: 1.0 },
+  { cables: 3, contacto: 0.71, m025: 0.8, m050: 0.88, m100: 0.95 },
+  { cables: 4, contacto: 0.65, m025: 0.71, m050: 0.8, m100: 0.88 },
+  { cables: 5, contacto: 0.6, m025: 0.65, m050: 0.71, m100: 0.8 },
+  { cables: 6, contacto: 0.58, m025: 0.6, m050: 0.65, m100: 0.71 },
+  { cables: 7, contacto: 0.55, m025: 0.58, m050: 0.6, m100: 0.65 },
+  { cables: 8, contacto: 0.53, m025: 0.55, m050: 0.58, m100: 0.6 },
+  { cables: 9, contacto: 0.5, m025: 0.53, m050: 0.55, m100: 0.58 },
+  { cables: 12, contacto: 0.45, m025: 0.5, m050: 0.53, m100: 0.55 },
+  { cables: 16, contacto: 0.4, m025: 0.45, m050: 0.5, m100: 0.53 },
+  { cables: 20, contacto: 0.35, m025: 0.4, m050: 0.45, m100: 0.5 },
+];

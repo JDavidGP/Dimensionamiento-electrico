@@ -15,6 +15,13 @@ import {
   calcularCargasDemanda,
   calcularLlenadoConducto,
   diametroMinimoTuboREBT,
+  factorAjusteConductoresPortadoresNEC,
+  conductoresPortadoresCorriente,
+  profundidadMinimaEnterradoNEC,
+  profundidadMinimaEnterradaREBT,
+  separacionMinimaOtrasCanalizacionesREBT,
+  factorAgrupacionTubosREBT,
+  separacionABucket,
   calcularCortocircuitoTrifasico,
   calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
@@ -88,6 +95,15 @@ export const MotorCalculoMediator = {
   // componente lo llama todavía. Método distinto a NEC (tabla directa
   // por sección+cantidad, no % de área) — ver canalizacionREBT.ts.
   diametroTuboREBT: diametroMinimoTuboREBT,
+  // Instalación enterrada/agrupamiento (usuario, 2026-11-25, "canalizaciones
+  // aéreas y subterráneas") — mismo nivel que diametroTuboREBT arriba.
+  factorAjusteCCCNec: factorAjusteConductoresPortadoresNEC,
+  conductoresPortadoresCorriente,
+  profundidadMinimaEnterradoNEC,
+  profundidadMinimaEnterradaREBT,
+  separacionMinimaOtrasCanalizacionesREBT,
+  factorAgrupacionTubosREBT,
+  separacionABucket,
   cortocircuitoTrifasico: calcularCortocircuitoTrifasico,
   cortocircuitoMonofasico: calcularCortocircuitoMonofasico,
   verificarCapacidadInterrupcion,
