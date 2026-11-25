@@ -75,8 +75,19 @@ export const TABLA_DIAMETRO_TUBO_REBT = {
   // abierto NO es este caso — la norma lo trata como "superficial"
   // (1.2.1, Tabla 2, ya arriba). Por eso la tabla solo llega a 16mm²
   // (las secciones típicas de un latiguillo a una máquina, nunca un
-  // alimentador grande) — no es que falten filas, el método en sí no
-  // se usa para secciones mayores.
+  // alimentador grande) — no es que falten filas, la norma recomienda
+  // no usar este método por encima de 16mm², así que no tabula más.
+  //
+  // CONFIRMADO (usuario, 2026-11-25, contra el PDF oficial): esta
+  // tabla coincide celda a celda con "empotrada" en el rango que
+  // comparten — no es un error de transcripción. El diámetro mínimo
+  // depende de la GEOMETRÍA (cuánto espacio ocupan los conductores),
+  // no de cómo va montado el tubo, así que es normal que el mismo
+  // diámetro físico sirva para ambos métodos. Lo que sí es distinto
+  // entre "empotrada" y "al_aire" es el factor de la regla de respaldo
+  // para >5 conductores (3× vs 4×, ver MULTIPLICADOR_SECCION_INTERIOR_MINIMO
+  // abajo) y que el tubo en sí debe ser flexible (obligatorio para
+  // "al_aire", no para "empotrada").
   al_aire: {
     "1.5": [12, 12, 16, 16, 20],
     "2.5": [12, 16, 20, 20, 20],

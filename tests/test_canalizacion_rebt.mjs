@@ -91,7 +91,7 @@ assert(alAireSeccionGrande.disponible === false, "Al aire, 25mm² no está tabul
 assert(/Tabla 7/.test(alAireSeccionGrande.motivo), `El motivo señala la Tabla 7 específicamente, no la 2 ni la 5 (real: '${alAireSeccionGrande.motivo}')`);
 
 assert(App.motor.diametroTuboREBT(2.5, 3, "al_aire").diametroExteriorMm === 20, "Al aire, 2.5mm² × 3 conductores: 20mm");
-assert(App.motor.diametroTuboREBT(2.5, 3, "empotrada").diametroExteriorMm === 20, "Mismo valor que empotrada para este caso puntual — las tablas pueden coincidir en algunas celdas sin ser la misma tabla");
+assert(App.motor.diametroTuboREBT(2.5, 3, "empotrada").diametroExteriorMm === 20, "Mismo valor que empotrada (confirmado contra el PDF oficial: el diámetro depende de la geometría, no del método de montaje — no es coincidencia de transcripción)");
 assert(App.motor.diametroTuboREBT(2.5, 3, "superficial").diametroExteriorMm === 16, "...pero NO con superficial, que sigue dando 16mm — confirma que son 3 tablas independientes, no una reetiquetada");
 
 console.log(fallos === 0 ? "\nTODOS LOS CHECKS PASARON" : `\n${fallos} CHECK(S) FALLARON`);
