@@ -78,6 +78,15 @@ export const CATALOGO_COMPONENTES = [
   // --- Carga ---
   { id: "contacto", nombre: "Contacto (tomacorriente)", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
   { id: "interruptor", nombre: "Interruptor", categoria: "carga", puntosConexion: { entradas: 1, salidas: 1 }, entidadVinculada: null },
+  // Interruptor conmutado (3 vías) — usuario, 2026-11-25: "generar el
+  // símbolo del interruptor conmutado junto el punto de luz que
+  // controla, para ubicar geográficamente los interruptores conmutados
+  // junto su punto de luz". El vínculo real (qué luminaria controla
+  // CADA interruptor) vive en el marcador (MarcadorEquipoPlano.
+  // controlaMarcadorId, ver modules/plano/tipos.ts) — este catálogo
+  // solo da el símbolo. entidadVinculada: null, igual que "interruptor"
+  // (un interruptor no es un "equipo" con carga propia en el sistema).
+  { id: "interruptor_conmutado", nombre: "Interruptor conmutado (3 vías)", categoria: "carga", puntosConexion: { entradas: 1, salidas: 1 }, entidadVinculada: null },
   { id: "luminaria", nombre: "Luminaria", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },
   // Variantes de luminaria SOLO por cómo se controla (usuario,
   // 2026-11-23) — puramente documental/visual, ningún cálculo cambia

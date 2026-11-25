@@ -62,6 +62,8 @@ export interface MarcadorEquipoPlano {
   tipo: string;
   entidadId: string | null;
   nombre: string;
+  /** Vínculo marcador-a-marcador (usuario, 2026-11-25): para un interruptor conmutado, el id del marcador de luminaria que controla — null si no aplica o todavía no se vinculó. Varios interruptores pueden apuntar a la MISMA luminaria (3/4 vías), a propósito: no es un vínculo exclusivo. Distinto de `entidadId` (que vincula a una entidad REAL del sistema — circuito/tablero/equipo/etc.), este vínculo es puramente geográfico/de plano. */
+  controlaMarcadorId: string | null;
 }
 
 export interface CalibracionDosPuntos {

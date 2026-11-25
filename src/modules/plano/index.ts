@@ -288,7 +288,7 @@ export function vincularRutaConductor(ruta: RutaConductorPlano, entidadId: strin
 // dos aspectos distintos del mismo dato.
 
 export function crearMarcadorEquipo(puntoModelo: Punto, tipo: string, entidadId: string | null = null, nombre: string = ""): MarcadorEquipoPlano {
-  return { id: generarId(), punto: puntoModelo, tipo, entidadId: entidadId || null, nombre: nombre?.trim() || "" };
+  return { id: generarId(), punto: puntoModelo, tipo, entidadId: entidadId || null, nombre: nombre?.trim() || "", controlaMarcadorId: null };
 }
 
 export function editarMarcadorEquipo(marcador: MarcadorEquipoPlano, cambios: Partial<MarcadorEquipoPlano>): MarcadorEquipoPlano {

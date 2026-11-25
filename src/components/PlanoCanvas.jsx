@@ -462,6 +462,35 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                 );
               })}
 
+              {/* Vínculo interruptor conmutado → luminaria que controla
+                  (usuario, 2026-11-25: "ubicar geográficamente los
+                  interruptores conmutados junto su punto de luz") —
+                  conector punteado puramente visual, antes de dibujar los
+                  marcadores para que el ícono quede encima de la línea. Si
+                  la luminaria vinculada ya no existe (se eliminó), no se
+                  dibuja nada — referencia suave, sin romper nada. */}
+              {marcadoresEquipo
+                .filter((m) => m.tipo === "interruptor_conmutado" && m.controlaMarcadorId)
+                .map((interruptor) => {
+                  const luminaria = marcadoresEquipo.find((m) => m.id === interruptor.controlaMarcadorId);
+                  if (!luminaria) return null;
+                  const a = px(interruptor.punto);
+                  const b = px(luminaria.punto);
+                  return (
+                    <line
+                      key={`conmutado-${interruptor.id}`}
+                      x1={a.x}
+                      y1={a.y}
+                      x2={b.x}
+                      y2={b.y}
+                      stroke={colores.textDim}
+                      strokeWidth={1.3 / transformVista.zoom}
+                      strokeDasharray={`${4 / transformVista.zoom} ${4 / transformVista.zoom}`}
+                      pointerEvents="none"
+                    />
+                  );
+                })}
+
               {marcadoresEquipo.map((marcador) => {
                 const p = px(marcador.punto);
                 const tamano = tamanoMarcadorPx(escalaMetrosPorPixel, transformVista.zoom);

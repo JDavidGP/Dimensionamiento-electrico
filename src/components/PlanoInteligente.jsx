@@ -175,6 +175,30 @@ export default function PlanoInteligente({
   const [tipoEquipoSeleccionado, setTipoEquipoSeleccionado] = useState(categoriasEquipo[primeraCategoriaEquipo]?.[0]?.id ?? "");
   const [nombreEquipoNuevo, setNombreEquipoNuevo] = useState("");
   const [entidadEquipoNuevo, setEntidadEquipoNuevo] = useState("");
+  // "¿Qué equipo ya ingresado es?" (usuario, 2026-11-25: "en Circuitos
+  // y resultados ya están los equipos ingresados correcto, por qué no
+  // llevamos esos ID directamente al plano... y lo ubicamos de forma
+  // más sencilla") — ANTES había que adivinar manualmente qué símbolo
+  // (tipo) correspondía a cada equipo real y recién ahí buscarlo en un
+  // segundo selector ya filtrado por ese tipo (candidatosEntidadEquipo
+  // en realidad no filtra por tipo — ver la nota ahí — así que ese
+  // segundo selector mostraba CUALQUIER equipo, aunque no calzara con
+  // el símbolo elegido). Este selector es nuevo y cruza TODOS los
+  // tipos de una: al elegir un equipo real, el símbolo se adivina solo
+  // (mismo motor heurístico que arma el diagrama automático, ver
+  // App.diagrama.elegirSimboloEquipo) y el selector de tipo de abajo
+  // queda como override manual, no como paso obligatorio.
+  const [equipoYaIngresadoSeleccionado, setEquipoYaIngresadoSeleccionado] = useState("");
+
+  function alElegirEquipoYaIngresado(equipoId) {
+    setEquipoYaIngresadoSeleccionado(equipoId);
+    if (!equipoId) return;
+    const equipo = equipos.find((e) => e.id === equipoId);
+    if (!equipo) return;
+    setTipoEquipoSeleccionado(App.diagrama.elegirSimboloEquipo(equipo));
+    setEntidadEquipoNuevo(equipoId);
+    setNombreEquipoNuevo(equipo.nombre || "");
+  }
 
   // Modo "grupo_equipo" (usuario, 2026-11-24) — mismo tipo/nombre-base
   // que "equipo", más la cantidad a generar de una vez.
@@ -411,7 +435,19 @@ export default function PlanoInteligente({
       // escalaMetrosPorPixel) — antes esto fallaba en silencio, un
       // click sin efecto y sin explicación; mismo aviso que ya usa el
       // modo "triangular" para el mismo caso.
-      if (!marcador) mostrarAviso("Calibrá el plano primero.");
+      if (!marcador) {
+        mostrarAviso("Calibrá el plano primero.");
+        return;
+      }
+      // Tras colocar un equipo YA vinculado, limpiar el selector de
+      // "¿Equipo ya ingresado?" — ese equipo ya no es candidato (queda
+      // excluido de la lista al estar vinculado), dejarlo seleccionado
+      // mostraría un valor que ya no está entre las opciones.
+      if (entidadEquipoNuevo) {
+        setEquipoYaIngresadoSeleccionado("");
+        setEntidadEquipoNuevo("");
+        setNombreEquipoNuevo("");
+      }
       return;
     }
 
@@ -517,6 +553,11 @@ export default function PlanoInteligente({
       const escala = planoCalibracion.escalaMetrosPorPixel;
       const puntoImagenElegido = App.plano.modeloAImagen(elegido, escala);
       agregarMarcadorEquipoPlano(puntoImagenElegido, tipoEquipoSeleccionado, entidadEquipoNuevo || null, nombreEquipoNuevo);
+      if (entidadEquipoNuevo) {
+        setEquipoYaIngresadoSeleccionado("");
+        setEntidadEquipoNuevo("");
+        setNombreEquipoNuevo("");
+      }
       reiniciarTriangulacion();
       mostrarAviso("Equipo ubicado por triangulación — ya podés usarlo de referencia para el siguiente.");
       return;
@@ -925,11 +966,29 @@ export default function PlanoInteligente({
 
             {(modo === "equipo" || modo === "triangular" || modo === "grupo_equipo") && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+                {modo !== "grupo_equipo" && (
+                  <select
+                    value={equipoYaIngresadoSeleccionado}
+                    onChange={(e) => alElegirEquipoYaIngresado(e.target.value)}
+                    style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.copper}`, background: colores.bg, color: colores.textMain, fontSize: 12, maxWidth: 220 }}
+                    title="Elegí un equipo que ya cargaste en Circuitos y resultados — el símbolo correcto se completa solo."
+                  >
+                    <option value="">¿Equipo ya ingresado?</option>
+                    {equipos
+                      .filter((e) => !marcadoresEquipoPlano.some((m) => m.entidadId === e.id))
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {etiquetaEntidadEquipo("contacto", e)}
+                        </option>
+                      ))}
+                  </select>
+                )}
                 <select
                   value={tipoEquipoSeleccionado}
                   onChange={(e) => {
                     setTipoEquipoSeleccionado(e.target.value);
                     setEntidadEquipoNuevo("");
+                    setEquipoYaIngresadoSeleccionado("");
                   }}
                   style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12 }}
                 >
@@ -1435,6 +1494,32 @@ export default function PlanoInteligente({
                         ))}
                       </select>
                     )}
+                    {m.tipo === "interruptor_conmutado" && (() => {
+                      // Vínculo marcador-a-marcador (usuario, 2026-11-25):
+                      // qué luminaria controla este interruptor conmutado —
+                      // puramente geográfico/de plano, no es una entidad del
+                      // sistema. Varios interruptores pueden apuntar a la
+                      // misma luminaria (escalera a 3/4 vías), a propósito.
+                      const luminarias = marcadoresEquipoPlano.filter((otro) => otro.tipo.startsWith("luminaria"));
+                      const luminariaVinculada = luminarias.find((l) => l.id === m.controlaMarcadorId);
+                      return (
+                        <select
+                          value={m.controlaMarcadorId ?? ""}
+                          onChange={(e) => editarMarcadorEquipoPlano(m.id, { controlaMarcadorId: e.target.value || null })}
+                          style={{ width: "100%", padding: "4px 6px", marginTop: 4, borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 11.5 }}
+                        >
+                          <option value="">— Controla la luminaria: sin vincular —</option>
+                          {luminariaVinculada === undefined && m.controlaMarcadorId && (
+                            <option value={m.controlaMarcadorId}>(luminaria eliminada)</option>
+                          )}
+                          {luminarias.map((l) => (
+                            <option key={l.id} value={l.id}>
+                              Controla: {l.nombre || App.plano.obtenerComponente(l.tipo)?.nombre || l.tipo}
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    })()}
                   </div>
                 );
               })}
