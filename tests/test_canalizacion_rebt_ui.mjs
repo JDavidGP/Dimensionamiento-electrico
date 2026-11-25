@@ -110,11 +110,17 @@ await page.getByRole("combobox").filter({ hasText: "En contacto" }).selectOption
 await page.waitForTimeout(150);
 assert((await page.getByText("factor de corrección: 1.00").count()) === 1, "3 tubos a ≥1m de separación: sin corrección (1,00)");
 
-// --- Instalación enterrada (ITC-BT-07) — también cambia la tabla de diámetro (Tabla 9, no Tabla 2/5) ---
+// --- Intemperie → ¿se entierra? (ITC-BT-07) — también cambia la tabla de diámetro (Tabla 9, no Tabla 2/5) ---
 const panelRebt = page.locator("div", { hasText: "Diámetro de tubo (ITC-BT-21)" }).filter({ has: page.getByText(/Tubos enterrados agrupados/) }).last();
 assert((await panelRebt.getByText("Tipo de instalación:").count()) === 1, "Antes de marcar enterrado, el selector superficial/empotrada está visible (Tabla 2/5)");
-assert((await page.getByText("¿Este tubo va enterrado? (ITC-BT-07)").count()) === 1, "Existe el toggle de instalación enterrada REBT, en el mismo bloque");
-await page.getByText("¿Este tubo va enterrado? (ITC-BT-07)").click();
+assert((await page.getByText("¿Esta instalación queda a la intemperie (exterior)?").count()) === 1, "Existe el toggle de intemperie REBT, primer paso antes de preguntar si se entierra");
+assert((await page.getByText("¿Se entierra? (si no, queda expuesta — ITC-BT-07)").count()) === 0, "Sin marcar intemperie, todavía no pregunta si se entierra");
+
+await page.getByText("¿Esta instalación queda a la intemperie (exterior)?").click();
+await page.waitForTimeout(150);
+assert((await page.getByText(/sigue siendo "superficial"/).count()) === 1, "Por defecto (sin marcar '¿se entierra?'), aclara que expuesta sigue siendo 'superficial', no 'al aire'");
+
+await page.getByText("¿Se entierra? (si no, queda expuesta — ITC-BT-07)").click();
 await page.waitForTimeout(150);
 assert((await panelRebt.getByText("Tipo de instalación:").count()) === 0, "Al marcar enterrado, el selector superficial/empotrada desaparece (ya no aplica, rige la Tabla 9)");
 assert((await page.getByText("Diámetro exterior mínimo: 25 mm (enterrado, Tabla 9, 2 conductores de 1.5 mm²)").count()) === 1, "Al marcar enterrado, el diámetro cambia a la Tabla 9 (25mm), no sigue en la Tabla 2 (12mm)");

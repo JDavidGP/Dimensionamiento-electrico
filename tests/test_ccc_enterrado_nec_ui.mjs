@@ -71,12 +71,19 @@ assert((await page.getByText(/sin reducción/).count()) >= 1, "Con 2 CCC (≤3) 
 await checkboxes.nth(0).check();
 await page.waitForTimeout(150);
 
-// --- Instalación enterrada (NEC 300.5) ---
-assert((await page.getByText("¿Este tubo va enterrado? (NEC 300.5)").count()) === 1, "Existe el toggle de instalación enterrada, dentro del mismo bloque");
-assert((await page.getByText(/Profundidad mínima exigida:/).count()) === 0, "Cerrado por defecto — no muestra el detalle sin que el usuario lo pida");
+// --- Intemperie → ¿se entierra? (NEC 300.5/300.9) ---
+assert((await page.getByText("¿Esta instalación queda a la intemperie (exterior)?").count()) === 1, "Existe el toggle de intemperie, primer paso antes de preguntar si se entierra");
+assert((await page.getByText("¿Se entierra? (si no, queda expuesta — NEC 300.5)").count()) === 0, "Sin marcar intemperie, todavía no pregunta si se entierra");
 
-await page.getByText("¿Este tubo va enterrado? (NEC 300.5)").click();
+await page.getByText("¿Esta instalación queda a la intemperie (exterior)?").click();
 await page.waitForTimeout(150);
+assert((await page.getByText("¿Se entierra? (si no, queda expuesta — NEC 300.5)").count()) === 1, "Al confirmar intemperie, aparece la pregunta de si se entierra");
+assert((await page.getByText(/wet location.*NEC 300\.9/).count()) === 1, "Recuerda que la intemperie exige wet location SIN IMPORTAR si se entierra o no");
+assert((await page.getByText(/Expuesta \(no enterrada\)/).count()) === 1, "Por defecto (sin marcar '¿se entierra?'), muestra el recordatorio de instalación expuesta");
+
+await page.getByText("¿Se entierra? (si no, queda expuesta — NEC 300.5)").click();
+await page.waitForTimeout(150);
+assert((await page.getByText(/Expuesta \(no enterrada\)/).count()) === 0, "Al marcar '¿se entierra?', ya no muestra el recordatorio de expuesta");
 const textoDefault = await page.getByText(/Profundidad mínima exigida:/).textContent();
 assert(textoDefault.includes('18"'), `Por defecto (PVC, ubicación general): exige 18in — Tabla 300.5 (real: '${textoDefault}')`);
 
@@ -87,8 +94,6 @@ assert((await page.getByText("⚠ No alcanza la profundidad mínima.").count()) 
 await page.getByPlaceholder("Profundidad real (in)").fill("20");
 await page.waitForTimeout(150);
 assert((await page.getByText("✓ Cumple.").count()) === 1, "20in medidos sí cumplen el mínimo de 18in exigido");
-
-assert((await page.getByText(/wet location/).count()) >= 1, "Recuerda el requisito de aislamiento THWN-2 (300.5(B)) para todo enterrado");
 
 console.log("\nErrores de página:", errores);
 assert(errores.length === 0, "Sin errores de página en todo el flujo");

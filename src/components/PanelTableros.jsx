@@ -635,6 +635,14 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
   const tabla = normativa.canalizaciones;
   const [tipoConducto, setTipoConducto] = useState(tabla?.tiposDisponibles?.[0] ?? "");
   const [seleccionados, setSeleccionados] = useState(() => new Set());
+  // Interior/exterior → enterrada o expuesta (usuario, 2026-11-25:
+  // "primero confirma si es para intemperie, luego si es enterrada o
+  // al aire"). La intemperie es la pregunta de ARRIBA: decide si hace
+  // falta aislamiento de ubicación húmeda (NEC 300.9) y herrajes para
+  // exterior, SIN IMPORTAR si se entierra o no — por eso se pregunta
+  // antes, no reemplazada por "¿va enterrado?" (que sigue siendo una
+  // pregunta aparte, gateada acá adentro).
+  const [intemperie, setIntemperie] = useState(false);
   // Instalación enterrada (usuario, 2026-11-25) — NEC 300.5. Es un
   // dato de la ZANJA (dónde pasa, qué va adentro), no de cada circuito
   // por separado, así que vive en este mismo bloque junto al grupo ya
@@ -748,41 +756,56 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
 
       <div style={{ marginTop: 10 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: colores.textMain, cursor: "pointer" }}>
-          <input type="checkbox" checked={enterradoAbierto} onChange={() => setEnterradoAbierto((v) => !v)} />
-          ¿Este tubo va enterrado? (NEC 300.5)
+          <input type="checkbox" checked={intemperie} onChange={(e) => { setIntemperie(e.target.checked); if (!e.target.checked) setEnterradoAbierto(false); }} />
+          ¿Esta instalación queda a la intemperie (exterior)?
         </label>
-        {enterradoAbierto && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6, paddingLeft: 4 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <select value={categoriaEnterrado} onChange={(e) => setCategoriaEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
-                {App.motor.categoriasConductoEnterradoNEC.map((o) => (
-                  <option key={o.valor} value={o.valor}>{o.label}</option>
-                ))}
-              </select>
-              <select value={ubicacionEnterrado} onChange={(e) => setUbicacionEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
-                {App.motor.ubicacionesEnterradoNEC.map((o) => (
-                  <option key={o.valor} value={o.valor}>{o.label}</option>
-                ))}
-              </select>
+        {intemperie && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6, paddingLeft: 4 }}>
+            <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
+              A la intemperie es "wet location" (NEC 300.9) SIN IMPORTAR si se entierra o no → conductores THWN-2 o superior, y cajas/conectores con clasificación para exterior (NEC 314.15).
             </div>
-            {profundidadMinimaIn != null && (
-              <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.5 }}>
-                Profundidad mínima exigida: <strong>{profundidadMinimaIn}"</strong>.{" "}
-                <input
-                  type="number"
-                  step="0.5"
-                  value={profundidadRealIn}
-                  onChange={(e) => setProfundidadRealIn(e.target.value)}
-                  placeholder="Profundidad real (in)"
-                  style={{ ...inputStyle(), width: 110, padding: "3px 6px", fontSize: 11 }}
-                />
-                {profundidadOk === true && <span style={{ color: colores.ok }}> ✓ Cumple.</span>}
-                {profundidadOk === false && <span style={{ color: colores.error }}> ⚠ No alcanza la profundidad mínima.</span>}
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: colores.textMain, cursor: "pointer" }}>
+              <input type="checkbox" checked={enterradoAbierto} onChange={() => setEnterradoAbierto((v) => !v)} />
+              ¿Se entierra? (si no, queda expuesta — NEC 300.5)
+            </label>
+            {enterradoAbierto ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 4 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <select value={categoriaEnterrado} onChange={(e) => setCategoriaEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+                    {App.motor.categoriasConductoEnterradoNEC.map((o) => (
+                      <option key={o.valor} value={o.valor}>{o.label}</option>
+                    ))}
+                  </select>
+                  <select value={ubicacionEnterrado} onChange={(e) => setUbicacionEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+                    {App.motor.ubicacionesEnterradoNEC.map((o) => (
+                      <option key={o.valor} value={o.valor}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {profundidadMinimaIn != null && (
+                  <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.5 }}>
+                    Profundidad mínima exigida: <strong>{profundidadMinimaIn}"</strong>.{" "}
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={profundidadRealIn}
+                      onChange={(e) => setProfundidadRealIn(e.target.value)}
+                      placeholder="Profundidad real (in)"
+                      style={{ ...inputStyle(), width: 110, padding: "3px 6px", fontSize: 11 }}
+                    />
+                    {profundidadOk === true && <span style={{ color: colores.ok }}> ✓ Cumple.</span>}
+                    {profundidadOk === false && <span style={{ color: colores.error }}> ⚠ No alcanza la profundidad mínima.</span>}
+                  </div>
+                )}
+                <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
+                  Si queda expuesto a daño físico, usar RMC/IMC/PVC Sch.80. Cinta de advertencia a 12" por encima si la profundidad es ≥18" sin envoltura de concreto.
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
+                Expuesta (no enterrada): conducto normal (EMT/PVC) pero con fittings/cajas clasificados para exterior. Si queda sobre un techo bajo sol directo, la temperatura ambiente real puede ser mayor que la del aire (310.15(B)(3)(c)) — verificar el factor de temperatura del circuito.
               </div>
             )}
-            <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
-              Todo conducto enterrado es "wet location" (300.5(B)) → conductores THWN-2 o superior. Si queda expuesto a daño físico, usar RMC/IMC/PVC Sch.80. Cinta de advertencia a 12" por encima si la profundidad es ≥18" sin envoltura de concreto.
-            </div>
           </div>
         )}
       </div>
@@ -816,6 +839,15 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
   const [seleccionados, setSeleccionados] = useState(() => new Set());
   const [cantidadTubosAgrupados, setCantidadTubosAgrupados] = useState("");
   const [separacionTubos, setSeparacionTubos] = useState("contacto");
+  // Interior/exterior → enterrada o expuesta (usuario, 2026-11-25:
+  // "primero confirma si es para intemperie, luego si es enterrada o
+  // al aire"). OJO: "al aire" acá NO es lo que el usuario quiso decir
+  // — 1.2.3 ("al_aire" en el selector de arriba) es solo el tramo
+  // flexible a una máquina (ver canalizacionREBT.ts). Una instalación
+  // expuesta a la intemperie pero NO enterrada sigue siendo
+  // "superficial" (Tabla 2) con tubo/cajas aptos para exterior, salvo
+  // que el caso real SÍ sea ese latiguillo a una máquina.
+  const [intemperie, setIntemperie] = useState(false);
   const [enterradoAbierto, setEnterradoAbierto] = useState(false);
   const [ubicacionEnterrado, setUbicacionEnterrado] = useState("acera");
   const [profundidadRealM, setProfundidadRealM] = useState("");
@@ -931,33 +963,45 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
 
       <div style={{ marginTop: 10 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: colores.textMain, cursor: "pointer" }}>
-          <input type="checkbox" checked={enterradoAbierto} onChange={() => setEnterradoAbierto((v) => !v)} />
-          ¿Este tubo va enterrado? (ITC-BT-07)
+          <input type="checkbox" checked={intemperie} onChange={(e) => { setIntemperie(e.target.checked); if (!e.target.checked) setEnterradoAbierto(false); }} />
+          ¿Esta instalación queda a la intemperie (exterior)?
         </label>
-        {enterradoAbierto && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6, paddingLeft: 4 }}>
-            <select value={ubicacionEnterrado} onChange={(e) => setUbicacionEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
-              <option value="acera">Bajo acera</option>
-              <option value="calzada">Bajo calzada</option>
-            </select>
-            {profundidadMinimaM != null && (
-              <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.5 }}>
-                Profundidad mínima exigida: <strong>{profundidadMinimaM.toFixed(2)} m</strong>.{" "}
-                <input
-                  type="number"
-                  step="0.05"
-                  value={profundidadRealM}
-                  onChange={(e) => setProfundidadRealM(e.target.value)}
-                  placeholder="Profundidad real (m)"
-                  style={{ ...inputStyle(), width: 110, padding: "3px 6px", fontSize: 11 }}
-                />
-                {profundidadOk === true && <span style={{ color: colores.ok }}> ✓ Cumple.</span>}
-                {profundidadOk === false && <span style={{ color: colores.error }}> ⚠ No alcanza la profundidad mínima.</span>}
+        {intemperie && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6, paddingLeft: 4 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: colores.textMain, cursor: "pointer" }}>
+              <input type="checkbox" checked={enterradoAbierto} onChange={() => setEnterradoAbierto((v) => !v)} />
+              ¿Se entierra? (si no, queda expuesta — ITC-BT-07)
+            </label>
+            {enterradoAbierto ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 4 }}>
+                <select value={ubicacionEnterrado} onChange={(e) => setUbicacionEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+                  <option value="acera">Bajo acera</option>
+                  <option value="calzada">Bajo calzada</option>
+                </select>
+                {profundidadMinimaM != null && (
+                  <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.5 }}>
+                    Profundidad mínima exigida: <strong>{profundidadMinimaM.toFixed(2)} m</strong>.{" "}
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={profundidadRealM}
+                      onChange={(e) => setProfundidadRealM(e.target.value)}
+                      placeholder="Profundidad real (m)"
+                      style={{ ...inputStyle(), width: 110, padding: "3px 6px", fontSize: 11 }}
+                    />
+                    {profundidadOk === true && <span style={{ color: colores.ok }}> ✓ Cumple.</span>}
+                    {profundidadOk === false && <span style={{ color: colores.error }}> ⚠ No alcanza la profundidad mínima.</span>}
+                  </div>
+                )}
+                <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
+                  Protección mecánica (losetas o cinta de señalización) a 0,25 m sobre el cable si va directamente enterrado. Separación mínima con otras canalizaciones (agua/gas/telecom): 0,20 m (0,40 m con gas de alta presión).
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
+                Expuesta (no enterrada): sigue siendo "superficial" (Tabla 2) — usar tubo y cajas con grado de protección (IP) adecuado para exterior. "Al aire" (arriba) es SOLO si el caso real es el tramo de tubo flexible a una máquina, no por estar simplemente a la intemperie.
               </div>
             )}
-            <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
-              Protección mecánica (losetas o cinta de señalización) a 0,25 m sobre el cable si va directamente enterrado. Separación mínima con otras canalizaciones (agua/gas/telecom): 0,20 m (0,40 m con gas de alta presión).
-            </div>
           </div>
         )}
       </div>
