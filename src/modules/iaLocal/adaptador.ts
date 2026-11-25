@@ -51,6 +51,24 @@ function primerVoltajeEstandar(normativaActiva: string, fases: string): number |
   return lista?.[0] ?? null;
 }
 
+// Plausibilidad breaker↔carga (usuario, 2026-11-25, tras probar con una
+// memoria técnica real de 8 páginas con contenido duplicado: la IA
+// local devolvió el MISMO amperaje — el de la acometida completa,
+// "Iprot = 113.9A" — como si fuera el breaker de CADA circuito, desde
+// una luz de 480W hasta una ducha de 4500W. esquema.ts solo valida que
+// corriente_a esté en un rango físico posible EN SÍ MISMO (0.01–10000A)
+// — 113.9A pasa ese filtro sin problema, pero es absurdo para una
+// lámpara. Acá se cruza contra la carga real (potencia_w/voltaje_v) de
+// ESE circuito — nunca se corrige el valor (podría ser el dato real),
+// solo se avisa cuando no calza ni de lejos, para que el usuario lo
+// revise contra el documento antes de confiar en la vista previa.
+const FACTOR_BREAKER_MAXIMO_RAZONABLE = 8; // generoso: cubre hasta motores con alto margen de arranque (NEC 430) sin disparar falsos positivos en casos normales
+function corrienteCargaAproximadaA(potenciaW: number, voltajeV: number, fases: string): number | null {
+  if (!(potenciaW > 0) || !(voltajeV > 0)) return null;
+  const divisor = fases === "tri" ? voltajeV * Math.sqrt(3) : voltajeV;
+  return potenciaW / divisor;
+}
+
 export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva: string): TableroParaImportar[] {
   return tableros.map((t) => {
     const fasesTablero = t.fases || "mono";
@@ -119,6 +137,24 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
         );
       } else {
         advertencias.push("Sin potencia ni corriente en el documento — el circuito se crea sin carga, hay que agregarla a mano.");
+      }
+
+      // Con potencia Y breaker dados a la vez (el caso más confiable,
+      // ambos de columnas distintas del documento), se cruzan entre sí
+      // — ver nota de corrienteCargaAproximadaA arriba.
+      if (c.potencia_w != null && c.corriente_a != null) {
+        const cargaAprox = corrienteCargaAproximadaA(c.potencia_w, voltaje, fases);
+        if (cargaAprox != null) {
+          if (c.corriente_a < cargaAprox * 0.95) {
+            advertencias.push(
+              `El breaker que da el documento (${c.corriente_a}A) es MENOR que la corriente estimada de esta carga (≈${cargaAprox.toFixed(1)}A, de ${c.potencia_w}W a ${voltaje}V) — revisar contra el documento original, puede ser un error de extracción.`
+            );
+          } else if (c.corriente_a > cargaAprox * FACTOR_BREAKER_MAXIMO_RAZONABLE) {
+            advertencias.push(
+              `El breaker que da el documento (${c.corriente_a}A) parece desproporcionado para esta carga (≈${cargaAprox.toFixed(1)}A, de ${c.potencia_w}W a ${voltaje}V) — revisar contra el documento original, puede confundirse con la corriente de diseño de toda la acometida en vez de la de este circuito.`
+            );
+          }
+        }
       }
 
       const errorValidacion = App.validacion.validarFormularioCircuito(form);
