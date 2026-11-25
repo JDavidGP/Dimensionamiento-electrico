@@ -49,6 +49,8 @@ import {
   detectarParedesCandidatas,
   calcularCrucesPared,
   ANGULO_MINIMO_CRUCE_GRADOS,
+  cajaDeHabitacion,
+  calcularDeltaConEnganche,
 } from "../../modules/plano/index.ts";
 import {
   distancia,
@@ -91,6 +93,8 @@ export const PlanoMediator = {
   vincularRutaConductor,
   calcularCrucesPared,
   ANGULO_MINIMO_CRUCE_GRADOS,
+  cajaDeHabitacion,
+  calcularDeltaConEnganche,
 
   /**
    * Circuitos/tableros candidatos para vincular a una ruta de

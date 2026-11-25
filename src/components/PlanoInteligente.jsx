@@ -111,6 +111,15 @@ export default function PlanoInteligente({
   // ahora mismo quien está trazando).
   const [asistenciaBordes, setAsistenciaBordes] = useState(true);
 
+  // Enganche automático de "Mover ambiente" (usuario, 2026-11-25) —
+  // mismo criterio que asistenciaBordes: preferencia de herramienta,
+  // no se persiste. Prendido por defecto (es la mejora que se estaba
+  // debiendo desde el "plano sin imagen" v1); se puede apagar si
+  // molesta sobre un plano con ambientes trazados a mano de forma
+  // irregular (el enganche usa la caja envolvente, ver
+  // modules/plano/enganchePuzzle.ts).
+  const [engancheAutomatico, setEngancheAutomatico] = useState(true);
+
   // Capas visibles (usuario, 2026-11-22: "necesitamos algo visual que
   // separe las líneas de las paredes con las rutas de los
   // conductores") — preferencia de herramienta, NO se persiste, mismo
@@ -811,6 +820,15 @@ export default function PlanoInteligente({
                   </label>
                 </>
               )}
+              {modo === "mover-ambiente" && (
+                <>
+                  {" "}·{" "}
+                  <label style={{ cursor: "pointer" }}>
+                    <input type="checkbox" checked={engancheAutomatico} onChange={(e) => setEngancheAutomatico(e.target.checked)} style={{ marginRight: 4 }} />
+                    Enganche automático (encaja contra otros ambientes y el borde del plano)
+                  </label>
+                </>
+              )}
               {modo === "triangular" && (
                 <>
                   {" "}·{" "}
@@ -987,7 +1005,7 @@ export default function PlanoInteligente({
           }
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
-          onArrastrarHabitacion={moverHabitacionPlano}
+          onArrastrarHabitacion={(habitacionId, deltaM) => moverHabitacionPlano(habitacionId, deltaM, engancheAutomatico)}
           onArrastrarMarcador={moverMarcadorEquipoPlano}
           onTrazarRectangulo={alTrazarRectangulo}
           asistenciaBordes={asistenciaBordes}

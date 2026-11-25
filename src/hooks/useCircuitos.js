@@ -1038,10 +1038,44 @@ export function useCircuitos() {
   // canvas a partir del movimiento del puntero (el hook no sabe nada
   // de píxeles de pantalla ni de zoom, ver la nota de arquitectura en
   // modules/plano/coordenadas.js).
-  function moverHabitacionPlano(habitacionId, deltaM) {
+  // `conEnganche` (usuario, 2026-11-25, deuda dejada a propósito al
+  // construir "plano sin imagen" v1): engancha el ambiente arrastrado
+  // contra los demás ambientes y el marco del plano (real o sintético)
+  // cuando algún borde queda a menos de RADIO_SNAP_METROS — ver
+  // modules/plano/enganchePuzzle.ts para la mecánica completa. El
+  // instalador puede apagarlo (checkbox en PlanoInteligente.jsx) si
+  // molesta sobre un plano con ambientes irregulares (el enganche usa
+  // la CAJA envolvente de cada ambiente, no su forma exacta).
+  function moverHabitacionPlano(habitacionId, deltaM, conEnganche = true) {
     const habitacion = habitacionesPlano.find((h) => h.id === habitacionId);
     if (!habitacion) return;
-    setNodosPlano(App.plano.moverNodos(habitacion.nodoIds, deltaM, nodosPlano));
+    if (!conEnganche) {
+      setNodosPlano(App.plano.moverNodos(habitacion.nodoIds, deltaM, nodosPlano));
+      return;
+    }
+
+    const cajaActual = App.plano.cajaDeHabitacion(habitacion, nodosPlano);
+    if (!cajaActual) {
+      setNodosPlano(App.plano.moverNodos(habitacion.nodoIds, deltaM, nodosPlano));
+      return;
+    }
+
+    const cajasReferencia = habitacionesPlano
+      .filter((h) => h.id !== habitacionId)
+      .map((h) => App.plano.cajaDeHabitacion(h, nodosPlano))
+      .filter(Boolean);
+
+    if (planoImagen && planoCalibracion) {
+      cajasReferencia.push({
+        xMin: 0,
+        xMax: planoImagen.anchoPx * planoCalibracion.escalaMetrosPorPixel,
+        yMin: 0,
+        yMax: planoImagen.altoPx * planoCalibracion.escalaMetrosPorPixel,
+      });
+    }
+
+    const deltaConEnganche = App.plano.calcularDeltaConEnganche(cajaActual, deltaM, cajasReferencia, App.plano.RADIO_SNAP_METROS);
+    setNodosPlano(App.plano.moverNodos(habitacion.nodoIds, deltaConEnganche, nodosPlano));
   }
 
   // Registra una ruta de conductor a partir de una cadena de nodos YA

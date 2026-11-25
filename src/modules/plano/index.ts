@@ -40,6 +40,7 @@ export { detectarParedesCandidatas } from "./deteccionLineas.ts";
 export { calcularHomografia, aplicarHomografia, invertirMatriz3x3 } from "./homografia.ts";
 export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.ts";
 export { calcularCrucesPared, ANGULO_MINIMO_CRUCE_GRADOS } from "./cruceParedes.ts";
+export { cajaDeHabitacion, calcularDeltaConEnganche } from "./enganchePuzzle.ts";
 
 export type {
   Punto,
@@ -60,6 +61,7 @@ export type {
   DatosExportarDXF,
 } from "./tipos.ts";
 export type { CrucePared, ResultadoCrucesPared } from "./cruceParedes.ts";
+export type { CajaAABB } from "./enganchePuzzle.ts";
 
 // Radio de "pegado" al trazar — un click a menos de 30cm (en el mundo
 // real, no en píxeles de pantalla: así es independiente del zoom) de
