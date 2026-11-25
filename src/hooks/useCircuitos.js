@@ -32,6 +32,14 @@ export function useCircuitos() {
   // cálculo (ver el diseño, §1 y §4).
   const [planoImagen, setPlanoImagen] = useState(null);
   const [planoCalibracion, setPlanoCalibracion] = useState(null);
+  // Altura de techo general del plano (piso a viga corona/encofrado),
+  // en metros — usuario, 2026-11-25: dato real distinto del ancho/largo
+  // en planta, útil para el tramo vertical del conductor hacia tomas e
+  // interruptores (ese cálculo en sí todavía no existe, esto es solo la
+  // captura del dato). null = no capturada todavía. Cada ambiente puede
+  // override-ar esto con su propio HabitacionPlano.alturaM si necesita
+  // una altura distinta (ver editarAlturaHabitacionPlano).
+  const [alturaTechoPlanoM, setAlturaTechoPlanoM] = useState(null);
   const [nodosPlano, setNodosPlano] = useState([]);
   const [segmentosPlano, setSegmentosPlano] = useState([]);
   const [habitacionesPlano, setHabitacionesPlano] = useState([]);
@@ -817,6 +825,7 @@ export function useCircuitos() {
       return renderizarPrimeraPaginaPDF(archivo).then((raster) => {
         setPlanoImagen({ dataUrl: raster.dataUrl, anchoPx: raster.anchoPx, altoPx: raster.altoPx, nombreArchivo: archivo.name, paginasTotal: raster.paginasTotal });
         setPlanoCalibracion(null);
+        setAlturaTechoPlanoM(null);
         setNodosPlano([]);
         setSegmentosPlano([]);
         setHabitacionesPlano([]);
@@ -831,6 +840,7 @@ export function useCircuitos() {
         img.onload = () => {
           setPlanoImagen({ dataUrl: e.target.result, anchoPx: img.naturalWidth, altoPx: img.naturalHeight, nombreArchivo: archivo.name });
           setPlanoCalibracion(null);
+          setAlturaTechoPlanoM(null);
           setNodosPlano([]);
           setSegmentosPlano([]);
           setHabitacionesPlano([]);
@@ -948,6 +958,32 @@ export function useCircuitos() {
 
   function renombrarHabitacionPlano(habitacionId, nombre) {
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, nombre: nombre.trim() || "Ambiente sin nombre" } : h)));
+  }
+
+  // "" vacío = vuelve a usar la altura general del plano (alturaTechoPlanoM).
+  // El guard es `>= 0` (no `> 0`) a propósito: un 0 de paso mientras se
+  // tipea un decimal (ej. "0" antes de "0.5") no debe rechazarse, nada
+  // calcula todavía con este valor así que no hay riesgo real.
+  function editarAlturaHabitacionPlano(habitacionId, alturaTexto) {
+    const texto = String(alturaTexto).trim();
+    if (texto === "") {
+      setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, alturaM: null } : h)));
+      return;
+    }
+    const valor = parseFloat(texto);
+    if (!(valor >= 0)) return;
+    setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, alturaM: valor } : h)));
+  }
+
+  function establecerAlturaTechoPlano(alturaTexto) {
+    const texto = String(alturaTexto).trim();
+    if (texto === "") {
+      setAlturaTechoPlanoM(null);
+      return;
+    }
+    const valor = parseFloat(texto);
+    if (!(valor >= 0)) return;
+    setAlturaTechoPlanoM(valor);
   }
 
   // Generador de ambiente por dimensión conocida (2026-11-20) — el
@@ -1125,6 +1161,7 @@ export function useCircuitos() {
   function quitarImagenPlano() {
     setPlanoImagen(null);
     setPlanoCalibracion(null);
+    setAlturaTechoPlanoM(null);
     setNodosPlano([]);
     setSegmentosPlano([]);
     setHabitacionesPlano([]);
@@ -1161,7 +1198,7 @@ export function useCircuitos() {
   // todavía (confirmado con el usuario: v1 es arrastre libre, igual
   // que ya funciona; el motor de alineación para que no queden huecos
   // es una mejora aparte, a propósito no construida acá).
-  function crearPlanoSinImagen(anchoM, altoM, nombre = "") {
+  function crearPlanoSinImagen(anchoM, altoM, nombre = "", alturaTechoM = null) {
     if (!(anchoM > 0) || !(altoM > 0)) return null;
     const anchoPx = Math.round(anchoM * PX_POR_METRO_RECTIFICADO);
     const altoPx = Math.round(altoM * PX_POR_METRO_RECTIFICADO);
@@ -1178,12 +1215,13 @@ export function useCircuitos() {
       distanciaRealM: anchoM,
       escalaMetrosPorPixel: 1 / PX_POR_METRO_RECTIFICADO,
     });
+    setAlturaTechoPlanoM(alturaTechoM > 0 ? alturaTechoM : null);
     setNodosPlano([]);
     setSegmentosPlano([]);
     setHabitacionesPlano([]);
     setRutasConductorPlano([]);
     setMarcadoresEquipoPlano([]);
-    return { anchoM, altoM };
+    return { anchoM, altoM, alturaTechoM: alturaTechoM > 0 ? alturaTechoM : null };
   }
 
   function corregirPerspectivaPlano(puntosImagenOrigen, anchoRealM, altoRealM) {
@@ -1268,6 +1306,7 @@ export function useCircuitos() {
       plano: {
         imagen: planoImagen,
         calibracion: planoCalibracion,
+        alturaTechoM: alturaTechoPlanoM,
         nodos: nodosPlano,
         segmentos: segmentosPlano,
         habitaciones: habitacionesPlano,
@@ -1301,6 +1340,7 @@ export function useCircuitos() {
       plano: {
         imagen: planoImagen,
         calibracion: planoCalibracion,
+        alturaTechoM: alturaTechoPlanoM,
         nodos: nodosPlano,
         segmentos: segmentosPlano,
         habitaciones: habitacionesPlano,
@@ -1327,6 +1367,7 @@ export function useCircuitos() {
         setConexionesDiagrama(cargado.conexionesDiagrama ?? []);
         setPlanoImagen(cargado.plano?.imagen ?? null);
         setPlanoCalibracion(cargado.plano?.calibracion ?? null);
+        setAlturaTechoPlanoM(cargado.plano?.alturaTechoM ?? null);
         setNodosPlano(cargado.plano?.nodos ?? []);
         setSegmentosPlano(cargado.plano?.segmentos ?? []);
         setHabitacionesPlano(cargado.plano?.habitaciones ?? []);
@@ -1353,6 +1394,7 @@ export function useCircuitos() {
     setConexionesDiagrama([]);
     setPlanoImagen(null);
     setPlanoCalibracion(null);
+    setAlturaTechoPlanoM(null);
     setNodosPlano([]);
     setSegmentosPlano([]);
     setHabitacionesPlano([]);
@@ -1448,6 +1490,8 @@ export function useCircuitos() {
     planoCalibracion,
     calibrarPlano,
     calibrarPlanoPorPerimetro,
+    alturaTechoPlanoM,
+    establecerAlturaTechoPlano,
     nodosPlano,
     segmentosPlano,
     agregarNodoPlano,
@@ -1459,6 +1503,7 @@ export function useCircuitos() {
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
+    editarAlturaHabitacionPlano,
     generarHabitacionPlano,
     generarHabitacionPorArrastre,
     moverHabitacionPlano,

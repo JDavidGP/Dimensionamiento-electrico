@@ -50,7 +50,7 @@ await page.getByRole("button", { name: "Generar ambiente", exact: true }).click(
 await page.waitForTimeout(150);
 await page.getByPlaceholder("Nombre (ej. Habitación #1)").fill("Habitación #1");
 await page.getByPlaceholder("Ancho (m)").fill("10");
-await page.getByPlaceholder("Alto (m)").fill("6");
+await page.getByPlaceholder("Largo (m)").fill("6");
 
 const centroImagen = { x: 400, y: 300 }; // bien adentro del lienzo de 1200x900 cargado
 const pCentro = await puntoPantallaDesdeImagen(centroImagen);

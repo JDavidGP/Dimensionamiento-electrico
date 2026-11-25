@@ -114,6 +114,8 @@ export default function App() {
     planoCalibracion,
     calibrarPlano,
     calibrarPlanoPorPerimetro,
+    alturaTechoPlanoM,
+    establecerAlturaTechoPlano,
     nodosPlano,
     segmentosPlano,
     agregarNodoPlano,
@@ -125,6 +127,7 @@ export default function App() {
     cerrarHabitacionPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
+    editarAlturaHabitacionPlano,
     generarHabitacionPlano,
     generarHabitacionPorArrastre,
     moverHabitacionPlano,
@@ -399,6 +402,8 @@ export default function App() {
                           planoCalibracion={planoCalibracion}
                           calibrarPlano={calibrarPlano}
                           calibrarPlanoPorPerimetro={calibrarPlanoPorPerimetro}
+                          alturaTechoPlanoM={alturaTechoPlanoM}
+                          establecerAlturaTechoPlano={establecerAlturaTechoPlano}
                           nodosPlano={nodosPlano}
                           segmentosPlano={segmentosPlano}
                           agregarNodoPlano={agregarNodoPlano}
@@ -410,6 +415,7 @@ export default function App() {
                           cerrarHabitacionPlano={cerrarHabitacionPlano}
                           eliminarHabitacionPlano={eliminarHabitacionPlano}
                           renombrarHabitacionPlano={renombrarHabitacionPlano}
+                          editarAlturaHabitacionPlano={editarAlturaHabitacionPlano}
                           generarHabitacionPlano={generarHabitacionPlano}
                           generarHabitacionPorArrastre={generarHabitacionPorArrastre}
                           moverHabitacionPlano={moverHabitacionPlano}

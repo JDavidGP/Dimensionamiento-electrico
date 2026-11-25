@@ -45,6 +45,8 @@ export default function PlanoInteligente({
   planoCalibracion,
   calibrarPlano,
   calibrarPlanoPorPerimetro,
+  alturaTechoPlanoM,
+  establecerAlturaTechoPlano,
   nodosPlano,
   segmentosPlano,
   agregarNodoPlano,
@@ -56,6 +58,7 @@ export default function PlanoInteligente({
   cerrarHabitacionPlano,
   eliminarHabitacionPlano,
   renombrarHabitacionPlano,
+  editarAlturaHabitacionPlano,
   generarHabitacionPlano,
   generarHabitacionPorArrastre,
   moverHabitacionPlano,
@@ -90,6 +93,7 @@ export default function PlanoInteligente({
   const [sinImagenAncho, setSinImagenAncho] = useState("");
   const [sinImagenAlto, setSinImagenAlto] = useState("");
   const [sinImagenNombre, setSinImagenNombre] = useState("");
+  const [sinImagenAlturaTecho, setSinImagenAlturaTecho] = useState("");
 
   // "Sugerir paredes" (usuario, 2026-11-20, "asistencia mejorada, no
   // automática") — PlanoCanvas.jsx expone la detección vía ref porque
@@ -255,18 +259,20 @@ export default function PlanoInteligente({
     e.preventDefault();
     const ancho = parseFloat(sinImagenAncho);
     const alto = parseFloat(sinImagenAlto);
-    const resultado = crearPlanoSinImagen(ancho, alto, sinImagenNombre);
+    const alturaTecho = sinImagenAlturaTecho ? parseFloat(sinImagenAlturaTecho) : null;
+    const resultado = crearPlanoSinImagen(ancho, alto, sinImagenNombre, alturaTecho);
     if (!resultado) {
-      mostrarAviso("El ancho y el alto deben ser mayores a 0.");
+      mostrarAviso("El ancho y el largo deben ser mayores a 0.");
       return;
     }
     setSinImagenAbierto(false);
     setSinImagenAncho("");
     setSinImagenAlto("");
     setSinImagenNombre("");
+    setSinImagenAlturaTecho("");
     cambiarModo("rectangulo");
     mostrarAviso(
-      `Marco de ${ancho}m × ${alto}m creado y ya calibrado — usá "Trazar rectángulo" o "Generar ambiente" para ir agregando cada habitación por su medida, y "Mover ambiente" para acomodarlas dentro del marco.`
+      `Marco de ${ancho}m × ${alto}m creado y ya calibrado${resultado.alturaTechoM ? ` (altura de techo: ${resultado.alturaTechoM}m)` : ""} — usá "Trazar rectángulo" o "Generar ambiente" para ir agregando cada habitación por su medida, y "Mover ambiente" para acomodarlas dentro del marco.`
     );
   }
 
@@ -375,7 +381,7 @@ export default function PlanoInteligente({
       const ancho = parseFloat(anchoAmbienteInput);
       const alto = parseFloat(altoAmbienteInput);
       if (!(ancho > 0) || !(alto > 0)) {
-        mostrarAviso("Completá un ancho y un alto mayores a 0 antes de hacer click.");
+        mostrarAviso("Completá un ancho y un largo mayores a 0 antes de hacer click.");
         return;
       }
       const habitacion = generarHabitacionPlano(puntoImagen, nombreAmbienteNuevo, ancho, alto);
@@ -666,13 +672,25 @@ export default function PlanoInteligente({
               />
             </div>
             <div>
-              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Alto total (m)</div>
+              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Largo total (m)</div>
               <input
                 type="number"
                 step="0.01"
                 value={sinImagenAlto}
                 onChange={(e) => setSinImagenAlto(e.target.value)}
                 placeholder="Ej: 8"
+                style={{ ...inputStyle(), width: 90 }}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Altura de techo (m, opcional)</div>
+              <input
+                type="number"
+                step="0.01"
+                value={sinImagenAlturaTecho}
+                onChange={(e) => setSinImagenAlturaTecho(e.target.value)}
+                placeholder="Ej: 2.4"
+                title="Piso a viga corona/encofrado — dato real distinto del largo en planta, para el tramo vertical del conductor hacia tomas e interruptores."
                 style={{ ...inputStyle(), width: 90 }}
               />
             </div>
@@ -939,7 +957,7 @@ export default function PlanoInteligente({
                   step="0.01"
                   value={altoAmbienteInput}
                   onChange={(e) => setAltoAmbienteInput(e.target.value)}
-                  placeholder="Alto (m)"
+                  placeholder="Largo (m)"
                   style={{ padding: "6px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 12, width: 90 }}
                 />
               </div>
@@ -992,7 +1010,7 @@ export default function PlanoInteligente({
               <input style={{ ...inputStyle(), width: 110 }} type="number" step="0.01" autoFocus value={anchoRealInput} onChange={(e) => setAnchoRealInput(e.target.value)} placeholder="Ej: 4" />
             </div>
             <div>
-              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Alto real del rectángulo (m):</div>
+              <div style={{ fontSize: 10, color: colores.textDim, marginBottom: 4 }}>Largo real del rectángulo (m):</div>
               <input style={{ ...inputStyle(), width: 110 }} type="number" step="0.01" value={altoRealInput} onChange={(e) => setAltoRealInput(e.target.value)} placeholder="Ej: 3" />
             </div>
             <button
@@ -1113,6 +1131,20 @@ export default function PlanoInteligente({
             )}
             {" "}({planoCalibracion.escalaMetrosPorPixel.toFixed(5)} m/px).{" "}
             <button type="button" onClick={() => cambiarModo("calibrar")} style={{ background: "none", border: "none", color: colores.copper, fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 10.5 }}>Recalibrar</button>
+            <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+              <span title="Piso a viga corona/encofrado — dato real distinto del ancho/largo en planta, para el tramo vertical del conductor hacia tomas e interruptores.">
+                Altura de techo general (m):
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={alturaTechoPlanoM ?? ""}
+                onChange={(e) => establecerAlturaTechoPlano(e.target.value)}
+                placeholder="Ej: 2.4"
+                style={{ ...inputStyle(), width: 70, padding: "3px 6px", fontSize: 10.5 }}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -1147,6 +1179,20 @@ export default function PlanoInteligente({
                   </div>
                   <div style={{ fontFamily: fuentes.mono, fontSize: 11.5, color: colores.textDim }}>
                     {h.areaM2.toFixed(2)} m² · perímetro {h.perimetroM.toFixed(2)} m
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                    <span style={{ fontSize: 10.5, color: colores.textDim }} title="Deja vacío para usar la altura general del plano.">
+                      Altura propia (m):
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={h.alturaM ?? ""}
+                      onChange={(e) => editarAlturaHabitacionPlano(h.id, e.target.value)}
+                      placeholder={alturaTechoPlanoM != null ? `gral. ${alturaTechoPlanoM}` : "—"}
+                      style={{ ...inputStyle(), width: 70, padding: "3px 6px", fontSize: 10.5 }}
+                    />
                   </div>
                 </div>
               ))}

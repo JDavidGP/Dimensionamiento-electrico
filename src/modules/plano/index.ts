@@ -164,6 +164,7 @@ export function crearHabitacion(nodoIds: string[], nodos: NodoPlano[] = [], nomb
     nombre: nombre?.trim() || "Ambiente sin nombre",
     areaM2: areaPoligono(puntos),
     perimetroM: perimetroPoligono(puntos),
+    alturaM: null,
   };
 }
 

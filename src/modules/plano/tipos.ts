@@ -37,6 +37,8 @@ export interface HabitacionPlano {
   nombre: string;
   areaM2: number;
   perimetroM: number;
+  /** Altura de techo propia de este ambiente (piso a viga corona), en metros. null = usa la altura general del plano. */
+  alturaM: number | null;
 }
 
 export type EntidadVinculadaRuta = "circuito" | "tablero";

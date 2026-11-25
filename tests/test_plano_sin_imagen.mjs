@@ -52,14 +52,14 @@ await page.getByRole("button", { name: "Generar ambiente", exact: true }).click(
 await page.waitForTimeout(150);
 await page.getByPlaceholder("Nombre (ej. Habitación #1)").fill("Sala");
 await page.getByPlaceholder("Ancho (m)").fill("4");
-await page.getByPlaceholder("Alto (m)").fill("3");
+await page.getByPlaceholder("Largo (m)").fill("3");
 let p = await puntoPantallaDesdeImagen({ x: 100, y: 100 });
 await page.mouse.click(p.x, p.y);
 await page.waitForTimeout(200);
 
 await page.getByPlaceholder("Nombre (ej. Habitación #1)").fill("Cocina");
 await page.getByPlaceholder("Ancho (m)").fill("3");
-await page.getByPlaceholder("Alto (m)").fill("2.5");
+await page.getByPlaceholder("Largo (m)").fill("2.5");
 p = await puntoPantallaDesdeImagen({ x: 400, y: 400 });
 await page.mouse.click(p.x, p.y);
 await page.waitForTimeout(200);

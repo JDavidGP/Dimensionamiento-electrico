@@ -21,6 +21,7 @@ export interface ProyectoMeta {
 export interface PlanoProyecto {
   imagen: unknown | null;
   calibracion: unknown | null;
+  alturaTechoM: number | null;
   nodos: unknown[];
   segmentos: unknown[];
   habitaciones: unknown[];
