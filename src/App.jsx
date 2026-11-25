@@ -129,6 +129,7 @@ export default function App() {
     editarSegmentoPlano,
     habitacionesPlano,
     cerrarHabitacionPlano,
+    detectarAmbientesPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
     editarAlturaHabitacionPlano,
@@ -434,6 +435,7 @@ export default function App() {
                           editarSegmentoPlano={editarSegmentoPlano}
                           habitacionesPlano={habitacionesPlano}
                           cerrarHabitacionPlano={cerrarHabitacionPlano}
+                          detectarAmbientesPlano={detectarAmbientesPlano}
                           eliminarHabitacionPlano={eliminarHabitacionPlano}
                           renombrarHabitacionPlano={renombrarHabitacionPlano}
                           editarAlturaHabitacionPlano={editarAlturaHabitacionPlano}

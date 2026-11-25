@@ -1042,6 +1042,37 @@ export function useCircuitos() {
     return habitacion;
   }
 
+  // Generalización de cerrarHabitacionPlano (deuda técnica del README,
+  // "Detección de habitaciones limitada a lazos que cierran sobre su
+  // propio punto de inicio" — usuario, 2026-11-25): analiza TODO el
+  // grafo de paredes ya trazado y registra como ambiente CADA cara
+  // cerrada que encuentre (App.plano.detectarCaras — ver su propia
+  // nota de cabecera para el porqué del algoritmo), no solo la que el
+  // usuario trazó volviendo a mano a su punto de partida. Así, una
+  // pared interior que separa dos cuartos ya alcanza para que AMBOS
+  // se detecten solos, sin retrazar los tramos compartidos.
+  // Deduplica contra habitaciones YA registradas por el mismo conjunto
+  // de nodos (sin importar el orden/sentido del recorrido) — nunca
+  // crea un duplicado de un ambiente que el usuario ya cerró a mano o
+  // ya detectó antes. Devuelve cuántos ambientes NUEVOS se agregaron.
+  function detectarAmbientesPlano() {
+    const caras = App.plano.detectarCaras(nodosPlano, segmentosPlano);
+    const clave = (nodoIds) => [...nodoIds].sort().join(",");
+    const existentes = new Set(habitacionesPlano.map((h) => clave(h.nodoIds)));
+    const nuevas = [];
+    for (const cara of caras) {
+      const k = clave(cara.nodoIds);
+      if (existentes.has(k)) continue;
+      existentes.add(k); // una misma cara no puede repetirse dos veces en `caras`, pero por las dudas
+      const habitacion = App.plano.crearHabitacion(cara.nodoIds, nodosPlano, `Ambiente ${habitacionesPlano.length + nuevas.length + 1}`);
+      if (habitacion) nuevas.push(habitacion);
+    }
+    if (nuevas.length === 0) return 0;
+    guardarPuntoDeshacerPlano();
+    setHabitacionesPlano([...habitacionesPlano, ...nuevas]);
+    return nuevas.length;
+  }
+
   function eliminarHabitacionPlano(habitacionId) {
     guardarPuntoDeshacerPlano();
     setHabitacionesPlano(habitacionesPlano.filter((h) => h.id !== habitacionId));
@@ -1647,6 +1678,7 @@ export function useCircuitos() {
     editarSegmentoPlano,
     habitacionesPlano,
     cerrarHabitacionPlano,
+    detectarAmbientesPlano,
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
     editarAlturaHabitacionPlano,

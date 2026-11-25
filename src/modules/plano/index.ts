@@ -8,14 +8,15 @@
 // app, es el mismo extendido a coordenadas reales.
 //
 // FASE 1 (2026-11-20, "construí la fase 1"): calibración + trazado
-// MANUAL de paredes. Detección automática de habitaciones arbitrarias
-// (caras de un grafo planar cualquiera) es un problema de geometría
-// computacional bastante más grande — para esta fase, una "habitación"
-// se registra cuando el usuario traza una cadena de paredes que
-// VUELVE a su propio nodo de inicio (un lazo cerrado), no por análisis
-// general del grafo. Simplificación deliberada, documentada acá para
-// que quede claro que no es un olvido: una futura ronda podría agregar
-// detección de ciclos arbitrarios si hiciera falta.
+// MANUAL de paredes. Una "habitación" se registra cuando el usuario
+// traza una cadena de paredes que VUELVE a su propio nodo de inicio
+// (crearHabitacion/cerrarHabitacion más abajo) — mecanismo simple,
+// sigue intacto, útil para el caso más común (un cuarto por vez).
+// La detección automática de TODAS las caras de un grafo planar
+// cualquiera (ej. una pared interior que separa dos cuartos, sin
+// volver a trazar cada uno) se agregó después (usuario, 2026-11-25) —
+// ver detectarCaras en deteccionCaras.ts, re-exportado más abajo.
+// Aditivo, no reemplaza este mecanismo.
 //
 // CERO cálculo eléctrico, CERO React, CERO canvas/zoom — eso vive en
 // PlanoCanvas.jsx (render) y en el hook (estado de sesión de trazado,
@@ -41,6 +42,7 @@ export { calcularHomografia, aplicarHomografia, invertirMatriz3x3 } from "./homo
 export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.ts";
 export { calcularCrucesPared, ANGULO_MINIMO_CRUCE_GRADOS } from "./cruceParedes.ts";
 export { cajaDeHabitacion, calcularDeltaConEnganche } from "./enganchePuzzle.ts";
+export { detectarCaras } from "./deteccionCaras.ts";
 
 export type {
   Punto,
@@ -62,6 +64,7 @@ export type {
 } from "./tipos.ts";
 export type { CrucePared, ResultadoCrucesPared } from "./cruceParedes.ts";
 export type { CajaAABB } from "./enganchePuzzle.ts";
+export type { CaraDetectada } from "./deteccionCaras.ts";
 
 // Radio de "pegado" al trazar — un click a menos de 30cm (en el mundo
 // real, no en píxeles de pantalla: así es independiente del zoom) de

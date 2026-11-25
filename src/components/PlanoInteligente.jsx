@@ -60,6 +60,7 @@ export default function PlanoInteligente({
   editarSegmentoPlano,
   habitacionesPlano,
   cerrarHabitacionPlano,
+  detectarAmbientesPlano,
   eliminarHabitacionPlano,
   renombrarHabitacionPlano,
   editarAlturaHabitacionPlano,
@@ -1259,12 +1260,31 @@ export default function PlanoInteligente({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
-          <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
-            Ambientes ({habitacionesPlano.length})
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Ambientes ({habitacionesPlano.length})
+            </div>
+            {nodosPlano.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const nuevos = detectarAmbientesPlano();
+                  mostrarAviso(
+                    nuevos > 0
+                      ? `${nuevos} ambiente${nuevos === 1 ? "" : "s"} nuevo${nuevos === 1 ? "" : "s"} detectado${nuevos === 1 ? "" : "s"} a partir de las paredes trazadas.`
+                      : "No se encontró ningún ambiente nuevo — ¿las paredes ya forman un lazo cerrado?"
+                  );
+                }}
+                title="Analiza TODAS las paredes trazadas y registra cada ambiente cerrado que encuentre — incluidos los que una pared interior separa de otro, sin tener que volver a trazarlos a mano."
+                style={{ padding: "5px 10px", borderRadius: 3, border: `1px solid ${colores.copper}`, background: "transparent", color: colores.copper, fontWeight: 600, fontSize: 11, cursor: "pointer" }}
+              >
+                Detectar ambientes automáticamente
+              </button>
+            )}
           </div>
           {habitacionesPlano.length === 0 ? (
             <div style={{ fontSize: 12, color: colores.textDim, lineHeight: 1.4 }}>
-              Cerrá un trazo de pared (volvé al punto de inicio) para que aparezca acá, con su área y perímetro ya calculados.
+              Cerrá un trazo de pared (volvé al punto de inicio) para que aparezca acá, con su área y perímetro ya calculados — o trazá varios cuartos compartiendo paredes y usá "Detectar ambientes automáticamente".
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

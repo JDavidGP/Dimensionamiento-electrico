@@ -52,6 +52,7 @@ import {
   ANGULO_MINIMO_CRUCE_GRADOS,
   cajaDeHabitacion,
   calcularDeltaConEnganche,
+  detectarCaras,
 } from "../../modules/plano/index.ts";
 import {
   distancia,
@@ -97,6 +98,7 @@ export const PlanoMediator = {
   ANGULO_MINIMO_CRUCE_GRADOS,
   cajaDeHabitacion,
   calcularDeltaConEnganche,
+  detectarCaras,
 
   /**
    * Circuitos/tableros candidatos para vincular a una ruta de
