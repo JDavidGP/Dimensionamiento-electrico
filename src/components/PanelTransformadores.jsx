@@ -3,6 +3,7 @@ import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
 import { BotonPill } from "./PanelTableros";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { TIPOS_CONEXION_EQUIPO } from "../shared/data/equiposEspeciales.js";
 
 // Lista propia de Transformadores, con su CRUD completo — mismo patrón
 // de acordeón que PanelFuentesEnergia.jsx antes de su rediseño en dos
@@ -34,7 +35,19 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // hace falta para seguir el cortocircuito más allá de sus bornes (ver
 // TableroMediator.cortocircuitoDesdeTablero) — opcional, sin esto el
 // cortocircuito en bornes sigue funcionando igual que siempre.
-const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", impedanciaPct: "", tipoRefrigeracion: "", notas: "" };
+//
+// Conexión Y/Δ agregada después (usuario, 2026-11-25, "terminemos de
+// completar la conexión Y/Δ") — el campo (`conexionPrimaria`/
+// `conexionSecundaria`) ya existía en la entidad desde que se creó
+// (modules/motor/transformador.ts), pero nunca tuvo UI. Puramente
+// informativo a propósito, mismo criterio ya usado con notas/tipo de
+// refrigeración al principio: ningún cálculo conectado hoy (corriente
+// nominal, breaker, Icc) depende de la conexión — todos usan kVA/
+// tensión/%Z de placa, que dan igual sin importar Y o Δ. Decisión
+// explícita del usuario: no conectar todavía el aviso de "secundario
+// en Δ sin neutro disponible" para cargas línea-neutro — queda para
+// una ronda aparte si hace falta.
+const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", impedanciaPct: "", tipoRefrigeracion: "", conexionPrimaria: "", conexionSecundaria: "", notas: "" };
 const FASES_TRANSFORMADOR = [
   { valor: "mono", label: "Mono" },
   { valor: "tri", label: "Tri" },
@@ -43,6 +56,17 @@ const TIPOS_REFRIGERACION = [
   { valor: "aceite", label: "Aceite" },
   { valor: "seco", label: "Seco" },
 ];
+const TIPOS_CONEXION_TRANSFORMADOR = [
+  { valor: TIPOS_CONEXION_EQUIPO.ESTRELLA, label: "Estrella (Y)" },
+  { valor: TIPOS_CONEXION_EQUIPO.DELTA, label: "Delta (Δ)" },
+];
+
+/** "Y" / "Δ" / "?" (sin asignar) — notación compacta de vector group para la tarjeta resumen. */
+function simboloConexion(valor) {
+  if (valor === TIPOS_CONEXION_EQUIPO.ESTRELLA) return "Y";
+  if (valor === TIPOS_CONEXION_EQUIPO.DELTA) return "Δ";
+  return "?";
+}
 
 function colorEstadoDe(entrada) {
   if (!entrada) return colores.ok;
@@ -83,6 +107,8 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
       capacidadKVA: t.capacidadKVA ? String(t.capacidadKVA) : "",
       impedanciaPct: t.impedanciaPct ? String(t.impedanciaPct) : "",
       tipoRefrigeracion: t.tipoRefrigeracion || "",
+      conexionPrimaria: t.conexionPrimaria || "",
+      conexionSecundaria: t.conexionSecundaria || "",
       notas: t.notas || "",
     });
     setEditandoId(t.id);
@@ -206,6 +232,32 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
             </div>
           </Campo>
 
+          {/* Conexión Y/Δ — solo aplica a transformadores trifásicos (un
+              monofásico no tiene esquema de conexión de devanados en este
+              sentido). Puramente informativo, ver nota de cabecera. */}
+          {form.fases === "tri" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <Campo label="Conexión primaria (opcional)">
+                <div style={{ display: "flex", gap: 6 }}>
+                  {TIPOS_CONEXION_TRANSFORMADOR.map((c) => (
+                    <BotonPill key={c.valor} activo={form.conexionPrimaria === c.valor} onClick={() => setForm({ ...form, conexionPrimaria: c.valor === form.conexionPrimaria ? "" : c.valor })}>
+                      {c.label}
+                    </BotonPill>
+                  ))}
+                </div>
+              </Campo>
+              <Campo label="Conexión secundaria (opcional)">
+                <div style={{ display: "flex", gap: 6 }}>
+                  {TIPOS_CONEXION_TRANSFORMADOR.map((c) => (
+                    <BotonPill key={c.valor} activo={form.conexionSecundaria === c.valor} onClick={() => setForm({ ...form, conexionSecundaria: c.valor === form.conexionSecundaria ? "" : c.valor })}>
+                      {c.label}
+                    </BotonPill>
+                  ))}
+                </div>
+              </Campo>
+            </div>
+          )}
+
           <Campo label="Notas (opcional)">
             <input
               style={inputStyle()}
@@ -285,6 +337,9 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
                       {t.fases}
                       {t.tensionPrimariaV && t.tensionSecundariaV ? ` · ${t.tensionPrimariaV}V→${t.tensionSecundariaV}V` : ""}
                       {t.capacidadKVA ? ` · ${t.capacidadKVA}kVA` : ""}
+                      {t.conexionPrimaria || t.conexionSecundaria
+                        ? ` · ${simboloConexion(t.conexionPrimaria)}-${simboloConexion(t.conexionSecundaria)}`
+                        : ""}
                     </div>
                   </div>
                   <button
