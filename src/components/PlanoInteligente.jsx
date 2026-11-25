@@ -15,24 +15,34 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // persistido — solo cuando una acción se CONFIRMA (segundo punto de
 // calibración + distancia, o un segmento de pared) se llama a una
 // función del hook, que es quien de verdad guarda algo en el proyecto.
+// Agrupados por etapa de trabajo (usuario, 2026-11-25: "realmente está
+// optimizado las opciones de edición... no hay otra forma más sencilla
+// de construir" — los 17 modos vivían en una sola fila plana de
+// botones, sin ningún agrupamiento, difícil de escanear de un vistazo).
+// Puramente visual: cada modo sigue siendo el mismo valor de siempre,
+// `cambiarModo` no cambia — solo se agrega `grupo` para poder
+// renderizarlos en filas separadas con una etiqueta (ver GRUPOS_MODO
+// más abajo y el render de la barra de modos).
+const GRUPOS_MODO = ["Vista y calibración", "Paredes y conductores", "Ambientes", "Equipos", "Utilidades"];
+
 const MODOS = [
-  { valor: "mover", label: "Mover vista", ayuda: "Arrastrá para mover, rueda del mouse (o los botones +/−) para zoom." },
-  { valor: "perspectiva", label: "Corregir perspectiva", ayuda: "Para fotos: hacé click en las 4 esquinas de un rectángulo real (ej. una habitación), en orden, dando toda la vuelta." },
-  { valor: "calibrar", label: "Calibrar", ayuda: "Hacé click en dos puntos cuya distancia real conozcas." },
-  { valor: "calibrar-perimetro", label: "Calibrar por perímetro", ayuda: "Trazá el contorno exterior completo (3+ puntos) y declará su perímetro real total." },
-  { valor: "pared", label: "Trazar pared", ayuda: "Click para ir agregando puntos. Volvé al punto de inicio para cerrar un ambiente." },
-  { valor: "espesor", label: "Medir espesor", ayuda: "Marcá 2 puntos a los dos lados de una pared ya trazada — se mide el espesor real y se guarda en la pared más cercana." },
-  { valor: "conductor", label: "Trazar conductor", ayuda: "Click para ir agregando el recorrido de un conductor. No hace falta cerrarlo — terminalo con el botón." },
-  { valor: "ambiente", label: "Generar ambiente", ayuda: "Completá el nombre y la medida abajo, y hacé click en el plano donde va el CENTRO del ambiente." },
-  { valor: "rectangulo", label: "Trazar rectángulo", ayuda: "Hacé click en una esquina del ambiente y arrastrá hasta la esquina opuesta — soltá para crearlo con la medida real." },
-  { valor: "area_paredes", label: "Reconocer paredes (área)", ayuda: "Arrastrá un rectángulo sobre la zona que querés analizar — se buscan líneas candidatas SOLO ahí, con menos ruido que sobre el plano completo." },
-  { valor: "mover-ambiente", label: "Mover ambiente", ayuda: "Arrastrá un ambiente ya trazado (manual o generado) para reposicionarlo, manteniendo su forma y medida exactas." },
-  { valor: "equipo", label: "Colocar equipo", ayuda: "Elegí el tipo abajo y hacé click en el plano donde va ubicado." },
-  { valor: "grupo_equipo", label: "Generar grupo", ayuda: "Elegí el tipo y la cantidad abajo, y hacé click en el plano — aparecen todos apilados ahí cerca, listos para arrastrar cada uno a su lugar con \"Mover equipo\"." },
-  { valor: "grupo_circuito", label: "Generar circuito", ayuda: "Elegí un circuito ya cargado abajo y hacé click en el plano — aparece un marcador YA VINCULADO por cada uno de sus equipos, apilados ahí cerca, listos para arrastrar cada uno a su lugar real con \"Mover equipo\"." },
-  { valor: "mover-equipo", label: "Mover equipo", ayuda: "Arrastrá un equipo ya colocado (individual o de un grupo) para reposicionarlo." },
-  { valor: "triangular", label: "Triangular equipo", ayuda: "Elegí el tipo arriba. Click en 2 puntos de referencia ya existentes (nodo de pared/conductor o equipo), escribí las 2 distancias medidas con cinta métrica, y confirmá con un click aproximado en el lugar real." },
-  { valor: "eliminar", label: "Borrar", ayuda: "Click sobre un nodo, una pared/conductor o un equipo para eliminarlo." },
+  { valor: "mover", label: "Mover vista", grupo: "Vista y calibración", ayuda: "Arrastrá para mover, rueda del mouse (o los botones +/−) para zoom." },
+  { valor: "perspectiva", label: "Corregir perspectiva", grupo: "Vista y calibración", ayuda: "Para fotos: hacé click en las 4 esquinas de un rectángulo real (ej. una habitación), en orden, dando toda la vuelta." },
+  { valor: "calibrar", label: "Calibrar", grupo: "Vista y calibración", ayuda: "Hacé click en dos puntos cuya distancia real conozcas." },
+  { valor: "calibrar-perimetro", label: "Calibrar por perímetro", grupo: "Vista y calibración", ayuda: "Trazá el contorno exterior completo (3+ puntos) y declará su perímetro real total." },
+  { valor: "pared", label: "Trazar pared", grupo: "Paredes y conductores", ayuda: "Click para ir agregando puntos. Volvé al punto de inicio para cerrar un ambiente." },
+  { valor: "espesor", label: "Medir espesor", grupo: "Paredes y conductores", ayuda: "Marcá 2 puntos a los dos lados de una pared ya trazada — se mide el espesor real y se guarda en la pared más cercana." },
+  { valor: "conductor", label: "Trazar conductor", grupo: "Paredes y conductores", ayuda: "Click para ir agregando el recorrido de un conductor. No hace falta cerrarlo — terminalo con el botón." },
+  { valor: "area_paredes", label: "Reconocer paredes (área)", grupo: "Paredes y conductores", ayuda: "Arrastrá un rectángulo sobre la zona que querés analizar — se buscan líneas candidatas SOLO ahí, con menos ruido que sobre el plano completo." },
+  { valor: "ambiente", label: "Generar ambiente", grupo: "Ambientes", ayuda: "Completá el nombre y la medida abajo, y hacé click en el plano donde va el CENTRO del ambiente." },
+  { valor: "rectangulo", label: "Trazar rectángulo", grupo: "Ambientes", ayuda: "Hacé click en una esquina del ambiente y arrastrá hasta la esquina opuesta — soltá para crearlo con la medida real." },
+  { valor: "mover-ambiente", label: "Mover ambiente", grupo: "Ambientes", ayuda: "Arrastrá un ambiente ya trazado (manual o generado) para reposicionarlo, manteniendo su forma y medida exactas." },
+  { valor: "equipo", label: "Colocar equipo", grupo: "Equipos", ayuda: "Elegí el tipo abajo y hacé click en el plano donde va ubicado." },
+  { valor: "grupo_equipo", label: "Generar grupo", grupo: "Equipos", ayuda: "Elegí el tipo y la cantidad abajo, y hacé click en el plano — aparecen todos apilados ahí cerca, listos para arrastrar cada uno a su lugar con \"Mover equipo\"." },
+  { valor: "grupo_circuito", label: "Generar circuito", grupo: "Equipos", ayuda: "Elegí un circuito ya cargado abajo y hacé click en el plano — aparece un marcador YA VINCULADO por cada uno de sus equipos, apilados ahí cerca, listos para arrastrar cada uno a su lugar real con \"Mover equipo\"." },
+  { valor: "mover-equipo", label: "Mover equipo", grupo: "Equipos", ayuda: "Arrastrá un equipo ya colocado (individual o de un grupo) para reposicionarlo." },
+  { valor: "triangular", label: "Triangular equipo", grupo: "Equipos", ayuda: "Elegí el tipo arriba. Click en 2 puntos de referencia ya existentes (nodo de pared/conductor o equipo), escribí las 2 distancias medidas con cinta métrica, y confirmá con un click aproximado en el lugar real." },
+  { valor: "eliminar", label: "Borrar", grupo: "Utilidades", ayuda: "Click sobre un nodo, una pared/conductor o un equipo para eliminarlo." },
 ];
 
 // Mismo mapa categoría->color que usa PlanoCanvas.jsx — para el punto
@@ -870,11 +880,18 @@ export default function PlanoInteligente({
 
         {planoImagen && (
           <>
-            <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
-              {MODOS.map((m) => (
-                <BotonPill key={m.valor} activo={modo === m.valor} onClick={() => cambiarModo(m.valor)}>
-                  {m.label}
-                </BotonPill>
+            <div style={{ marginBottom: 6 }}>
+              {GRUPOS_MODO.map((grupo) => (
+                <div key={grupo} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 5, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 9.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", width: 118, flexShrink: 0 }}>
+                    {grupo}
+                  </span>
+                  {MODOS.filter((m) => m.grupo === grupo).map((m) => (
+                    <BotonPill key={m.valor} activo={modo === m.valor} onClick={() => cambiarModo(m.valor)} flex="0 0 auto">
+                      {m.label}
+                    </BotonPill>
+                  ))}
+                </div>
               ))}
             </div>
 
