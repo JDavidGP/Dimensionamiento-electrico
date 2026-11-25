@@ -185,6 +185,18 @@ export default function App() {
           .circuitos-grid { grid-template-columns: 1fr !important; }
         }
 
+        /* Mismo bug, mismo arreglo, pestaña Plano (usuario, celular,
+           captura adjunta, 2026-11-25: "En móvil se ve bastante
+           recortado y estirado") — la grilla de PlanoInteligente.jsx
+           (1fr + 280px fijo) nunca había recibido el className/media
+           query que sí se le puso a "Circuitos y resultados" en la
+           misma ronda de 2026-11-19: en un celular angosto el lienzo
+           del plano quedaba apretado contra una columna lateral fija,
+           viéndose recortado y estirado en vez de apilarse debajo. */
+        @media (max-width: 680px) {
+          .plano-grid { grid-template-columns: 1fr !important; }
+        }
+
         /* Informe técnico (InformeTecnico.jsx): al imprimir/"Guardar como PDF",
            mostrar SOLO el informe, sin importar qué pestaña está activa en
            pantalla (TabsViewPager monta todas las pestañas siempre, solo

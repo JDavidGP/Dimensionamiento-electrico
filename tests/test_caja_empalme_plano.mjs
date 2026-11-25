@@ -40,7 +40,7 @@ await page.waitForTimeout(400);
 // --- 1. Sin calibrar: colocar un equipo avisa en vez de fallar en silencio ---
 await page.getByRole("button", { name: "Colocar equipo", exact: true }).click();
 await page.waitForTimeout(150);
-await page.locator("select").nth(2).selectOption({ label: "Caja de empalme" });
+await page.locator("select").nth(3).selectOption({ label: "Caja de empalme" });
 let p = await puntoPantallaDesdeImagen({ x: 400, y: 300 });
 await page.mouse.click(p.x, p.y);
 await page.waitForTimeout(200);
@@ -63,8 +63,8 @@ await page.waitForTimeout(200);
 // --- 3. Colocar la caja de empalme, ya calibrado ---
 await page.getByRole("button", { name: "Colocar equipo", exact: true }).click();
 await page.waitForTimeout(150);
-await page.locator("select").nth(2).selectOption({ label: "Caja de empalme" });
-await page.getByPlaceholder("Nombre (opcional)").fill("CE-1 cocina");
+await page.locator("select").nth(3).selectOption({ label: "Caja de empalme" });
+await page.getByPlaceholder("Nombre (opcional)").first().fill("CE-1 cocina");
 await page.waitForTimeout(100);
 assert(
   (await page.getByText(/Vincular a/).count()) === 0,
@@ -80,9 +80,10 @@ assert((await page.locator('input[value="CE-1 cocina"]').count()) >= 1, "El nomb
 //     Diagrama unifilar (soloPlano) — TabsViewPager monta ambos
 //     <select> a la vez, hay que acotar al select de cada editor:
 //     [0] capas visibles del plano, [1] tipo de nodo del Diagrama,
-//     [2] tipo de equipo del Plano. ---
+//     [2] "¿Equipo ya ingresado?" del Plano (usuario, 2026-11-25),
+//     [3] tipo de equipo del Plano. ---
 const opcionesDiagrama = await page.locator("select").nth(1).locator("option").allTextContents();
-const opcionesPlano = await page.locator("select").nth(2).locator("option").allTextContents();
+const opcionesPlano = await page.locator("select").nth(3).locator("option").allTextContents();
 assert(!opcionesDiagrama.includes("Caja de empalme"), "'Caja de empalme' NO aparece en el selector de tipo del Diagrama unifilar");
 assert(opcionesPlano.includes("Caja de empalme"), "'Caja de empalme' SÍ aparece en el selector de tipo de Plano");
 assert(opcionesDiagrama.includes("Barra de distribución"), "Un tipo normal (no soloPlano) sigue disponible en el Diagrama — el filtro no se pasó de listo");

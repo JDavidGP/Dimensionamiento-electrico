@@ -50,24 +50,48 @@ function contenidoInterno(tipo) {
 
 const SIMBOLO_GENERICO_HTML = '<rect x="5" y="5" width="22" height="22" rx="2"/>';
 
+// Grosor de trazo AUTORAL, en unidades del viewBox 32×32 (el mismo
+// 1.8 con el que cada .svg se ve bien abierto suelto en Inkscape).
+const GROSOR_TRAZO_BASE = 1.8;
+
 /**
  * Símbolo de un componente del diagrama (ahora desde su propio .svg),
- * dentro de un viewBox lógico 32×32. `strokeWidth` acá es el DEFAULT
- * (1.8, igual que antes) — se extrae solo el contenido INTERNO de
- * cada .svg (ver contenidoInterno arriba), así que el stroke-width
- * declarado en la raíz del archivo (para que se vea bien abierto
- * suelto en Inkscape) no llega al DOM en tiempo de ejecución; los
- * elementos de un símbolo que necesitan otro grosor (ej. las barras
- * largas de banco_baterias.svg, la barra de barra_distribucion.svg) lo
- * declaran ELLOS MISMOS, así que siguen funcionando igual.
+ * dentro de un viewBox lógico 32×32. Se extrae solo el contenido
+ * INTERNO de cada .svg (ver contenidoInterno arriba), así que el
+ * stroke-width declarado en la raíz del archivo (para que se vea bien
+ * abierto suelto en Inkscape) no llega al DOM en tiempo de ejecución;
+ * los elementos de un símbolo que necesitan otro grosor (ej. las
+ * barras largas de banco_baterias.svg, la barra de
+ * barra_distribucion.svg) lo declaran ELLOS MISMOS, así que siguen
+ * funcionando igual.
+ *
+ * Bug reportado por el usuario (captura real de su propia instancia,
+ * no una foto borrosa — 2026-11-25, "la luminaria sencilla se
+ * entiende pero la conmutada no": un marcador de "Tablero eléctrico"/
+ * "Caja de empalme" en Plano se veía como un simple punto oscuro
+ * sólido, sin ícono visible) — causa raíz: ANTES el `stroke-width` se
+ * fijaba en 1.8 SIN COMPENSAR el `scale(size/32)` de este mismo <g>;
+ * como el grosor de trazo heredado se pinta en el sistema de
+ * coordenadas YA escalado de sus hijos, a un tamaño de marcador chico
+ * (14-48px en pantalla, ver tamanoMarcadorPx en PlanoCanvas.jsx) el
+ * trazo quedaba en una fracción de píxel — invisible por
+ * antialiasing, dejando ver solo el círculo de fondo oscuro detrás.
+ * Se compensa de una: el `strokeWidth` que se fija en este <g> es
+ * GROSOR_TRAZO_BASE DIVIDIDO por el mismo factor de escala, así que
+ * tras aplicar `scale(size/32)` el trazo renderizado SIEMPRE mide
+ * GROSOR_TRAZO_BASE en unidades previas al zoom general del plano
+ * (mismo criterio que paredes/conductores: sigue escalando con el
+ * zoom del lienzo, solo deja de encogerse ADEMÁS por el tamaño propio
+ * del ícono).
  */
 export function SimboloDiagrama({ tipo, x = 0, y = 0, size = 28, color }) {
   const html = SIMBOLOS[tipo] ? contenidoInterno(tipo) : SIMBOLO_GENERICO_HTML;
+  const escala = size / 32;
   return (
     <g
-      transform={`translate(${x}, ${y}) scale(${size / 32})`}
+      transform={`translate(${x}, ${y}) scale(${escala})`}
       stroke={color}
-      strokeWidth={1.8}
+      strokeWidth={GROSOR_TRAZO_BASE / escala}
       strokeLinecap="round"
       fill="none"
       color={color}

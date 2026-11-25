@@ -87,14 +87,17 @@ await page.waitForTimeout(150);
 // terminaba agarrando el <select> "Vincular a" de un marcador YA
 // creado en la lista, en vez del de esta barra de herramientas.
 const barraEquipo = page.locator('input[placeholder="Nombre (opcional)"]').first().locator("xpath=..");
+// select(0) es "¿Equipo ya ingresado?" (usuario, 2026-11-25) — el tipo
+// de equipo es el select(1) de esta barra.
+const SELECT_TIPO_EQUIPO = 1;
 
-await barraEquipo.locator("select").first().selectOption("tablero_electrico");
+await barraEquipo.locator("select").nth(SELECT_TIPO_EQUIPO).selectOption("tablero_electrico");
 await page.waitForTimeout(100);
 await barraEquipo.locator("select").last().selectOption({ label: "TD-OVERLAY-1" });
 await click({ x: 300, y: 250 });
 await page.waitForTimeout(200);
 
-await barraEquipo.locator("select").first().selectOption("tablero_electrico");
+await barraEquipo.locator("select").nth(SELECT_TIPO_EQUIPO).selectOption("tablero_electrico");
 await page.waitForTimeout(100);
 await barraEquipo.locator("select").last().selectOption({ label: "TD-OVERLAY-2" });
 await click({ x: 300, y: 450 });

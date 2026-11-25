@@ -96,11 +96,13 @@ await page.waitForTimeout(150);
 // (único de esta barra) como punto de referencia.
 const barraEquipo = page.locator('input[placeholder="Nombre (opcional)"]').locator("xpath=..");
 
-// Tipo por defecto es el primero del catálogo (categoría "fuente" -> "acometida").
-// Elegimos explícitamente "Tablero eléctrico" (vinculable a un tablero real).
-await barraEquipo.locator("select").first().selectOption("tablero_electrico");
+// select(0) es "¿Equipo ya ingresado?" (usuario, 2026-11-25) — el tipo
+// por defecto del select(1) es el primero del catálogo (categoría
+// "fuente" -> "acometida"). Elegimos explícitamente "Tablero
+// eléctrico" (vinculable a un tablero real).
+await barraEquipo.locator("select").nth(1).selectOption("tablero_electrico");
 await page.waitForTimeout(100);
-assert((await barraEquipo.locator("select").count()) === 2, "Al elegir un tipo vinculable aparece el select de 'Vincular a'");
+assert((await barraEquipo.locator("select").count()) === 3, "Al elegir un tipo vinculable aparece el select de 'Vincular a' (+ '¿Equipo ya ingresado?' y el de tipo, siempre presentes)");
 
 const pEquipo = await puntoPantallaDesdeImagen({ x: 300, y: 250 });
 await page.mouse.click(pEquipo.x, pEquipo.y);

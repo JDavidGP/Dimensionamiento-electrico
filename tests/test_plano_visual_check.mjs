@@ -50,12 +50,14 @@ await page.waitForTimeout(250);
 await page.getByRole("button", { name: "Colocar equipo", exact: true }).click();
 await page.waitForTimeout(150);
 const barraEquipo = page.locator('input[placeholder="Nombre (opcional)"]').locator("xpath=..");
-await barraEquipo.locator("select").first().selectOption("luminaria");
+// select(0) es "¿Equipo ya ingresado?" (usuario, 2026-11-25) — el tipo
+// de equipo es el select(1) de esta barra.
+await barraEquipo.locator("select").nth(1).selectOption("luminaria");
 await page.waitForTimeout(100);
 let pEquipo = await puntoPantallaDesdeImagen({ x: 300, y: 250 });
 await page.mouse.click(pEquipo.x, pEquipo.y);
 await page.waitForTimeout(150);
-await barraEquipo.locator("select").first().selectOption("tablero_electrico");
+await barraEquipo.locator("select").nth(1).selectOption("tablero_electrico");
 await page.waitForTimeout(100);
 pEquipo = await puntoPantallaDesdeImagen({ x: 450, y: 350 });
 await page.mouse.click(pEquipo.x, pEquipo.y);
