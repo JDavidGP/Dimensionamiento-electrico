@@ -128,6 +128,7 @@ export default function App() {
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
     editarAlturaHabitacionPlano,
+    editarExteriorHabitacionPlano,
     generarHabitacionPlano,
     generarHabitacionPorArrastre,
     moverHabitacionPlano,
@@ -416,6 +417,7 @@ export default function App() {
                           eliminarHabitacionPlano={eliminarHabitacionPlano}
                           renombrarHabitacionPlano={renombrarHabitacionPlano}
                           editarAlturaHabitacionPlano={editarAlturaHabitacionPlano}
+                          editarExteriorHabitacionPlano={editarExteriorHabitacionPlano}
                           generarHabitacionPlano={generarHabitacionPlano}
                           generarHabitacionPorArrastre={generarHabitacionPorArrastre}
                           moverHabitacionPlano={moverHabitacionPlano}

@@ -975,6 +975,14 @@ export function useCircuitos() {
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, alturaM: valor } : h)));
   }
 
+  // Interior/exterior (usuario, 2026-11-25) — marca el ambiente, no una
+  // jerarquía nueva de terreno/edificación (ver la nota en tipos.ts).
+  // Un equipo colocado adentro hereda la condición al leerla (ver
+  // habitacionQueContiene), no se copia a cada marcador.
+  function editarExteriorHabitacionPlano(habitacionId, exterior) {
+    setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, exterior: Boolean(exterior) } : h)));
+  }
+
   function establecerAlturaTechoPlano(alturaTexto) {
     const texto = String(alturaTexto).trim();
     if (texto === "") {
@@ -1538,6 +1546,7 @@ export function useCircuitos() {
     eliminarHabitacionPlano,
     renombrarHabitacionPlano,
     editarAlturaHabitacionPlano,
+    editarExteriorHabitacionPlano,
     generarHabitacionPlano,
     generarHabitacionPorArrastre,
     moverHabitacionPlano,

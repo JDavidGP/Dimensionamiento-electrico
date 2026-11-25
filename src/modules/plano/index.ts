@@ -25,7 +25,7 @@
 // modules/tablero/index.js con TableroMediator.
 
 import { generarId } from "../../shared/utils/id.js";
-import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo } from "../geometria/index.ts";
+import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo, puntoDentroDePoligono } from "../geometria/index.ts";
 import type { Punto, NodoPlano, SegmentoPlano, TipoSegmento, HabitacionPlano, RutaConductorPlano, MarcadorEquipoPlano, EntidadVinculadaRuta } from "./tipos.ts";
 
 export { calcularEscala, calcularEscalaPorPerimetro, imagenAModelo, modeloAImagen } from "./calibracion.ts";
@@ -167,7 +167,27 @@ export function crearHabitacion(nodoIds: string[], nodos: NodoPlano[] = [], nomb
     areaM2: areaPoligono(puntos),
     perimetroM: perimetroPoligono(puntos),
     alturaM: null,
+    exterior: false,
   };
+}
+
+/**
+ * El ambiente (si alguno) que contiene `puntoModelo` — usuario,
+ * 2026-11-25: para que un equipo colocado en el plano herede
+ * "interior"/"exterior" del ambiente donde cae, sin pedirlo aparte.
+ * Mismo point-in-polygon que ya usa PlanoCanvas.jsx para el hit-test
+ * de "Mover ambiente", pero en espacio MODELO (no imagen) y expuesto
+ * acá para que el hook/UI lo puedan usar sin duplicar la lógica. Si
+ * dos ambientes se superponen, gana el primero que los contenga (el
+ * orden de creación) — caso raro, no se resuelve con más precisión
+ * porque superponer ambientes a propósito no es un uso soportado.
+ */
+export function habitacionQueContiene(puntoModelo: Punto, habitaciones: HabitacionPlano[] = [], nodos: NodoPlano[] = []): HabitacionPlano | null {
+  for (const h of habitaciones) {
+    const puntos = h.nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter((p): p is Punto => Boolean(p));
+    if (puntos.length >= 3 && puntoDentroDePoligono(puntoModelo, puntos)) return h;
+  }
+  return null;
 }
 
 // --- Generador de ambiente por dimensión conocida (2026-11-20) ---

@@ -59,6 +59,7 @@ export default function PlanoInteligente({
   eliminarHabitacionPlano,
   renombrarHabitacionPlano,
   editarAlturaHabitacionPlano,
+  editarExteriorHabitacionPlano,
   generarHabitacionPlano,
   generarHabitacionPorArrastre,
   moverHabitacionPlano,
@@ -1211,6 +1212,10 @@ export default function PlanoInteligente({
                       placeholder={alturaTechoPlanoM != null ? `gral. ${alturaTechoPlanoM}` : "—"}
                       style={{ ...inputStyle(), width: 70, padding: "3px 6px", fontSize: 10.5 }}
                     />
+                    <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, color: colores.textDim, cursor: "pointer", marginLeft: 6 }} title="Instalación de exteriores (intemperie) — ej. cobertizo, patio, cuarto de bomba separado.">
+                      <input type="checkbox" checked={h.exterior} onChange={(e) => editarExteriorHabitacionPlano(h.id, e.target.checked)} />
+                      Exterior
+                    </label>
                   </div>
                 </div>
               ))}
@@ -1352,11 +1357,22 @@ export default function PlanoInteligente({
                 const comp = App.plano.obtenerComponente(m.tipo);
                 const entidad = App.plano.resolverEntidadEquipo(m, { tableros, equipos, fuentesEnergia, transformadores });
                 const candidatos = App.plano.candidatosEntidadEquipo(m.tipo, { tableros, equipos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano, marcadorId: m.id });
+                // Interior/exterior (usuario, 2026-11-25): se DERIVA del
+                // ambiente que contiene al marcador, nunca se guarda
+                // aparte en el equipo — si el ambiente cambia, el
+                // equipo sigue el cambio solo, sin re-marcar nada.
+                const ambienteDelEquipo = App.plano.habitacionQueContiene(m.punto, habitacionesPlano, nodosPlano);
                 return (
                   <div key={m.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: COLOR_POR_CATEGORIA[comp?.categoria] ?? colores.border, flexShrink: 0 }} />
                       <div style={{ flex: 1, fontSize: 12, color: colores.textMain }}>{comp?.nombre ?? m.tipo}</div>
+                      <span
+                        style={{ fontSize: 9.5, color: ambienteDelEquipo ? (ambienteDelEquipo.exterior ? colores.warn : colores.textDim) : colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, padding: "1px 5px", textTransform: "uppercase", letterSpacing: "0.03em" }}
+                        title={ambienteDelEquipo ? `Dentro de "${ambienteDelEquipo.nombre}"` : "No cae dentro de ningún ambiente trazado"}
+                      >
+                        {ambienteDelEquipo ? (ambienteDelEquipo.exterior ? "Exterior" : "Interior") : "Sin ambiente"}
+                      </span>
                       <button
                         type="button"
                         onClick={() => eliminarMarcadorEquipoPlano(m.id)}

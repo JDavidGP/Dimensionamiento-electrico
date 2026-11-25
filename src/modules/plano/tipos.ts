@@ -39,6 +39,8 @@ export interface HabitacionPlano {
   perimetroM: number;
   /** Altura de techo propia de este ambiente (piso a viga corona), en metros. null = usa la altura general del plano. */
   alturaM: number | null;
+  /** Instalación de interiores o de exteriores (usuario, 2026-11-25) — false = interior (default). Un cobertizo, un cuarto de bomba separado, una zona de patio/jardín: cada uno es OTRO ambiente marcado exterior=true, no una jerarquía nueva de terreno/edificación. */
+  exterior: boolean;
 }
 
 export type EntidadVinculadaRuta = "circuito" | "tablero";
