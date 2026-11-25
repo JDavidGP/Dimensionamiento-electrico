@@ -44,6 +44,7 @@ export { calcularCrucesPared, ANGULO_MINIMO_CRUCE_GRADOS } from "./cruceParedes.
 export { cajaDeHabitacion, calcularDeltaConEnganche } from "./enganchePuzzle.ts";
 export { detectarCaras } from "./deteccionCaras.ts";
 export { caminoMasCorto } from "./caminoRed.ts";
+export { calcularExtraAlturaInstalacion, calcularLongitudEsperadaRuta } from "./alturaInstalacion.ts";
 
 export type {
   Punto,

@@ -1506,7 +1506,17 @@ export default function PlanoInteligente({
                 // de tipo "pared" únicamente (una ruta nunca "cruza" otra
                 // ruta de conductor en este cálculo).
                 const segmentosPared = segmentosPlano.filter((s) => s.tipo === "pared");
-                const cruces = App.plano.calcularCrucesPared(r, nodosPlano, segmentosPared);
+                // calcularLongitudEsperadaRuta extiende calcularCrucesPared
+                // (mismos campos: cruces/extraTotalM/longitudTotalM/
+                // paredesSinEspesor/paredesAnguloIndeterminado) + la
+                // bajada/subida real hasta el equipo del extremo de la
+                // ruta, si tiene altura de instalación cargada (usuario,
+                // 2026-11-25: "hay que tomar en cuenta la altura donde se
+                // instala un interruptor [o] tomacorriente" — ver
+                // modules/plano/alturaInstalacion.ts).
+                const cruces = App.plano.calcularLongitudEsperadaRuta(r, nodosPlano, segmentosPared, marcadoresEquipoPlano, equipos, habitacionesPlano, alturaTechoPlanoM);
+                const extraAltura = cruces.alturaInstalacion;
+                const hayExtra = cruces.cruces.length > 0 || extraAltura.extraM > 0;
                 return (
                   <div key={r.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -1527,10 +1537,18 @@ export default function PlanoInteligente({
                     <div style={{ fontFamily: fuentes.mono, fontSize: 11.5, color: colores.textDim }}>
                       longitud trazada {r.longitudM.toFixed(2)} m
                       {cruces.cruces.length > 0 && (
+                        <> · +{cruces.extraTotalM.toFixed(2)} m por {cruces.cruces.length} cruce{cruces.cruces.length !== 1 ? "s" : ""} de pared</>
+                      )}
+                      {extraAltura.extraM > 0 && (
                         <>
                           {" "}
-                          · +{cruces.extraTotalM.toFixed(2)} m por {cruces.cruces.length} cruce{cruces.cruces.length !== 1 ? "s" : ""} de pared ·{" "}
-                          <strong style={{ color: colores.textMain }}>total {cruces.longitudTotalM.toFixed(2)} m</strong>
+                          · +{extraAltura.extraM.toFixed(2)} m {extraAltura.referencia === "piso" ? "subiendo desde el piso" : "bajando desde el techo"} al equipo
+                        </>
+                      )}
+                      {hayExtra && (
+                        <>
+                          {" "}
+                          · <strong style={{ color: colores.textMain }}>total {cruces.longitudTotalConAlturaM.toFixed(2)} m</strong>
                         </>
                       )}
                     </div>
@@ -1543,6 +1561,9 @@ export default function PlanoInteligente({
                       <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 2 }}>
                         ⚠ Cruza {cruces.paredesAnguloIndeterminado.length} pared{cruces.paredesAnguloIndeterminado.length !== 1 ? "es" : ""} en un ángulo demasiado rasante para calcular el extra con confianza.
                       </div>
+                    )}
+                    {extraAltura.motivo && (
+                      <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 2 }}>⚠ {extraAltura.motivo}</div>
                     )}
 
                     {/* Autocompletar distancia (usuario, 2026-11-22: "autocompletar la
@@ -1594,7 +1615,7 @@ export default function PlanoInteligente({
                                 onClick={() => aplicarLongitudRutaPlano(r.id)}
                                 style={{ background: "none", border: "none", color: colores.copper, fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 11 }}
                               >
-                                Usar esta longitud ({cruces.longitudTotalM.toFixed(2)} m)
+                                Usar esta longitud ({cruces.longitudTotalConAlturaM.toFixed(2)} m)
                               </button>
                             </div>
                           )}

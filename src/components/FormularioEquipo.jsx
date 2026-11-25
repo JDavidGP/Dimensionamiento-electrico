@@ -90,6 +90,36 @@ export default function FormularioEquipo({ form, setForm, onGuardar, onCancelar,
         </Campo>
       </div>
 
+      {/* Altura de instalación — usuario, 2026-11-25: "hay que tomar en
+          cuenta la altura donde se instala un interruptor [o]
+          tomacorriente". Opcional y puramente física: sin cargarla, cero
+          cambio de comportamiento. Con ella, "Usar esta longitud" (en el
+          Plano) suma la bajada/subida real hasta este equipo al metraje
+          del circuito — ver modules/plano/alturaInstalacion.ts. */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: 10 }}>
+        <Campo label="Altura instalación (m, opcional)">
+          <input
+            style={inputStyle()}
+            type="number"
+            step="0.05"
+            min="0"
+            value={form.alturaInstalacionM}
+            onChange={(e) => setForm({ ...form, alturaInstalacionM: e.target.value })}
+            placeholder="Ej: 0.4"
+          />
+        </Campo>
+        <Campo label="Referencia">
+          <div style={{ display: "flex", gap: 6 }}>
+            <BotonPill activo={form.referenciaAltura !== "piso"} onClick={() => setForm({ ...form, referenciaAltura: "techo" })}>
+              Desde el techo
+            </BotonPill>
+            <BotonPill activo={form.referenciaAltura === "piso"} onClick={() => setForm({ ...form, referenciaAltura: "piso" })}>
+              Desde el piso
+            </BotonPill>
+          </div>
+        </Campo>
+      </div>
+
       {error && <div style={{ color: colores.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: "flex", gap: 8 }}>

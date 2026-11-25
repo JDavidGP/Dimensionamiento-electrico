@@ -106,6 +106,7 @@ export default function TablaResultados({
   diferenciales = [],
   onAsignarDiferencial,
   listaIntegridad = [],
+  desincronizacionRutas = [],
 }) {
   if (circuitos.length === 0) {
     return (
@@ -122,6 +123,7 @@ export default function TablaResultados({
         const equipos = equiposDe(circuito.id);
         const activo = circuitoActivoId === circuito.id;
         const entradaIntegridad = listaIntegridad.find((e) => e.tipo === "circuito" && e.id === circuito.id);
+        const desincronizacion = desincronizacionRutas.find((d) => d.entidadTipo === "circuito" && d.entidadId === circuito.id);
         const estado = estadoCombinado(r, entradaIntegridad);
         const colorEstado = colores[estado];
 
@@ -251,7 +253,7 @@ export default function TablaResultados({
                   );
                 })()}
 
-                {(r?.advertencias?.length > 0 || entradaIntegridad?.problemas?.length > 0) && (
+                {(r?.advertencias?.length > 0 || entradaIntegridad?.problemas?.length > 0 || desincronizacion) && (
                   <div style={{ padding: "0 14px 10px 14px" }}>
                     {r?.advertencias?.map((a, i) => (
                       <div key={`e${i}`} style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}>
@@ -267,6 +269,18 @@ export default function TablaResultados({
                         <span>🗂</span> <span>{p}</span>
                       </div>
                     ))}
+                    {desincronizacion && (
+                      <div
+                        style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}
+                        title="La ruta trazada en el Plano ya no coincide con este campo — 'Usar esta longitud' en el Plano lo vuelve a sincronizar"
+                      >
+                        <span>📐</span>{" "}
+                        <span>
+                          Distancia ({desincronizacion.valorActual.toFixed(2)}m) desincronizada de la ruta "{desincronizacion.rutaNombre}" trazada en el
+                          Plano ({desincronizacion.valorEsperado.toFixed(2)}m) — revisá o actualizá con "Usar esta longitud".
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 

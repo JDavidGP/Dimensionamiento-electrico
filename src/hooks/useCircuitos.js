@@ -246,6 +246,56 @@ export function useCircuitos() {
     [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales]
   );
 
+  // Desincronización entre la "Distancia (m)"/"Longitud alimentador"
+  // escrita a mano y la longitud REAL de la ruta del Plano vinculada a
+  // ese circuito/tablero (usuario, 2026-11-25: "¿cómo está validado ese
+  // dato?" — "Usar esta longitud" solo copia UNA VEZ, nunca mantiene un
+  // vínculo vivo; si el trazo cambia después, o el campo se edita a
+  // mano, quedaban desincronizados en silencio, sin ningún aviso). Usa
+  // el mismo cálculo EXACTO que "Usar esta longitud" en PlanoInteligente
+  // (calcularLongitudEsperadaRuta, trazado + cruces de pared + la
+  // bajada/subida al equipo si tiene altura de instalación cargada) —
+  // así, apenas se aplica, esta advertencia desaparece sola, nunca
+  // queda en desacuerdo con el propio botón que la resuelve. Vive acá
+  // (no en ValidacionMediator/referencial.ts) porque necesita geometría
+  // del Plano, que ese módulo nunca cruza a propósito (ver su nota de
+  // cabecera) — mismo criterio que alimentadores/balancesFases arriba.
+  const desincronizacionRutas = useMemo(() => {
+    const segmentosPared = segmentosPlano.filter((s) => s.tipo === "pared");
+    const resultado = [];
+    for (const ruta of rutasConductorPlano) {
+      if (!ruta.entidadId || !ruta.entidadTipo) continue;
+      const entidad =
+        ruta.entidadTipo === "circuito" ? circuitos.find((c) => c.id === ruta.entidadId) : tableros.find((t) => t.id === ruta.entidadId);
+      if (!entidad) continue;
+      const valorActual = ruta.entidadTipo === "circuito" ? entidad.distancia : entidad.longitudAlimentador;
+      if (valorActual == null || valorActual === "") continue;
+      const { longitudTotalConAlturaM } = App.plano.calcularLongitudEsperadaRuta(
+        ruta,
+        nodosPlano,
+        segmentosPared,
+        marcadoresEquipoPlano,
+        equipos,
+        habitacionesPlano,
+        alturaTechoPlanoM
+      );
+      const diferenciaM = Math.abs(Number(valorActual) - longitudTotalConAlturaM);
+      // 2cm de tolerancia — ruido de redondeo (el campo real queda
+      // redondeado a cm, ver aplicarLongitudRutaPlano), no una
+      // diferencia real que valga la pena avisar.
+      if (diferenciaM > 0.02) {
+        resultado.push({
+          entidadId: ruta.entidadId,
+          entidadTipo: ruta.entidadTipo,
+          rutaNombre: ruta.nombre,
+          valorActual: Number(valorActual),
+          valorEsperado: longitudTotalConAlturaM,
+        });
+      }
+    }
+    return resultado;
+  }, [rutasConductorPlano, nodosPlano, segmentosPlano, marcadoresEquipoPlano, equipos, habitacionesPlano, alturaTechoPlanoM, circuitos, tableros]);
+
   const detalleElectrico = useCallback(
     (id) =>
       App.validacion.detalleElectrico(id, {
@@ -1364,17 +1414,31 @@ export function useCircuitos() {
     setCircuitos(circuitos.map((c) => (c.id === id ? { ...c, distancia: distanciaM } : c)));
   }
 
-  /** Copia la longitud YA calculada (trazado + cruces de pared, ver cruceParedes.ts) de una ruta vinculada al campo real del circuito/tablero que señala. No hace nada si la ruta no está vinculada. */
+  /**
+   * Copia la longitud YA calculada (trazado + cruces de pared +, si
+   * corresponde, la bajada/subida real hasta el equipo del extremo —
+   * ver modules/plano/alturaInstalacion.ts) de una ruta vinculada al
+   * campo real del circuito/tablero que señala. No hace nada si la
+   * ruta no está vinculada.
+   */
   function aplicarLongitudRutaPlano(rutaId) {
     const ruta = rutasConductorPlano.find((r) => r.id === rutaId);
     if (!ruta?.entidadId) return;
     const segmentosPared = segmentosPlano.filter((s) => s.tipo === "pared");
-    const { longitudTotalM } = App.plano.calcularCrucesPared(ruta, nodosPlano, segmentosPared);
+    const { longitudTotalConAlturaM } = App.plano.calcularLongitudEsperadaRuta(
+      ruta,
+      nodosPlano,
+      segmentosPared,
+      marcadoresEquipoPlano,
+      equipos,
+      habitacionesPlano,
+      alturaTechoPlanoM
+    );
     // Redondeado a cm (2 decimales) — la precisión de más de la resta
     // de puntos en metros no aporta nada real (ni la escala calibrada
     // a mano ni la medida de espesor tienen esa exactitud) y ensucia
     // el campo si el instalador lo ve/edita después.
-    const distanciaRedondeada = Math.round(longitudTotalM * 100) / 100;
+    const distanciaRedondeada = Math.round(longitudTotalConAlturaM * 100) / 100;
     if (ruta.entidadTipo === "circuito") {
       actualizarDistanciaCircuito(ruta.entidadId, distanciaRedondeada);
     } else if (ruta.entidadTipo === "tablero") {
@@ -1882,6 +1946,7 @@ export function useCircuitos() {
     exportarDXFPlano,
     listaIntegridad,
     resumenIntegridad: resumenInt,
+    desincronizacionRutas,
     detalleElectrico,
     ESTADOS_INTEGRIDAD: App.validacion.ESTADOS,
   };

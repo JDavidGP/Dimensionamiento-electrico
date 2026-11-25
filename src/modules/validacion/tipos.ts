@@ -16,6 +16,10 @@ export interface Equipo extends EquipoMotor {
   circuitoId?: string | null;
   etiqueta?: string;
   funcion?: string;
+  /** Altura real de instalación de la caja (tomacorriente, interruptor...), en metros — opcional, puramente física. null/undefined = no cargada, no se suma ningún extra de altura al trazar su conductor en el Plano (ver modules/plano/alturaInstalacion.ts). */
+  alturaInstalacionM?: number | string | null;
+  /** Desde dónde se mide esa altura: "techo" (default, el conductor baja desde el cielo/losa) o "piso" (sube desde el piso) — ver modules/plano/alturaInstalacion.ts para el porqué del default. */
+  referenciaAltura?: "techo" | "piso" | null;
 }
 
 export interface Circuito extends CircuitoMotor {

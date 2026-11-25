@@ -161,6 +161,7 @@ export default function App() {
     crearPlanoSinImagen,
     exportarDXFPlano,
     listaIntegridad,
+    desincronizacionRutas,
   } = useCircuitos();
 
   const circuitoActivo = circuitos.find((c) => c.id === circuitoActivoId) ?? null;
@@ -398,6 +399,7 @@ export default function App() {
                     diferenciales={normativaActiva === "IEC_ES" ? diferenciales : []}
                     onAsignarDiferencial={normativaActiva === "IEC_ES" ? asignarCircuitoADiferencial : undefined}
                     listaIntegridad={listaIntegridad}
+                    desincronizacionRutas={desincronizacionRutas}
                   />
 
                   <PanelBreakers resultados={resultados} />

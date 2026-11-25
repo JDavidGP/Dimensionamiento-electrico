@@ -113,6 +113,8 @@ export interface FormularioEquipo {
   tipoEquipoNEC?: string;
   esCargaContinua?: boolean;
   corrienteRotorBloqueado?: string | number | null;
+  alturaInstalacionM?: string | number | null;
+  referenciaAltura?: "techo" | "piso";
 }
 
 export function validarEquipo(form: FormularioEquipo): string | null {
@@ -133,6 +135,13 @@ export function validarEquipo(form: FormularioEquipo): string | null {
   if (!form.tipoEquipoNEC || !TIPOS_EQUIPO_NEC[form.tipoEquipoNEC]) {
     return "Selecciona un tipo de equipo (NEC).";
   }
+  // Altura de instalación: opcional (vacío = no cargada), pero si se
+  // escribe algo tiene que ser un número real ≥ 0 — no se guarda un
+  // dato basura que después arruine en silencio el cálculo del Plano.
+  if (form.alturaInstalacionM !== "" && form.alturaInstalacionM != null) {
+    const alturaInstalacionM = parseFloat(String(form.alturaInstalacionM));
+    if (!(alturaInstalacionM >= 0)) return "La altura de instalación no puede ser negativa.";
+  }
   return null;
 }
 
@@ -141,6 +150,8 @@ export function formularioAEquipo(form: FormularioEquipo, circuitoId: string | n
     form.corrienteRotorBloqueado === "" || form.corrienteRotorBloqueado == null
       ? null
       : parseFloat(String(form.corrienteRotorBloqueado));
+  const alturaInstalacionM =
+    form.alturaInstalacionM === "" || form.alturaInstalacionM == null ? null : parseFloat(String(form.alturaInstalacionM));
 
   return {
     id: idExistente ?? generarId(),
@@ -156,6 +167,8 @@ export function formularioAEquipo(form: FormularioEquipo, circuitoId: string | n
     esCargaContinua: !!form.esCargaContinua,
     corrienteRotorBloqueado:
       form.tipoEquipoNEC === "MOTOR" && lra != null && lra > 0 ? lra : null,
+    alturaInstalacionM: alturaInstalacionM != null && alturaInstalacionM >= 0 ? alturaInstalacionM : null,
+    referenciaAltura: form.referenciaAltura === "piso" ? "piso" : "techo",
   };
 }
 
@@ -172,5 +185,7 @@ export function equipoAFormulario(equipo: Equipo): FormularioEquipo {
     esCargaContinua: !!equipo.esCargaContinua,
     corrienteRotorBloqueado:
       equipo.corrienteRotorBloqueado == null ? "" : String(equipo.corrienteRotorBloqueado),
+    alturaInstalacionM: equipo.alturaInstalacionM == null ? "" : String(equipo.alturaInstalacionM),
+    referenciaAltura: equipo.referenciaAltura === "piso" ? "piso" : "techo",
   };
 }

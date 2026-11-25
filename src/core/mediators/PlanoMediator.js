@@ -54,6 +54,8 @@ import {
   calcularDeltaConEnganche,
   detectarCaras,
   caminoMasCorto,
+  calcularExtraAlturaInstalacion,
+  calcularLongitudEsperadaRuta,
 } from "../../modules/plano/index.ts";
 import {
   distancia,
@@ -101,6 +103,8 @@ export const PlanoMediator = {
   calcularDeltaConEnganche,
   detectarCaras,
   caminoMasCorto,
+  calcularExtraAlturaInstalacion,
+  calcularLongitudEsperadaRuta,
 
   /**
    * Circuitos/tableros candidatos para vincular a una ruta de

@@ -58,6 +58,12 @@ export const EQUIPO_VACIO = {
   tipoEquipoNEC: "CARGA_GENERAL",
   esCargaContinua: false, // Art. 210.19 — 125 % antes de agrupar
   corrienteRotorBloqueado: "", // solo MOTOR; opcional
+  // Altura real de instalación de la caja (tomacorriente, interruptor...)
+  // — opcional, puramente física (ver modules/plano/alturaInstalacion.ts).
+  // "" = no cargada, no se suma ningún extra de altura al trazar su
+  // conductor en el Plano.
+  alturaInstalacionM: "",
+  referenciaAltura: "techo", // "techo" (default) | "piso"
 };
 
 // Un TABLERO es dato relacional puro (Fase 3): agrupa circuitos bajo
