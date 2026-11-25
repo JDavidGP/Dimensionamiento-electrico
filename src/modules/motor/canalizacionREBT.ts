@@ -5,7 +5,9 @@
 // calcular el caso de >5 conductores (depende de un diámetro interior
 // que el fabricante declara, no la norma). Geométrico puro, igual
 // criterio que canalizacion.ts: no sabe de Tablero/topología.
-import { TABLA_DIAMETRO_TUBO_REBT, MULTIPLICADOR_SECCION_INTERIOR_MINIMO } from "../../shared/data/canalizacionREBT.js";
+import { TABLA_DIAMETRO_TUBO_REBT, MULTIPLICADOR_SECCION_INTERIOR_MINIMO, TIPOS_INSTALACION_TUBO_REBT } from "../../shared/data/canalizacionREBT.js";
+
+export { TIPOS_INSTALACION_TUBO_REBT };
 
 export type TipoInstalacionTuboREBT = "superficial" | "empotrada";
 

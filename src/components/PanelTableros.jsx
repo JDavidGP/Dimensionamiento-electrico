@@ -790,6 +790,159 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
   );
 }
 
+// Diámetro de tubo REBT (ITC-BT-21) + agrupación de tubos enterrados
+// (ITC-BT-19 Tabla B) + profundidad enterrada (ITC-BT-07) — usuario,
+// 2026-11-25, "canalizaciones aéreas y subterráneas". Equivalente a
+// BloqueLlenadoConducto, pero solo para IEC_ES: REBT da el diámetro
+// DIRECTO por tabla (sección+cantidad), no un % de llenado de área, y
+// solo para conductores de LA MISMA sección en un tubo (ver la nota
+// larga en shared/data/canalizacionREBT.js) — si el grupo marcado
+// mezcla secciones distintas, se avisa en vez de forzar un cálculo que
+// la norma no tabula.
+function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActiva }) {
+  const [tipoInstalacion, setTipoInstalacion] = useState(App.motor.tiposInstalacionTuboREBT[0]);
+  const [seleccionados, setSeleccionados] = useState(() => new Set());
+  const [cantidadTubosAgrupados, setCantidadTubosAgrupados] = useState("");
+  const [separacionTubos, setSeparacionTubos] = useState("contacto");
+  const [enterradoAbierto, setEnterradoAbierto] = useState(false);
+  const [ubicacionEnterrado, setUbicacionEnterrado] = useState("acera");
+  const [profundidadRealM, setProfundidadRealM] = useState("");
+
+  const normativa = App.normativa.obtener(normativaActiva);
+  if (normativa.id !== "IEC_ES") return null; // NEC/CIEN usan BloqueLlenadoConducto (tabla distinta)
+
+  const candidatos = circuitosDelTablero
+    .map((c) => {
+      const r = resultados.find((res) => res.id === c.id);
+      return r?.ok ? { id: c.id, nombre: c.nombre, seccion: r.seccion } : null;
+    })
+    .filter(Boolean);
+
+  if (candidatos.length === 0) return null;
+
+  function alternar(id) {
+    setSeleccionados((previo) => {
+      const nuevo = new Set(previo);
+      if (nuevo.has(id)) nuevo.delete(id);
+      else nuevo.add(id);
+      return nuevo;
+    });
+  }
+
+  const seleccionadosArr = candidatos.filter((c) => seleccionados.has(c.id));
+  const seccionesDistintas = new Set(seleccionadosArr.map((c) => c.seccion));
+  const resultadoTubo =
+    seleccionadosArr.length > 0 && seccionesDistintas.size === 1
+      ? App.motor.diametroTuboREBT(seleccionadosArr[0].seccion, seleccionadosArr.length, tipoInstalacion)
+      : null;
+
+  const cantidadTubosNum = parseInt(cantidadTubosAgrupados, 10);
+  const factorAgrupacion = cantidadTubosNum >= 2 ? App.motor.factorAgrupacionTubosREBT(cantidadTubosNum, separacionTubos) : null;
+
+  const profundidadMinimaM = App.motor.profundidadMinimaEnterradaREBT(ubicacionEnterrado);
+  const profundidadRealNum = parseFloat(profundidadRealM);
+  const profundidadOk = profundidadMinimaM != null && profundidadRealNum >= 0 ? profundidadRealNum >= profundidadMinimaM : null;
+
+  return (
+    <div>
+      <div style={{ fontSize: 10.5, color: colores.textDim, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>
+        Diámetro de tubo (ITC-BT-21)
+      </div>
+      <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 6 }}>
+        Marcá los circuitos que comparten un mismo tubo (de IGUAL sección — ITC-BT-21 no tabula secciones mixtas):
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 8 }}>
+        {candidatos.map((c) => (
+          <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: colores.textMain, cursor: "pointer" }}>
+            <input type="checkbox" checked={seleccionados.has(c.id)} onChange={() => alternar(c.id)} />
+            {c.nombre} <span style={{ color: colores.textDim, fontFamily: fuentes.mono }}>— {c.seccion} mm²</span>
+          </label>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 11, color: colores.textDim }}>Tipo de instalación:</span>
+        <select value={tipoInstalacion} onChange={(e) => setTipoInstalacion(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11.5 }}>
+          {App.motor.tiposInstalacionTuboREBT.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </div>
+
+      {seleccionadosArr.length > 0 && seccionesDistintas.size > 1 && (
+        <div style={{ fontSize: 11.5, color: colores.warn, lineHeight: 1.5 }}>
+          ⚠ El grupo marcado mezcla secciones distintas ({[...seccionesDistintas].join(", ")} mm²) — ITC-BT-21 no tabula ese caso, consultar hoja de datos del fabricante del tubo.
+        </div>
+      )}
+      {resultadoTubo && (
+        resultadoTubo.disponible ? (
+          <div style={{ fontSize: 11.5, color: colores.textMain, lineHeight: 1.5 }}>
+            Diámetro exterior mínimo: <strong>{resultadoTubo.diametroExteriorMm} mm</strong> ({tipoInstalacion}, {seleccionadosArr.length} conductor{seleccionadosArr.length !== 1 ? "es" : ""} de {seleccionadosArr[0].seccion} mm²)
+          </div>
+        ) : (
+          <div style={{ fontSize: 11.5, color: colores.warn, lineHeight: 1.5 }}>⚠ {resultadoTubo.motivo}</div>
+        )
+      )}
+
+      <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, color: colores.textDim }}>Tubos enterrados agrupados (ITC-BT-19 Tabla B):</span>
+        <input
+          type="number"
+          step="1"
+          min="2"
+          value={cantidadTubosAgrupados}
+          onChange={(e) => setCantidadTubosAgrupados(e.target.value)}
+          placeholder="Cantidad"
+          style={{ ...inputStyle(), width: 80, padding: "4px 6px", fontSize: 11 }}
+        />
+        <select value={separacionTubos} onChange={(e) => setSeparacionTubos(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+          <option value="contacto">En contacto</option>
+          <option value="0.25">0,25 m</option>
+          <option value="0.50">0,50 m</option>
+          <option value="1.00_o_mas">≥ 1 m</option>
+        </select>
+        {factorAgrupacion != null && (
+          <span style={{ fontSize: 11.5, color: factorAgrupacion < 1 ? colores.warn : colores.textDim }}>
+            factor de corrección: <strong>{factorAgrupacion.toFixed(2)}</strong>
+          </span>
+        )}
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: colores.textMain, cursor: "pointer" }}>
+          <input type="checkbox" checked={enterradoAbierto} onChange={() => setEnterradoAbierto((v) => !v)} />
+          ¿Este tubo va enterrado? (ITC-BT-07)
+        </label>
+        {enterradoAbierto && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6, paddingLeft: 4 }}>
+            <select value={ubicacionEnterrado} onChange={(e) => setUbicacionEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+              <option value="acera">Bajo acera</option>
+              <option value="calzada">Bajo calzada</option>
+            </select>
+            {profundidadMinimaM != null && (
+              <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.5 }}>
+                Profundidad mínima exigida: <strong>{profundidadMinimaM.toFixed(2)} m</strong>.{" "}
+                <input
+                  type="number"
+                  step="0.05"
+                  value={profundidadRealM}
+                  onChange={(e) => setProfundidadRealM(e.target.value)}
+                  placeholder="Profundidad real (m)"
+                  style={{ ...inputStyle(), width: 110, padding: "3px 6px", fontSize: 11 }}
+                />
+                {profundidadOk === true && <span style={{ color: colores.ok }}> ✓ Cumple.</span>}
+                {profundidadOk === false && <span style={{ color: colores.error }}> ⚠ No alcanza la profundidad mínima.</span>}
+              </div>
+            )}
+            <div style={{ fontSize: 10.5, color: colores.textDim, lineHeight: 1.4 }}>
+              Protección mecánica (losetas o cinta de señalización) a 0,25 m sobre el cable si va directamente enterrado. Separación mínima con otras canalizaciones (agua/gas/telecom): 0,20 m (0,40 m con gas de alta presión).
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Mismo patrón de acordeón que TablaResultados: lista colapsada, clic
 // despliega el detalle del tablero seleccionado (sus circuitos y su
 // alimentador ya calculado). Fase 3 (dato relacional) + Fase 4
@@ -1509,6 +1662,7 @@ export default function PanelTableros({
                     <BloqueBalanceFases balance={balancesFases?.[t.id]} />
 
                     <BloqueLlenadoConducto circuitosDelTablero={circuitosDelTablero} resultados={resultados} normativaActiva={normativaActiva} />
+                    <BloqueCanalizacionREBT circuitosDelTablero={circuitosDelTablero} resultados={resultados} normativaActiva={normativaActiva} />
 
                     <ResumenFuentesEnergia
                       tablero={t}
