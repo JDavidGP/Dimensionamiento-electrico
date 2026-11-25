@@ -149,6 +149,7 @@ export default function App() {
     eliminarMarcadorEquipoPlano,
     moverMarcadorEquipoPlano,
     generarGrupoMarcadoresEquipoPlano,
+    generarCircuitoMarcadoresEquipoPlano,
     corregirPerspectivaPlano,
     crearPlanoSinImagen,
     exportarDXFPlano,
@@ -455,6 +456,7 @@ export default function App() {
                           eliminarMarcadorEquipoPlano={eliminarMarcadorEquipoPlano}
                           moverMarcadorEquipoPlano={moverMarcadorEquipoPlano}
                           generarGrupoMarcadoresEquipoPlano={generarGrupoMarcadoresEquipoPlano}
+                          generarCircuitoMarcadoresEquipoPlano={generarCircuitoMarcadoresEquipoPlano}
                           corregirPerspectivaPlano={corregirPerspectivaPlano}
                           crearPlanoSinImagen={crearPlanoSinImagen}
                           exportarDXFPlano={exportarDXFPlano}

@@ -1326,6 +1326,39 @@ export function useCircuitos() {
     return nuevos;
   }
 
+  // "Generar circuito completo" (usuario, 2026-11-25: "desde el
+  // diagrama unifilar se puede generar el circuito completo con sus
+  // consumidores finales solo para arrastrar dentro del plano ya con
+  // sus id ya vinculado") — mismo patrón visual de apilado que
+  // "Generar grupo" (arriba), pero en vez de N marcadores NUEVOS de un
+  // mismo tipo elegido a mano, toma TODOS los equipos YA cargados de
+  // un circuito real y genera un marcador por cada uno, cada uno YA
+  // vinculado a su propio equipo (entidadId) y con su símbolo inferido
+  // solo (App.diagrama.elegirSimboloEquipo, misma heurística que
+  // "¿Equipo ya ingresado?" de "Colocar equipo") — el usuario solo
+  // arrastra cada uno a su posición real con "Mover equipo", sin
+  // vincular nada a mano. Un equipo del circuito que YA tenga marcador
+  // en el plano (de una ronda anterior) se salta, nunca se duplica —
+  // mismo criterio de exclusión que "¿Equipo ya ingresado?".
+  function generarCircuitoMarcadoresEquipoPlano(puntoImagen, circuitoId) {
+    if (!planoCalibracion) return null;
+    const equiposDelCircuito = equipos.filter((e) => e.circuitoId === circuitoId);
+    if (equiposDelCircuito.length === 0) return { nuevos: [], total: 0 };
+    const yaVinculados = new Set(marcadoresEquipoPlano.map((m) => m.entidadId).filter(Boolean));
+    const pendientes = equiposDelCircuito.filter((e) => !yaVinculados.has(e.id));
+    if (pendientes.length === 0) return { nuevos: [], total: equiposDelCircuito.length };
+
+    const nuevos = pendientes.map((equipo, i) => {
+      const puntoImagenI = { x: puntoImagen.x + (i + 1) * SEPARACION_GRUPO_PX, y: puntoImagen.y + (i + 1) * SEPARACION_GRUPO_PX };
+      const puntoModelo = App.plano.imagenAModelo(puntoImagenI, planoCalibracion.escalaMetrosPorPixel);
+      const tipo = App.diagrama.elegirSimboloEquipo(equipo);
+      return App.plano.crearMarcadorEquipo(puntoModelo, tipo, equipo.id, equipo.nombre || "");
+    });
+    guardarPuntoDeshacerPlano();
+    setMarcadoresEquipoPlano([...marcadoresEquipoPlano, ...nuevos]);
+    return { nuevos, total: equiposDelCircuito.length };
+  }
+
   function eliminarMarcadorEquipoPlano(marcadorId) {
     guardarPuntoDeshacerPlano();
     setMarcadoresEquipoPlano(App.plano.eliminarMarcadorEquipo(marcadorId, marcadoresEquipoPlano));
@@ -1698,6 +1731,7 @@ export function useCircuitos() {
     eliminarMarcadorEquipoPlano,
     moverMarcadorEquipoPlano,
     generarGrupoMarcadoresEquipoPlano,
+    generarCircuitoMarcadoresEquipoPlano,
     corregirPerspectivaPlano,
     crearPlanoSinImagen,
     exportarDXFPlano,
