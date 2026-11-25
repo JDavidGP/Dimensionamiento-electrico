@@ -6,6 +6,13 @@
 // vinculado a su propio equipo (sin pasar por "Vincular a") y con el
 // símbolo correcto ya inferido — apilados cerca del click, listos para
 // arrastrar cada uno a su posición real con "Mover equipo".
+//
+// Extendido después (usuario, 2026-11-25, "la representación de los
+// circuitos en sí... los circuitos individuales que realmente quiero
+// mover en el plano"): además de sus equipos, también genera el
+// marcador del PROPIO circuito (tipo "circuito", símbolo de PIA) —
+// hasta esa ronda, un Circuito como entidad no tenía NINGÚN marcador
+// propio, solo se veían sus equipos sueltos.
 import { chromium } from "playwright";
 import { fileURLToPath } from "url";
 const DIR = fileURLToPath(new URL(".", import.meta.url));
@@ -84,51 +91,63 @@ await page.waitForTimeout(200);
 assert((await page.getByText("Elegí un circuito primero.").count()) >= 1, "Sin elegir circuito, avisa en vez de fallar en silencio");
 assert((await panelPlano.getByText("Equipos en el plano (0)").count()) === 1, "No se generó ningún marcador sin elegir circuito");
 
-// --- 3. Elegir el circuito VACÍO: avisa que no tiene equipos ---
+// --- 3. Elegir el circuito VACÍO (sin equipos todavía): genera SOLO
+//     el marcador del propio circuito (PIA) — nada que inventar para
+//     equipos que no existen, pero el circuito en sí sí se puede
+//     ubicar ya. ---
 const selectCircuito = page.locator("select").filter({ has: page.locator('option:has-text("¿Qué circuito?")') });
 assert((await selectCircuito.locator("option").allTextContents()).some((t) => t.includes("Circuito prueba generar") && t.includes("2 equipos")), "El circuito con 2 equipos aparece correctamente contado");
 await selectCircuito.selectOption({ label: await selectCircuito.locator("option").filter({ hasText: "Circuito vacío" }).textContent() });
 await page.mouse.click(p.x, p.y);
-await page.waitForTimeout(200);
-assert((await page.getByText(/todavía no tiene equipos cargados/).count()) >= 1, "Avisa que el circuito elegido no tiene equipos");
+await page.waitForTimeout(300);
+assert((await page.getByText(/Se generó el marcador del circuito \(PIA\)/).count()) >= 1, "Genera el marcador del propio circuito aunque todavía no tenga equipos");
+assert((await panelPlano.getByText("Equipos en el plano (1)").count()) === 1, "Se creó 1 marcador (el del circuito vacío, ningún equipo que generar)");
 
-// --- 4. Elegir el circuito con 2 equipos: genera 2 marcadores YA
-//     vinculados, con el símbolo correcto cada uno. ---
+// --- 3b. Correrlo de nuevo sobre el MISMO circuito vacío: ya tiene su
+//     marcador y sigue sin equipos — no genera nada más. ---
+await page.mouse.click(p.x, p.y);
+await page.waitForTimeout(300);
+assert((await page.getByText(/ya tiene su propio marcador y todavía no tiene equipos/).count()) >= 1, "Correr de nuevo sobre el circuito vacío no duplica su marcador");
+assert((await panelPlano.getByText("Equipos en el plano (1)").count()) === 1, "Sigue siendo 1 solo marcador");
+
+// --- 4. Elegir el circuito con 2 equipos: genera 3 marcadores YA
+//     vinculados — el del circuito (PIA) + uno por cada equipo, con el
+//     símbolo correcto cada uno. ---
 await selectCircuito.selectOption({ label: await selectCircuito.locator("option").filter({ hasText: "Circuito prueba generar" }).textContent() });
 await page.mouse.click(p.x, p.y);
 await page.waitForTimeout(300);
 
-assert((await page.getByText(/2 marcador\(es\) generado\(s\), YA vinculados/).count()) >= 1, "Avisa que generó 2 marcadores ya vinculados");
-assert((await panelPlano.getByText("Equipos en el plano (2)").count()) === 1, "Se crearon exactamente 2 marcadores");
+assert((await page.getByText(/Se generó el marcador del circuito \(PIA\) \+ 2 equipo\(s\)/).count()) >= 1, "Avisa que generó el marcador del circuito + 2 equipos, ya vinculados");
+assert((await panelPlano.getByText("Equipos en el plano (4)").count()) === 1, "4 marcadores en total: el circuito vacío + el circuito nuevo (PIA) + sus 2 equipos");
 
 const listaEquiposPlano = panelPlano.getByText(/^Equipos en el plano \(/).locator("xpath=following-sibling::div[1]");
+assert((await listaEquiposPlano.getByText("Circuito (PIA)", { exact: true }).count()) === 2, "Los 2 circuitos (el vacío y el nuevo) muestran el símbolo 'Circuito (PIA)'");
 assert((await listaEquiposPlano.getByText("Luminaria", { exact: true }).count()) === 1, "Uno de los marcadores se infirió como 'Luminaria' (por el nombre 'Lámpara pasillo')");
 assert((await listaEquiposPlano.getByText("Contacto (tomacorriente)", { exact: true }).count()) === 1, "El otro se infirió como 'Contacto (tomacorriente)' (por el nombre 'Tomacorriente pasillo')");
 
-// Cada marcador quedó vinculado a SU equipo real (no "— Sin vincular —").
+// Cada marcador quedó vinculado a SU entidad real (no "— Sin vincular —").
 const tarjetaLampara = listaEquiposPlano.locator('input[value="Lámpara pasillo"]').locator("xpath=..");
 assert((await tarjetaLampara.locator("select").first().locator("option:checked").textContent()).includes("Lámpara pasillo"), "El marcador de la luminaria quedó vinculado a 'Lámpara pasillo' (sin pasar por 'Vincular a')");
 const tarjetaToma = listaEquiposPlano.locator('input[value="Tomacorriente pasillo"]').locator("xpath=..");
 assert((await tarjetaToma.locator("select").first().locator("option:checked").textContent()).includes("Tomacorriente pasillo"), "El marcador del tomacorriente quedó vinculado a 'Tomacorriente pasillo'");
+const tarjetaCircuito = listaEquiposPlano.locator('input[value="Circuito prueba generar"]').locator("xpath=..");
+assert((await tarjetaCircuito.locator("select").first().locator("option:checked").textContent()).includes("Circuito prueba generar"), "El marcador del circuito quedó vinculado al circuito real (no a ninguno de sus equipos)");
 
 // --- 5. Correr "Generar circuito" de NUEVO sobre el mismo circuito:
-//     no duplica nada (ambos equipos ya tienen marcador). ---
+//     no duplica nada (circuito y equipos ya tienen marcador). ---
 await selectCircuito.selectOption({ label: await selectCircuito.locator("option").filter({ hasText: "Circuito prueba generar" }).textContent() });
 await page.mouse.click(p.x, p.y);
 await page.waitForTimeout(300);
-assert((await page.getByText(/ya tienen marcador en el plano — no se generó ninguno nuevo/).count()) >= 1, "Correr de nuevo sobre el mismo circuito no duplica nada — avisa en vez de generar de más");
-assert((await panelPlano.getByText("Equipos en el plano (2)").count()) === 1, "Siguen siendo exactamente 2 marcadores, ninguno duplicado");
+assert((await page.getByText(/Ese circuito y todos sus equipos ya tienen marcador en el plano/).count()) >= 1, "Correr de nuevo sobre el mismo circuito no duplica nada — avisa en vez de generar de más");
+assert((await panelPlano.getByText("Equipos en el plano (4)").count()) === 1, "Siguen siendo exactamente 4 marcadores, ninguno duplicado");
 
-// --- 6. Deshacer revierte el LOTE completo (los 2 marcadores) en un solo paso ---
-// Primero hay que volver a generarlos (se deshizo todo con la prueba
-// anterior solo de verificación, no de deshacer) — en realidad el
-// estado actual YA tiene los 2 marcadores del paso 4, así que deshacer
-// acá debería revertir la última acción real: el intento vacío del
-// paso 5 no generó nada nuevo (no hubo guardarPuntoDeshacerPlano), así
-// que deshacer debería ir directo a ANTES del paso 4 (0 marcadores).
+// --- 6. Deshacer revierte el LOTE completo (el circuito + sus 2 equipos) en un solo paso ---
+// El intento vacío del paso 5 no generó nada nuevo (no hubo
+// guardarPuntoDeshacerPlano), así que deshacer va directo a ANTES del
+// paso 4 (vuelve a 1 marcador: el del circuito vacío del paso 3).
 await page.getByRole("button", { name: "↶ Deshacer", exact: true }).click();
 await page.waitForTimeout(200);
-assert((await panelPlano.getByText("Equipos en el plano (0)").count()) === 1, "Deshacer revierte el LOTE completo de 'Generar circuito' en un solo paso");
+assert((await panelPlano.getByText("Equipos en el plano (1)").count()) === 1, "Deshacer revierte el LOTE completo de 'Generar circuito' en un solo paso (vuelve a 1: el circuito vacío)");
 
 console.log("\nErrores de página:", errores);
 assert(errores.length === 0, "Sin errores de página en todo el flujo");

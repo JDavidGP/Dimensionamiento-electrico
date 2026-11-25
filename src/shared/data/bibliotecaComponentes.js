@@ -74,6 +74,19 @@ export const CATALOGO_COMPONENTES = [
   // usuario y el concepto no aporta nada a la topología eléctrica que
   // ese diagrama representa.
   { id: "caja_empalme", nombre: "Caja de empalme", categoria: "distribucion", puntosConexion: { entradas: Infinity, salidas: Infinity }, entidadVinculada: null, soloPlano: true },
+  // Circuito (PIA) — usuario, 2026-11-25: "la representación de los
+  // circuitos en sí... no [están] los circuitos individuales que
+  // realmente quiero mover en el plano". Hasta ahora un Circuito, como
+  // entidad, no tenía NINGÚN marcador propio — solo se veían sus
+  // equipos sueltos (ver "Generar circuito" arriba). Este marcador
+  // representa el PIA de un circuito real, vinculado por `entidadId`
+  // (mismo patrón que tablero_electrico, no uno nuevo) — se puede
+  // colocar y mover como una pieza propia, típicamente cerca de su
+  // tablero. `soloPlano` a propósito: el Diagrama unifilar sigue sin
+  // un nodo por circuito (los equipos se conectan directo al tablero
+  // ahí) — cambiar ESO es un alcance más grande (cardinalidad 1→N real
+  // en vez de genérica), que queda aparte.
+  { id: "circuito", nombre: "Circuito (PIA)", categoria: "distribucion", puntosConexion: { entradas: 1, salidas: Infinity }, entidadVinculada: "circuito", soloPlano: true },
 
   // --- Carga ---
   { id: "contacto", nombre: "Contacto (tomacorriente)", categoria: "carga", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: "equipo" },

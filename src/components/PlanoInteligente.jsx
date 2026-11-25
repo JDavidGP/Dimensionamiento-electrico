@@ -253,6 +253,11 @@ export default function PlanoInteligente({
       const contexto = [circuito?.nombre, tablero?.nombre].filter(Boolean).join(" · ");
       return contexto ? `${entidad.nombre || "Equipo sin nombre"} (${contexto})` : entidad.nombre || "Equipo sin nombre";
     }
+    if (comp?.entidadVinculada === "circuito") {
+      const tablero = tableros.find((t) => t.id === entidad.tableroId);
+      const etiqueta = entidad.etiqueta ? `${entidad.etiqueta} — ` : "";
+      return tablero ? `${etiqueta}${entidad.nombre || "Circuito sin nombre"} (${tablero.nombre})` : `${etiqueta}${entidad.nombre || "Circuito sin nombre"}`;
+    }
     return entidad.nombre || "(sin nombre)";
   }
 
@@ -491,18 +496,21 @@ export default function PlanoInteligente({
         mostrarAviso("Calibrá el plano primero.");
         return;
       }
-      if (resultado.total === 0) {
-        mostrarAviso("Ese circuito todavía no tiene equipos cargados en Circuitos y resultados.");
-        return;
-      }
-      if (resultado.nuevos.length === 0) {
-        mostrarAviso("Los equipos de ese circuito ya tienen marcador en el plano — no se generó ninguno nuevo.");
+      if (!resultado.circuitoGenerado && resultado.nuevos.length === 0) {
+        mostrarAviso(
+          resultado.total === 0
+            ? "Ese circuito ya tiene su propio marcador y todavía no tiene equipos cargados en Circuitos y resultados."
+            : "Ese circuito y todos sus equipos ya tienen marcador en el plano — no se generó ninguno nuevo."
+        );
         return;
       }
       const saltados = resultado.total - resultado.nuevos.length;
+      const partes = [];
+      if (resultado.circuitoGenerado) partes.push("el marcador del circuito (PIA)");
+      if (resultado.nuevos.length > 0) partes.push(`${resultado.nuevos.length} equipo(s)`);
       mostrarAviso(
-        `${resultado.nuevos.length} marcador(es) generado(s), YA vinculados a sus equipos reales, apilados cerca del click — arrastrá cada uno a su lugar real con "Mover equipo".` +
-          (saltados > 0 ? ` (${saltados} ya tenían marcador y se saltaron.)` : "")
+        `Se generó ${partes.join(" + ")}, YA vinculados a sus entidades reales, apilados cerca del click — arrastrá cada uno a su lugar real con "Mover equipo".` +
+          (saltados > 0 ? ` (${saltados} equipo(s) ya tenían marcador y se saltaron.)` : "")
       );
       return;
     }
@@ -1075,7 +1083,7 @@ export default function PlanoInteligente({
                   >
                     <option value="">— Vincular a (opcional) —</option>
                     {App.plano
-                      .candidatosEntidadEquipo(tipoEquipoSeleccionado, { tableros, equipos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano })
+                      .candidatosEntidadEquipo(tipoEquipoSeleccionado, { tableros, equipos, circuitos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano })
                       .map((c) => (
                         <option key={c.id} value={c.id}>
                           {etiquetaEntidadEquipo(tipoEquipoSeleccionado, c)}
@@ -1571,8 +1579,8 @@ export default function PlanoInteligente({
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {marcadoresEquipoPlano.map((m) => {
                 const comp = App.plano.obtenerComponente(m.tipo);
-                const entidad = App.plano.resolverEntidadEquipo(m, { tableros, equipos, fuentesEnergia, transformadores });
-                const candidatos = App.plano.candidatosEntidadEquipo(m.tipo, { tableros, equipos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano, marcadorId: m.id });
+                const entidad = App.plano.resolverEntidadEquipo(m, { tableros, equipos, circuitos, fuentesEnergia, transformadores });
+                const candidatos = App.plano.candidatosEntidadEquipo(m.tipo, { tableros, equipos, circuitos, fuentesEnergia, transformadores, marcadores: marcadoresEquipoPlano, marcadorId: m.id });
                 // Interior/exterior (usuario, 2026-11-25): se DERIVA del
                 // ambiente que contiene al marcador, nunca se guarda
                 // aparte en el equipo — si el ambiente cambia, el

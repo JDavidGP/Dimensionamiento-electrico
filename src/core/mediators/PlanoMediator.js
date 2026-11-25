@@ -171,7 +171,7 @@ export const PlanoMediator = {
    * un nodo del diagrama Y a un marcador del plano a la vez, son
    * aspectos distintos (topología eléctrica vs. ubicación física).
    */
-  candidatosEntidadEquipo(tipoEquipo, { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [], marcadores = [], marcadorId = null } = {}) {
+  candidatosEntidadEquipo(tipoEquipo, { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [], marcadores = [], marcadorId = null } = {}) {
     const comp = obtenerComponente(tipoEquipo);
     if (!comp?.entidadVinculada) return [];
     const vinculados = new Set(marcadores.filter((m) => m.id !== marcadorId && m.entidadId).map((m) => m.entidadId));
@@ -181,6 +181,9 @@ export const PlanoMediator = {
     }
     if (comp.entidadVinculada === "equipo") {
       return equipos.filter((e) => !vinculados.has(e.id));
+    }
+    if (comp.entidadVinculada === "circuito") {
+      return circuitos.filter((c) => !vinculados.has(c.id));
     }
     if (comp.entidadVinculada === "fuenteEnergia") {
       const { GENERADOR, BATERIA } = OrigenMediator.TIPOS_FUENTE_ENERGIA;
@@ -194,11 +197,12 @@ export const PlanoMediator = {
   },
 
   /** La entidad real que representa este marcador, o null si no tiene vínculo o ya no existe. */
-  resolverEntidadEquipo(marcador, { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [] } = {}) {
+  resolverEntidadEquipo(marcador, { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [] } = {}) {
     if (!marcador?.entidadId) return null;
     const comp = obtenerComponente(marcador.tipo);
     if (comp?.entidadVinculada === "tablero") return tableros.find((t) => t.id === marcador.entidadId) ?? null;
     if (comp?.entidadVinculada === "equipo") return equipos.find((e) => e.id === marcador.entidadId) ?? null;
+    if (comp?.entidadVinculada === "circuito") return circuitos.find((c) => c.id === marcador.entidadId) ?? null;
     if (comp?.entidadVinculada === "fuenteEnergia") return fuentesEnergia.find((f) => f.id === marcador.entidadId) ?? null;
     if (comp?.entidadVinculada === "transformador") return transformadores.find((t) => t.id === marcador.entidadId) ?? null;
     return null;

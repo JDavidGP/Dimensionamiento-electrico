@@ -341,6 +341,19 @@ export function useCircuitos() {
       nodosLiberados = App.diagrama.liberarNodosDeEntidad(equipo.id, nodosLiberados);
     }
     setNodosDiagrama(nodosLiberados);
+    // Mismo criterio que arriba, pero para marcadores del PLANO — bug
+    // preexistente encontrado al agregar el marcador de Circuito
+    // (usuario, 2026-11-25): eliminarEquipo/Circuito/Tablero/
+    // FuenteEnergia/Transformador limpiaban sus nodos del diagrama,
+    // pero NUNCA sus marcadores del plano — quedaban apuntando a un
+    // entidadId muerto. Se libera primero el marcador del propio
+    // circuito, y después el de cada uno de sus equipos (en cascada,
+    // igual que el resto de esta función).
+    let marcadoresLiberados = App.plano.liberarMarcadoresDeEntidad(id, marcadoresEquipoPlano);
+    for (const equipo of equiposDelCircuito) {
+      marcadoresLiberados = App.plano.liberarMarcadoresDeEntidad(equipo.id, marcadoresLiberados);
+    }
+    setMarcadoresEquipoPlano(marcadoresLiberados);
     setCircuitos(circuitos.filter((c) => c.id !== id));
     setEquipos(equipos.filter((e) => e.circuitoId !== id));
     if (circuitoActivoId === id) setCircuitoActivoId(null);
@@ -423,6 +436,8 @@ export function useCircuitos() {
   function eliminarEquipo(id) {
     // Desvincula (no borra) los nodos del diagrama que representaban este equipo.
     setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
+    // Idem para su marcador del plano — ver nota en eliminarCircuito.
+    setMarcadoresEquipoPlano(App.plano.liberarMarcadoresDeEntidad(id, marcadoresEquipoPlano));
     setEquipos(equipos.filter((e) => e.id !== id));
     if (editandoEquipoId === id) cancelarEdicionEquipo();
   }
@@ -654,6 +669,8 @@ export function useCircuitos() {
     // después quita el tablero.
     setCircuitos(App.tablero.liberarCircuitos(id, circuitos));
     setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
+    // Idem para su marcador del plano — ver nota en eliminarCircuito.
+    setMarcadoresEquipoPlano(App.plano.liberarMarcadoresDeEntidad(id, marcadoresEquipoPlano));
     setTableros(tableros.filter((t) => t.id !== id));
   }
 
@@ -686,6 +703,8 @@ export function useCircuitos() {
     // nodos del diagrama que la representaban.
     setTableros(App.origen.liberarTableros(id, tableros));
     setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
+    // Idem para su marcador del plano — ver nota en eliminarCircuito.
+    setMarcadoresEquipoPlano(App.plano.liberarMarcadoresDeEntidad(id, marcadoresEquipoPlano));
     setFuentesEnergia(fuentesEnergia.filter((f) => f.id !== id));
   }
 
@@ -716,6 +735,8 @@ export function useCircuitos() {
     // eliminarFuenteEnergia.
     setTableros(App.origen.liberarTablerosDeTransformador(id, tableros));
     setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
+    // Idem para su marcador del plano — ver nota en eliminarCircuito.
+    setMarcadoresEquipoPlano(App.plano.liberarMarcadoresDeEntidad(id, marcadoresEquipoPlano));
     setTransformadores(transformadores.filter((t) => t.id !== id));
   }
 
@@ -1399,21 +1420,41 @@ export function useCircuitos() {
   // mismo criterio de exclusión que "¿Equipo ya ingresado?".
   function generarCircuitoMarcadoresEquipoPlano(puntoImagen, circuitoId) {
     if (!planoCalibracion) return null;
+    const circuito = circuitos.find((c) => c.id === circuitoId);
+    if (!circuito) return { nuevos: [], total: 0 };
     const equiposDelCircuito = equipos.filter((e) => e.circuitoId === circuitoId);
-    if (equiposDelCircuito.length === 0) return { nuevos: [], total: 0 };
     const yaVinculados = new Set(marcadoresEquipoPlano.map((m) => m.entidadId).filter(Boolean));
     const pendientes = equiposDelCircuito.filter((e) => !yaVinculados.has(e.id));
-    if (pendientes.length === 0) return { nuevos: [], total: equiposDelCircuito.length };
+    // El propio circuito (PIA, usuario, 2026-11-25: "la representación
+    // de los circuitos en sí... que realmente quiero mover en el
+    // plano") se genera junto con sus equipos — un marcador propio,
+    // vinculado al circuito (no a un equipo), de una sola vez. Se
+    // salta si el circuito YA tiene marcador (mismo criterio de
+    // dedup que el resto de esta función).
+    const circuitoYaTieneMarcador = yaVinculados.has(circuitoId);
+    if (pendientes.length === 0 && circuitoYaTieneMarcador) {
+      return { nuevos: [], circuitoGenerado: false, total: equiposDelCircuito.length };
+    }
 
-    const nuevos = pendientes.map((equipo, i) => {
+    const nuevosEquipos = [];
+    let circuitoGenerado = false;
+    const nuevos = [];
+    if (!circuitoYaTieneMarcador) {
+      const puntoModeloCircuito = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
+      nuevos.push(App.plano.crearMarcadorEquipo(puntoModeloCircuito, "circuito", circuito.id, circuito.nombre || ""));
+      circuitoGenerado = true;
+    }
+    pendientes.forEach((equipo, i) => {
       const puntoImagenI = { x: puntoImagen.x + (i + 1) * SEPARACION_GRUPO_PX, y: puntoImagen.y + (i + 1) * SEPARACION_GRUPO_PX };
       const puntoModelo = App.plano.imagenAModelo(puntoImagenI, planoCalibracion.escalaMetrosPorPixel);
       const tipo = App.diagrama.elegirSimboloEquipo(equipo);
-      return App.plano.crearMarcadorEquipo(puntoModelo, tipo, equipo.id, equipo.nombre || "");
+      const marcador = App.plano.crearMarcadorEquipo(puntoModelo, tipo, equipo.id, equipo.nombre || "");
+      nuevos.push(marcador);
+      nuevosEquipos.push(marcador);
     });
     guardarPuntoDeshacerPlano();
     setMarcadoresEquipoPlano([...marcadoresEquipoPlano, ...nuevos]);
-    return { nuevos, total: equiposDelCircuito.length };
+    return { nuevos: nuevosEquipos, circuitoGenerado, total: equiposDelCircuito.length };
   }
 
   function eliminarMarcadorEquipoPlano(marcadorId) {
