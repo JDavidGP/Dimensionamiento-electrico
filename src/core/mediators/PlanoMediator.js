@@ -53,6 +53,7 @@ import {
   cajaDeHabitacion,
   calcularDeltaConEnganche,
   detectarCaras,
+  caminoMasCorto,
 } from "../../modules/plano/index.ts";
 import {
   distancia,
@@ -99,6 +100,7 @@ export const PlanoMediator = {
   cajaDeHabitacion,
   calcularDeltaConEnganche,
   detectarCaras,
+  caminoMasCorto,
 
   /**
    * Circuitos/tableros candidatos para vincular a una ruta de

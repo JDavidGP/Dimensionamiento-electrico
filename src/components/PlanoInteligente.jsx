@@ -74,6 +74,7 @@ export default function PlanoInteligente({
   eliminarRutaConductorPlano,
   renombrarRutaConductorPlano,
   vincularRutaConductorPlano,
+  generarRutasAutomaticasCircuito,
   aplicarLongitudRutaPlano,
   marcadoresEquipoPlano,
   agregarMarcadorEquipoPlano,
@@ -212,6 +213,14 @@ export default function PlanoInteligente({
   // consumidores finales... ya con sus id ya vinculado") — circuito
   // elegido para generar su grupo de marcadores YA vinculados.
   const [circuitoGrupoSeleccionado, setCircuitoGrupoSeleccionado] = useState("");
+
+  // "Sugerir ruta automática" (usuario, 2026-11-25) — circuito elegido
+  // para conectar tablero→cada equipo por el camino más corto sobre la
+  // red de conductores ya trazada. No es un "modo" de click en el
+  // plano (los puntos ya se conocen: los marcadores existentes) — es
+  // una acción directa, por eso vive junto al panel "Rutas de
+  // conductor", no en la barra de modos.
+  const [circuitoRutaAutoSeleccionado, setCircuitoRutaAutoSeleccionado] = useState("");
 
   // Triangulación por recorrido (usuario, 2026-11-21): ubicar un
   // equipo sin tocar la imagen directamente — click en 2 puntos de
@@ -1392,6 +1401,48 @@ export default function PlanoInteligente({
           <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
             Rutas de conductor ({rutasConductorPlano.length})
           </div>
+          {planoCalibracion && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+              <select
+                value={circuitoRutaAutoSeleccionado}
+                onChange={(e) => setCircuitoRutaAutoSeleccionado(e.target.value)}
+                style={{ padding: "5px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 11.5, maxWidth: 200 }}
+              >
+                <option value="">¿Sugerir ruta para qué circuito?</option>
+                {circuitos.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.etiqueta ? `${c.etiqueta} — ` : ""}
+                    {c.nombre || "(sin nombre)"}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!circuitoRutaAutoSeleccionado}
+                onClick={() => {
+                  const resultado = generarRutasAutomaticasCircuito(circuitoRutaAutoSeleccionado);
+                  if (resultado?.sinTablero) {
+                    mostrarAviso("Ese circuito no tiene un tablero vinculado a un marcador en el plano todavía — colocalo primero con \"Colocar equipo\".");
+                    return;
+                  }
+                  const generadas = resultado?.generadas.length ?? 0;
+                  const sinCamino = resultado?.sinCamino ?? [];
+                  let texto =
+                    generadas > 0
+                      ? `${generadas} ruta(s) generada(s) siguiendo la red de conductores ya trazada.`
+                      : "No se generó ninguna ruta.";
+                  if (sinCamino.length > 0) {
+                    texto += ` Sin conexión encontrada para: ${sinCamino.join(", ")} — colocá su marcador y/o trazá conductor hasta cerca de él.`;
+                  }
+                  mostrarAviso(texto);
+                }}
+                title="Busca, para cada equipo de este circuito, el camino más corto SOBRE los conductores que ya trazaste a mano — nunca inventa una conexión recta."
+                style={{ padding: "5px 10px", borderRadius: 3, border: `1px solid ${colores.copper}`, background: "transparent", color: circuitoRutaAutoSeleccionado ? colores.copper : colores.textDim, fontWeight: 600, fontSize: 11, cursor: circuitoRutaAutoSeleccionado ? "pointer" : "not-allowed" }}
+              >
+                Sugerir ruta automática
+              </button>
+            </div>
+          )}
           {rutasConductorPlano.length === 0 ? (
             <div style={{ fontSize: 12, color: colores.textDim, lineHeight: 1.4 }}>
               Trazá el recorrido de un conductor ("Trazar conductor") y terminalo para que aparezca acá, con su longitud ya calculada.

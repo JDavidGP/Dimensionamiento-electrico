@@ -43,6 +43,7 @@ export { generarDXF, codificarDXFComoBytes } from "./exportarDXF.ts";
 export { calcularCrucesPared, ANGULO_MINIMO_CRUCE_GRADOS } from "./cruceParedes.ts";
 export { cajaDeHabitacion, calcularDeltaConEnganche } from "./enganchePuzzle.ts";
 export { detectarCaras } from "./deteccionCaras.ts";
+export { caminoMasCorto } from "./caminoRed.ts";
 
 export type {
   Punto,
@@ -65,6 +66,7 @@ export type {
 export type { CrucePared, ResultadoCrucesPared } from "./cruceParedes.ts";
 export type { CajaAABB } from "./enganchePuzzle.ts";
 export type { CaraDetectada } from "./deteccionCaras.ts";
+export type { CaminoEncontrado } from "./caminoRed.ts";
 
 // Radio de "pegado" al trazar — un click a menos de 30cm (en el mundo
 // real, no en píxeles de pantalla: así es independiente del zoom) de

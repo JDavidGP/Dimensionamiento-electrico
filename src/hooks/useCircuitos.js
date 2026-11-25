@@ -1245,6 +1245,63 @@ export function useCircuitos() {
     );
   }
 
+  // "Sugerir ruta automática" (usuario, 2026-11-25, pensado como una
+  // instalación real: calibrar → ubicar cajas de empalme → trazar la
+  // red de rutas permitida → el resto se conecta solo arrastrando los
+  // circuitos ya vinculados). v1, opción acordada con el usuario:
+  // arranca desde el marcador del TABLERO del circuito — NO desde una
+  // caja de empalme, que sigue sin vincularse a nada (decisión ya
+  // tomada, ver bibliotecaComponentes.js) — hacia cada equipo del
+  // circuito que YA tenga marcador, buscando el camino más corto SOLO
+  // sobre los segmentos "conductor" ya trazados a mano con "Trazar
+  // conductor" (App.plano.caminoMasCorto) — "la red" no es un concepto
+  // nuevo, es la que ya existe una vez que se trazó. Genera una
+  // RutaConductorPlano por cada equipo alcanzable, SIN vincular a nada
+  // por default — igual que una ruta trazada a mano, el usuario decide
+  // después (con "Vincular a" + "Usar esta longitud") cuál de todas
+  // representa la distancia real del circuito. Nunca inventa una
+  // conexión recta: un equipo sin camino en la red ya trazada, o sin
+  // marcador todavía, se reporta aparte, no se conecta a la fuerza.
+  // Deduplica contra rutas YA registradas con el MISMO camino exacto
+  // (mismo conjunto de nodos, sin importar sentido) — correr esta
+  // acción de nuevo sobre el mismo circuito no genera duplicados.
+  function generarRutasAutomaticasCircuito(circuitoId) {
+    const circuito = circuitos.find((c) => c.id === circuitoId);
+    if (!circuito) return null;
+    const marcadorTablero = circuito.tableroId
+      ? marcadoresEquipoPlano.find((m) => m.tipo === "tablero_electrico" && m.entidadId === circuito.tableroId)
+      : null;
+    if (!marcadorTablero) return { generadas: [], sinTablero: true, sinCamino: [] };
+
+    const nodoCercaDe = (punto) => App.plano.nodoCercano(punto, nodosPlano, App.plano.RADIO_SNAP_METROS);
+    const nodoTablero = nodoCercaDe(marcadorTablero.punto);
+    const clave = (nodoIds) => [...nodoIds].sort().join(",");
+    const existentes = new Set(rutasConductorPlano.map((r) => clave(r.nodoIds)));
+
+    const equiposDelCircuito = equipos.filter((e) => e.circuitoId === circuitoId);
+    const sinCamino = [];
+    const nuevasRutas = [];
+
+    for (const equipo of equiposDelCircuito) {
+      const marcadorEquipo = marcadoresEquipoPlano.find((m) => m.entidadId === equipo.id);
+      const nodoEquipo = marcadorEquipo ? nodoCercaDe(marcadorEquipo.punto) : null;
+      const camino = nodoTablero && nodoEquipo ? App.plano.caminoMasCorto(nodoTablero.id, nodoEquipo.id, nodosPlano, segmentosPlano) : null;
+      if (!camino) {
+        sinCamino.push(equipo.nombre || "Equipo sin nombre");
+        continue;
+      }
+      if (existentes.has(clave(camino.nodoIds))) continue; // ya existe una ruta con este mismo camino — no duplicar
+      const ruta = App.plano.crearRutaConductor(camino.nodoIds, nodosPlano, `Auto: ${marcadorTablero.nombre || "Tablero"} → ${equipo.nombre || "Equipo"}`);
+      if (ruta) nuevasRutas.push(ruta);
+    }
+
+    if (nuevasRutas.length > 0) {
+      guardarPuntoDeshacerPlano();
+      setRutasConductorPlano([...rutasConductorPlano, ...nuevasRutas]);
+    }
+    return { generadas: nuevasRutas, sinTablero: false, sinCamino };
+  }
+
   function actualizarDistanciaCircuito(id, distanciaM) {
     setCircuitos(circuitos.map((c) => (c.id === id ? { ...c, distancia: distanciaM } : c)));
   }
@@ -1724,6 +1781,7 @@ export function useCircuitos() {
     eliminarRutaConductorPlano,
     renombrarRutaConductorPlano,
     vincularRutaConductorPlano,
+    generarRutasAutomaticasCircuito,
     aplicarLongitudRutaPlano,
     marcadoresEquipoPlano,
     agregarMarcadorEquipoPlano,
