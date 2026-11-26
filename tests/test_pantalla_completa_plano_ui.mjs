@@ -1,14 +1,19 @@
-// Pantalla completa + menú de herramientas colapsable en el Plano —
-// usuario, 2026-11-26, "al entrar en plano y entrar a editar se
+// Pantalla completa + menú de herramientas por categorías en el Plano
+// — usuario, 2026-11-26, "al entrar en plano y entrar a editar se
 // expande a pantalla completa... los botones quedan agrupados en un
-// menú que tocas para expandir o retraer" (confirmó Android). Dos
-// capas independientes: (1) un modo CSS propio (position:fixed sobre
-// el viewport) que SIEMPRE funciona, es la fuente de verdad del
-// layout; (2) un intento best-effort de la Fullscreen API real +
-// orientación horizontal, que en un entorno headless de CI puede
-// fallar o no estar disponible — por eso esta prueba verifica la capa
-// (1) (siempre determinística) y solo confirma que intentar la capa
-// (2) nunca tira un error de página.
+// menú que tocas para expandir o retraer" (confirmó Android), y luego,
+// probándolo en el celular real: "el botón de pantalla completa
+// debería ir dentro del lienzo en una esquina... cuando toque el menú
+// despliega un menú que contenga apartados por ejemplo ambiente lo
+// tocas y muestra todos los botones relacionado con esa función".
+//
+// Dos capas independientes para pantalla completa: (1) un modo CSS
+// propio (position:fixed sobre el viewport) que SIEMPRE funciona, es
+// la fuente de verdad del layout; (2) un intento best-effort de la
+// Fullscreen API real + orientación horizontal, que en un entorno
+// headless de CI puede fallar o no estar disponible — por eso esta
+// prueba verifica la capa (1) (siempre determinística) y solo
+// confirma que intentar la capa (2) nunca tira un error de página.
 import { chromium } from "playwright";
 import { fileURLToPath } from "url";
 const DIR = fileURLToPath(new URL(".", import.meta.url));
@@ -28,7 +33,12 @@ await page.waitForTimeout(150);
 await page.getByRole("button", { name: "Plano", exact: true }).click();
 await page.waitForTimeout(300);
 
-const botonPantallaCompleta = page.getByRole("button", { name: "⛶ Pantalla completa", exact: true });
+// El botón vive DENTRO del lienzo (como el de un reproductor de
+// video), no en el panel de controles — se busca dentro del
+// contenedor relativo que PlanoCanvas.jsx arma para sus propios
+// overlays (el mismo que ya usan los botones de zoom −/Ajustar/+).
+const contenedorLienzo = page.locator("svg").last().locator("xpath=../..");
+const botonPantallaCompleta = contenedorLienzo.getByRole("button", { name: "⛶", exact: true });
 assert((await botonPantallaCompleta.count()) === 0, "Sin plano cargado, el botón de pantalla completa ni aparece (nada que maximizar)");
 
 await page.locator('input[type="file"][accept="image/*,application/pdf"]').setInputFiles(DIR + "fixtures/plano_test.png");
@@ -36,7 +46,7 @@ await page.waitForTimeout(400);
 
 async function puntoPantallaDesdeImagen(puntoImagen) {
   const svg = page.locator("svg").last();
-  await svg.scrollIntoViewIfNeeded(); // viewport de teléfono (420px ancho) — el lienzo queda bien abajo de la barra de 17 modos envuelta en varias líneas, hay que desplazarse hasta él antes de clickear coordenadas absolutas.
+  await svg.scrollIntoViewIfNeeded(); // viewport de teléfono (420px ancho) — el lienzo queda bien abajo de la barra de modos, hay que desplazarse hasta él antes de clickear coordenadas absolutas.
   const box = await svg.boundingBox();
   const transformAttr = await page.locator("svg > g").last().getAttribute("transform");
   const m = transformAttr.match(/translate\(([-\d.]+),([-\d.]+)\) scale\(([-\d.]+)\)/);
@@ -61,59 +71,85 @@ await page.waitForTimeout(200);
 const planoGrid = page.locator(".plano-grid");
 const svgCanvas = page.locator("svg").last().locator("xpath=..");
 
-// --- 1. Con plano cargado, el botón aparece; el modo FAB de herramientas NO (todavía no estamos en pantalla completa) ---
-assert(await botonPantallaCompleta.isVisible(), "Con un plano cargado, 'Pantalla completa' es visible");
-assert((await page.getByRole("button", { name: /herramientas/i }).count()) === 0, "Fuera de pantalla completa, el botón de Herramientas (FAB) ni existe — la barra de modos siempre está visible normal");
+// --- 1. Con plano cargado, el botón del lienzo aparece; el FAB de herramientas NO (todavía no estamos en pantalla completa) ---
+assert(await botonPantallaCompleta.isVisible(), "Con un plano cargado, el botón '⛶' es visible DENTRO del lienzo");
+assert((await page.getByRole("button", { name: /herramientas/i }).count()) === 0, "Fuera de pantalla completa, el FAB de Herramientas ni existe — la barra de modos siempre está visible normal");
 
 const alturaCanvasAntes = await svgCanvas.evaluate((el) => el.style.height);
 assert(alturaCanvasAntes === "480px", `Antes de pantalla completa, el lienzo usa la altura fija de siempre (real: '${alturaCanvasAntes}')`);
 
-// --- 2. Entrar en pantalla completa: el contenedor pasa a position:fixed cubriendo el viewport, el lienzo pide más alto, y el botón cambia a "Salir" ---
+// --- 2. Entrar en pantalla completa: el contenedor pasa a position:fixed cubriendo el viewport, el lienzo pide más alto, y el botón del lienzo cambia a "⤡" ---
 await botonPantallaCompleta.click();
 await page.waitForTimeout(150);
 
 const posicionTrasEntrar = await planoGrid.evaluate((el) => getComputedStyle(el).position);
 assert(posicionTrasEntrar === "fixed", `Al entrar en pantalla completa, el contenedor del Plano pasa a position:fixed (real: '${posicionTrasEntrar}')`);
 
-const botonSalir = page.getByRole("button", { name: "⤡ Salir", exact: true });
-assert(await botonSalir.isVisible(), "El botón ahora dice 'Salir' (atajo, corto a propósito para que quepa flotando en la esquina)");
-assert((await botonPantallaCompleta.count()) === 0, "El botón de 'entrar' ya no existe mientras está en pantalla completa (es el mismo botón, cambia de texto/acción)");
+const botonSalir = contenedorLienzo.getByRole("button", { name: "⤡", exact: true });
+assert(await botonSalir.isVisible(), "El botón del lienzo ahora muestra '⤡' (salir)");
+assert((await botonPantallaCompleta.count()) === 0, "El botón '⛶' (entrar) ya no existe mientras está en pantalla completa — es el MISMO botón, cambia de ícono/acción");
 
 const alturaCanvasDespues = await svgCanvas.evaluate((el) => el.style.height);
 assert(alturaCanvasDespues.includes("vh") && alturaCanvasDespues !== "480px", `En pantalla completa, el lienzo pide una altura basada en el viewport, no la fija de 480px (real: '${alturaCanvasDespues}')`);
 
-// --- 3. El FAB "Herramientas" aparece, arranca EXPANDIDO (el selector de modos sigue visible) ---
+// --- 3. El FAB "Herramientas" aparece, arranca EXPANDIDO — pero eso ahora
+//     muestra las 5 CATEGORÍAS (chips), no los 17 botones sueltos de una. ---
 const botonHerramientas = page.getByRole("button", { name: /herramientas/i });
-assert(await botonHerramientas.isVisible(), "En pantalla completa aparece el botón de Herramientas (FAB)");
+assert(await botonHerramientas.isVisible(), "En pantalla completa aparece el FAB de Herramientas");
+const chipParedes = page.getByRole("button", { name: "Paredes y conductores", exact: true });
+const chipAmbientes = page.getByRole("button", { name: "Ambientes", exact: true });
 const botonTrazarPared = page.getByRole("button", { name: "Trazar pared", exact: true });
-assert(await botonTrazarPared.isVisible(), "Arranca EXPANDIDO — el selector de modos (ej. 'Trazar pared') sigue visible de entrada");
+assert(await chipParedes.isVisible(), "Arranca EXPANDIDO — se ven las categorías (ej. 'Paredes y conductores') de entrada");
+assert((await botonTrazarPared.count()) === 0, "...pero NINGÚN botón de modo individual todavía — hace falta tocar una categoría primero");
 
-// --- 4. Tocar el FAB retrae el menú — el selector de modos desaparece, pero el modo activo NO cambia ---
-await page.getByRole("button", { name: "Trazar pared", exact: true }).click();
+// --- 4. Tocar una categoría despliega SOLO sus botones ---
+await chipParedes.click();
 await page.waitForTimeout(100);
+assert(await botonTrazarPared.isVisible(), "Tocar 'Paredes y conductores' despliega 'Trazar pared' (y el resto de esa categoría)");
+assert((await page.getByRole("button", { name: "Colocar equipo", exact: true }).count()) === 0, "...pero NO los botones de OTRA categoría (ej. 'Colocar equipo', de Equipos)");
+
+// --- 5. Tocar OTRA categoría cambia cuál está desplegada (no las acumula todas) ---
+await chipAmbientes.click();
+await page.waitForTimeout(100);
+assert((await botonTrazarPared.count()) === 0, "Al abrir 'Ambientes', la categoría anterior ('Paredes y conductores') se cierra sola");
+assert((await page.getByRole("button", { name: "Generar ambiente", exact: true }).count()) === 1, "...y aparecen los botones de 'Ambientes' en su lugar");
+
+// --- 6. Tocar la MISMA categoría de nuevo la cierra (toggle) ---
+await chipAmbientes.click();
+await page.waitForTimeout(100);
+assert((await page.getByRole("button", { name: "Generar ambiente", exact: true }).count()) === 0, "Tocar la misma categoría de nuevo la cierra");
+
+// --- 7. Elegir un modo real (dentro de una categoría) sigue funcionando igual que siempre ---
+await chipParedes.click();
+await page.waitForTimeout(100);
+await botonTrazarPared.click();
+await page.waitForTimeout(100);
+
+// --- 8. Tocar el FAB retrae TODO el drawer (categorías incluidas) — el modo activo NO cambia ---
 await botonHerramientas.click();
 await page.waitForTimeout(100);
-assert(!(await botonTrazarPared.isVisible()), "Al tocar el FAB, el selector de modos se esconde (display:none)");
+assert(!(await chipParedes.isVisible()), "Al tocar el FAB, hasta las categorías se esconden (display:none)");
 
 // El lienzo sigue ahí y sigue siendo clickeable para trazar en modo "pared" aunque el menú esté oculto — confirma que ocultar el menú no afecta la funcionalidad del lienzo.
 let p = await puntoPantallaDesdeImagen({ x: 150, y: 250 });
 await page.mouse.click(p.x, p.y);
 await page.waitForTimeout(150);
 const circulosTrasClick = await page.locator("svg > g circle").count();
-assert(circulosTrasClick >= 1, "Con el menú retraído, el lienzo sigue funcionando — el click en modo 'Trazar pared' creó un nodo igual");
+assert(circulosTrasClick >= 1, "Con el drawer retraído, el lienzo sigue funcionando — el click en modo 'Trazar pared' (elegido antes) creó un nodo igual");
 
-// --- 5. Reabrir el menú lo vuelve a mostrar ---
+// --- 9. Reabrir el FAB vuelve a mostrar las categorías (recuerda cuál estaba abierta: 'Paredes y conductores') ---
 await botonHerramientas.click();
 await page.waitForTimeout(100);
-assert(await botonTrazarPared.isVisible(), "Tocar el FAB de nuevo re-expande el menú");
+assert(await chipParedes.isVisible(), "Tocar el FAB de nuevo re-expande el drawer (las categorías)");
+assert(await botonTrazarPared.isVisible(), "La categoría que estaba abierta ('Paredes y conductores') sigue abierta — no se resetea sola");
 
-// --- 6. Salir de pantalla completa: todo vuelve al estado normal ---
+// --- 10. Salir de pantalla completa: todo vuelve al estado normal ---
 await botonSalir.click();
 await page.waitForTimeout(150);
 const posicionTrasSalir = await planoGrid.evaluate((el) => getComputedStyle(el).position);
 assert(posicionTrasSalir !== "fixed", `Al salir, el contenedor deja de ser position:fixed (real: '${posicionTrasSalir}')`);
-assert(await botonPantallaCompleta.isVisible(), "El botón vuelve a decir 'Pantalla completa'");
-assert((await page.getByRole("button", { name: /herramientas/i }).count()) === 0, "El FAB de Herramientas desaparece al salir — la barra de modos vuelve a su comportamiento normal (siempre visible)");
+assert(await botonPantallaCompleta.isVisible(), "El botón del lienzo vuelve a mostrar '⛶'");
+assert((await page.getByRole("button", { name: /herramientas/i }).count()) === 0, "El FAB de Herramientas desaparece al salir — la barra de modos vuelve a su comportamiento normal (siempre visible, sin categorías)");
 const alturaCanvasFinal = await svgCanvas.evaluate((el) => el.style.height);
 assert(alturaCanvasFinal === "480px", "El lienzo vuelve a su altura fija de siempre al salir de pantalla completa");
 

@@ -45,6 +45,14 @@ const MODOS = [
   { valor: "eliminar", label: "Borrar", grupo: "Utilidades", ayuda: "Click sobre un nodo, una pared/conductor o un equipo para eliminarlo." },
 ];
 
+// Categorías del menú colapsable de pantalla completa (usuario,
+// 2026-11-26: "cuando toque el menú despliega un menú que contenga
+// apartados... ambiente lo tocas y muestra todos los botones
+// relacionado con esa función") — los MISMOS 5 grupos que ya agrupan
+// la fila de escritorio, sin inventar una taxonomía nueva, solo
+// reusando `grupo` en un acordeón en vez de una fila plana.
+const CATEGORIAS_MODOS = [...new Set(MODOS.map((m) => m.grupo))];
+
 // Mismo mapa categoría->color que usa PlanoCanvas.jsx — para el punto
 // de color junto a cada opción del <select> de tipo de equipo.
 const COLOR_POR_CATEGORIA = { fuente: colores.ok, medicion_proteccion: colores.warn, distribucion: colores.copper, control: colores.copperDim, carga: colores.textDim };
@@ -140,6 +148,9 @@ export default function PlanoInteligente({
   const contenedorPlanoRef = useRef(null);
   const [pantallaCompletaPlano, setPantallaCompletaPlano] = useState(false);
   const [menuPlanoExpandido, setMenuPlanoExpandido] = useState(true);
+  // Acordeón de categorías del drawer de pantalla completa (ver
+  // CATEGORIAS_MODOS) — null = ninguna categoría abierta todavía.
+  const [categoriaMenuAbierta, setCategoriaMenuAbierta] = useState(null);
   const [paredesCandidatas, setParedesCandidatas] = useState([]);
   const [puertasCandidatas, setPuertasCandidatas] = useState([]);
   // Asistencia de bordes (Fase 2) — "pega" cada click de trazado al
@@ -850,48 +861,7 @@ export default function PlanoInteligente({
           hacia la derecha para siempre. minWidth:0 fuerza el track a
           NO crecer por el contenido — el ancho real lo sigue dando la
           grilla, nunca el <svg>. */}
-      <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14, minWidth: 0, position: "relative" }}>
-        {/* position:absolute, SIN reservar padding — 2 bugs reales
-            encontrados probando esto (usuario, 2026-11-26): (1) metido
-            como un botón más en la fila de acciones (flexWrap), una
-            vez que TODAS las acciones condicionales ya están visibles
-            (Deshacer + Restablecer + Exportar DXF + Quitar + este),
-            7 botones ya no entraban en una sola línea a 1280px — la
-            fila envolvía a una 2da línea, empujando el lienzo 22px
-            hacia abajo (la MISMA categoría de regresión que ya atrapó
-            test_enganche_puzzle_ui una vez con la barra de modos).
-            (2) Flotarlo absoluto arriba de TODO SIN tocar la fila
-            parecía la solución, pero reservarle espacio con
-            paddingRight en esa fila achicaba su ancho disponible IGUAL
-            — mismo problema, otra vía. Se sacó el padding del todo y
-            se bajó el botón a top:44 (debajo de la fila de acciones de
-            una sola línea, que mide ~28px) — así nunca compite por
-            ancho con nada, y solo se superpondría en el caso raro de
-            que esa fila YA wrapeara por su cuenta sin este botón
-            (no pasa hoy). */}
-        {planoImagen && (
-          <button
-            type="button"
-            onClick={pantallaCompletaPlano ? salirPantallaCompletaPlano : entrarPantallaCompletaPlano}
-            style={{
-              position: "absolute",
-              top: 44,
-              right: 14,
-              padding: "6px 10px",
-              borderRadius: 3,
-              border: `1px solid ${colores.copper}`,
-              background: pantallaCompletaPlano ? colores.copper : "transparent",
-              color: pantallaCompletaPlano ? colores.textSobreAcento : colores.copper,
-              fontWeight: 700,
-              fontSize: 11.5,
-              cursor: "pointer",
-              zIndex: 1,
-            }}
-            title={pantallaCompletaPlano ? "Volver a la vista normal, con el resto de la app alrededor." : "Maximiza el Plano ocupando toda la pantalla — pensado para editar desde el celular."}
-          >
-            {pantallaCompletaPlano ? "⤡ Salir" : "⛶ Pantalla completa"}
-          </button>
-        )}
+      <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
           <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase" }}>
             Plano inteligente
@@ -1065,39 +1035,70 @@ export default function PlanoInteligente({
               </div>
             )}
             <div style={pantallaCompletaPlano && !menuPlanoExpandido ? { display: "none" } : undefined}>
-            {/* Una sola fila que se acomoda sola (igual que la versión
-                original, sin grupo) — una primera versión forzaba 5
-                filas fijas (una por grupo), lo que empujaba el lienzo
-                del plano hacia abajo lo suficiente como para que,
-                en un plano alto, quedara parcialmente fuera de la
-                vista (regresión real encontrada con Playwright, no
-                solo un detalle de la prueba: cualquier usuario con
-                una ventana más baja hubiera tenido que scrollear de
-                más). Las etiquetas de grupo son solo un separador
-                chico inline, nunca fuerzan un salto de línea propio. */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
-              {MODOS.map((m, i) => (
-                <React.Fragment key={m.valor}>
-                  {(i === 0 || MODOS[i - 1].grupo !== m.grupo) && (
-                    <span
-                      style={{
-                        fontSize: 9,
-                        color: colores.textDim,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.03em",
-                        paddingLeft: i === 0 ? 0 : 8,
-                        borderLeft: i === 0 ? "none" : `1px solid ${colores.border}`,
-                      }}
+            {pantallaCompletaPlano ? (
+              // Acordeón por categoría (usuario, 2026-11-26: "despliega
+              // un menú que contenga apartados... ambiente lo tocas y
+              // muestra todos los botones relacionado con esa función")
+              // — SOLO en pantalla completa; la fila plana de abajo
+              // (escritorio) sigue exactamente igual, sin tocar.
+              <div style={{ marginBottom: 6 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {CATEGORIAS_MODOS.map((cat) => (
+                    <BotonPill
+                      key={cat}
+                      activo={categoriaMenuAbierta === cat}
+                      onClick={() => setCategoriaMenuAbierta((actual) => (actual === cat ? null : cat))}
+                      flex="0 0 auto"
                     >
-                      {m.grupo}
-                    </span>
-                  )}
-                  <BotonPill activo={modo === m.valor} onClick={() => cambiarModo(m.valor)} flex="0 0 auto">
-                    {m.label}
-                  </BotonPill>
-                </React.Fragment>
-              ))}
-            </div>
+                      {cat}
+                    </BotonPill>
+                  ))}
+                </div>
+                {categoriaMenuAbierta && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${colores.border}` }}>
+                    {MODOS.filter((m) => m.grupo === categoriaMenuAbierta).map((m) => (
+                      <BotonPill key={m.valor} activo={modo === m.valor} onClick={() => cambiarModo(m.valor)} flex="0 0 auto">
+                        {m.label}
+                      </BotonPill>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Una sola fila que se acomoda sola (igual que la versión
+              // original, sin grupo) — una primera versión forzaba 5
+              // filas fijas (una por grupo), lo que empujaba el lienzo
+              // del plano hacia abajo lo suficiente como para que,
+              // en un plano alto, quedara parcialmente fuera de la
+              // vista (regresión real encontrada con Playwright, no
+              // solo un detalle de la prueba: cualquier usuario con
+              // una ventana más baja hubiera tenido que scrollear de
+              // más). Las etiquetas de grupo son solo un separador
+              // chico inline, nunca fuerzan un salto de línea propio.
+              <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
+                {MODOS.map((m, i) => (
+                  <React.Fragment key={m.valor}>
+                    {(i === 0 || MODOS[i - 1].grupo !== m.grupo) && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          color: colores.textDim,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.03em",
+                          paddingLeft: i === 0 ? 0 : 8,
+                          borderLeft: i === 0 ? "none" : `1px solid ${colores.border}`,
+                        }}
+                      >
+                        {m.grupo}
+                      </span>
+                    )}
+                    <BotonPill activo={modo === m.valor} onClick={() => cambiarModo(m.valor)} flex="0 0 auto">
+                      {m.label}
+                    </BotonPill>
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, fontSize: 11, color: colores.textDim }}>
               <span>Mostrar:</span>
@@ -1420,6 +1421,8 @@ export default function PlanoInteligente({
               : []
           }
           ocuparAltoDisponible={pantallaCompletaPlano}
+          pantallaCompleta={pantallaCompletaPlano}
+          onTogglePantallaCompleta={pantallaCompletaPlano ? salirPantallaCompletaPlano : entrarPantallaCompletaPlano}
         />
 
         {modo === "perspectiva" && puntosPerspectiva.length === 4 && (

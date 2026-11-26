@@ -89,6 +89,8 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     onClickParedCandidata,
     onTrazarRectangulo,
     ocuparAltoDisponible = false,
+    pantallaCompleta = false,
+    onTogglePantallaCompleta,
   },
   ref
 ) {
@@ -754,6 +756,23 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
             +
           </button>
         </div>
+      )}
+
+      {/* Pantalla completa — DENTRO del lienzo, como el botón de un
+          reproductor de video (usuario, 2026-11-26: "el botón de
+          pantalla completa debería ir dentro del lienzo en una
+          esquina"). Vive acá, no en PlanoInteligente.jsx, por el mismo
+          motivo que los botones de zoom: es del LIENZO, no del panel
+          de controles alrededor. */}
+      {imagen && onTogglePantallaCompleta && (
+        <button
+          type="button"
+          onClick={onTogglePantallaCompleta}
+          title={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
+          style={{ ...botonZoomEstilo, position: "absolute", top: 10, right: 10, width: "auto", padding: "0 10px", fontSize: 10.5 }}
+        >
+          {pantallaCompleta ? "⤡" : "⛶"}
+        </button>
       )}
     </div>
   );
