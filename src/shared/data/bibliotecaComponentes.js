@@ -87,6 +87,14 @@ export const CATALOGO_COMPONENTES = [
   // usuario y el concepto no aporta nada a la topología eléctrica que
   // ese diagrama representa.
   { id: "caja_empalme", nombre: "Caja de empalme", categoria: "distribucion", puntosConexion: { entradas: Infinity, salidas: Infinity }, entidadVinculada: null, soloPlano: true },
+  // Fuente de agua (bañera/ducha) — usuario, 2026-11-26, continuando
+  // REBT ITC-BT-27 (volúmenes de seguridad del baño): referencia
+  // puramente física (sin carga, sin breaker, nunca se vincula a una
+  // entidad), igual criterio que "Caja de empalme" — su único dato
+  // propio es `radioVolumen1M` (ver modules/plano/volumenesBano.ts),
+  // editado directo sobre el marcador. `soloPlano` a propósito: no
+  // aporta nada a la topología eléctrica del Diagrama unifilar.
+  { id: "fuente_agua", nombre: "Fuente de agua (bañera/ducha)", categoria: "distribucion", puntosConexion: { entradas: 0, salidas: 0 }, entidadVinculada: null, soloPlano: true },
   // Circuito (PIA) — usuario, 2026-11-25: "la representación de los
   // circuitos en sí... no [están] los circuitos individuales que
   // realmente quiero mover en el plano". Hasta ahora un Circuito, como

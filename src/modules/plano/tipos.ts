@@ -67,6 +67,8 @@ export interface MarcadorEquipoPlano {
   nombre: string;
   /** Vínculo marcador-a-marcador (usuario, 2026-11-25): para un interruptor conmutado, el id del marcador de luminaria que controla — null si no aplica o todavía no se vinculó. Varios interruptores pueden apuntar a la MISMA luminaria (3/4 vías), a propósito: no es un vínculo exclusivo. Distinto de `entidadId` (que vincula a una entidad REAL del sistema — circuito/tablero/equipo/etc.), este vínculo es puramente geográfico/de plano. */
   controlaMarcadorId: string | null;
+  /** Solo tiene sentido para tipo "fuente_agua" — radio del Volumen 1 de ITC-BT-27 (huella de la bañera/ducha), en metros. null/undefined = usa RADIO_VOLUMEN1_DEFECTO_M (ver modules/plano/volumenesBano.ts). */
+  radioVolumen1M?: number | string | null;
 }
 
 export interface CalibracionDosPuntos {

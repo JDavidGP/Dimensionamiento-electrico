@@ -51,6 +51,16 @@ export { requiereProteccionGFCI } from "./proteccionGFCI.ts";
 export type { RequerimientoGFCI } from "./proteccionGFCI.ts";
 export { requiereProteccionAFCI } from "./proteccionAFCI.ts";
 export type { RequerimientoAFCI } from "./proteccionAFCI.ts";
+export {
+  ANCHO_VOLUMEN_2_M,
+  ANCHO_VOLUMEN_3_M,
+  RADIO_VOLUMEN1_DEFECTO_M,
+  SENSIBILIDAD_MAXIMA_VOLUMEN3_MA,
+  clasificarDistanciaBano,
+  fuenteAguaMasCercana,
+  evaluarZonaBano,
+} from "./volumenesBano.ts";
+export type { ZonaBano, ResultadoZonaBano, MarcadorFuenteAgua } from "./volumenesBano.ts";
 
 export type {
   Punto,

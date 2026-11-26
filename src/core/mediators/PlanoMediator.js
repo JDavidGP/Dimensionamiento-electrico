@@ -59,6 +59,13 @@ import {
   OPCIONES_TIPO_AMBIENTE,
   requiereProteccionGFCI,
   requiereProteccionAFCI,
+  ANCHO_VOLUMEN_2_M,
+  ANCHO_VOLUMEN_3_M,
+  RADIO_VOLUMEN1_DEFECTO_M,
+  SENSIBILIDAD_MAXIMA_VOLUMEN3_MA,
+  clasificarDistanciaBano,
+  fuenteAguaMasCercana,
+  evaluarZonaBano,
 } from "../../modules/plano/index.ts";
 import {
   distancia,
@@ -111,6 +118,13 @@ export const PlanoMediator = {
   OPCIONES_TIPO_AMBIENTE,
   requiereProteccionGFCI,
   requiereProteccionAFCI,
+  ANCHO_VOLUMEN_2_M,
+  ANCHO_VOLUMEN_3_M,
+  RADIO_VOLUMEN1_DEFECTO_M,
+  SENSIBILIDAD_MAXIMA_VOLUMEN3_MA,
+  clasificarDistanciaBano,
+  fuenteAguaMasCercana,
+  evaluarZonaBano,
 
   /**
    * Circuitos/tableros candidatos para vincular a una ruta de

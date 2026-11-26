@@ -109,6 +109,7 @@ export default function TablaResultados({
   desincronizacionRutas = [],
   advertenciasGFCI = [],
   advertenciasAFCI = [],
+  advertenciasVolumenBano = [],
 }) {
   if (circuitos.length === 0) {
     return (
@@ -297,6 +298,7 @@ export default function TablaResultados({
                   <div style={{ borderTop: `1px solid ${colores.border}` }}>
                     {equipos.map((eq) => {
                       const faltaGFCI = advertenciasGFCI.find((a) => a.equipoId === eq.id);
+                      const volumenBano = advertenciasVolumenBano.find((a) => a.equipoId === eq.id);
                       return (
                         <div
                           key={eq.id}
@@ -316,6 +318,19 @@ export default function TablaResultados({
                           {faltaGFCI && (
                             <div style={{ width: "100%", color: colores.warn, fontSize: 11, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaGFCI.motivo}>
                               <span>⚡</span> <span>Requiere protección GFCI ({faltaGFCI.motivo}) y no está marcada — ver "Protegido por GFCI" al editar el equipo.</span>
+                            </div>
+                          )}
+                          {volumenBano && (
+                            <div
+                              style={{ width: "100%", color: volumenBano.nivel === "error" ? colores.error : colores.warn, fontSize: 11, display: "flex", gap: 6, alignItems: "flex-start" }}
+                              title={volumenBano.motivo}
+                            >
+                              <span>🛁</span>{" "}
+                              <span>
+                                {volumenBano.nivel === "error"
+                                  ? `Prohibido por ITC-BT-27 (${volumenBano.motivo}) — a ${volumenBano.distanciaM.toFixed(2)}m de una fuente de agua, moverlo o alejarlo.`
+                                  : `${volumenBano.motivo} — el circuito no tiene un diferencial ≤30mA asignado.`}
+                              </span>
                             </div>
                           )}
                         </div>

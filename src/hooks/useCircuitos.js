@@ -349,6 +349,39 @@ export function useCircuitos() {
     return resultado;
   }, [normativaActiva, circuitos, equipos, marcadoresEquipoPlano, habitacionesPlano, nodosPlano]);
 
+  // Volúmenes de seguridad del baño — REBT ITC-BT-27 (usuario,
+  // 2026-11-26, "sigamos" con esto tras confirmar la Tabla 1 exacta en
+  // el texto consolidado del REBT, BOE-A-2002-18099). Solo IEC_ES —
+  // concepto propio de REBT, sin equivalente NEC/CIEN modelado acá. Un
+  // "contacto" (tomacorriente) dentro del radio Volumen 0/1/2 de la
+  // fuente de agua más cercana es un ERROR (la norma dice "No
+  // permitida", no es solo una recomendación); dentro de Volumen 3 es
+  // una ADVERTENCIA si su circuito no tiene un diferencial de ≤30mA
+  // asignado. Ver modules/plano/volumenesBano.ts para la
+  // simplificación deliberada (distancia horizontal únicamente).
+  const advertenciasVolumenBano = useMemo(() => {
+    if (normativaActiva !== "IEC_ES") return [];
+    const resultado = [];
+    for (const marcador of marcadoresEquipoPlano) {
+      if (marcador.tipo !== "contacto") continue;
+      const zona = App.plano.evaluarZonaBano(marcador.punto, marcadoresEquipoPlano);
+      if (!zona || zona.zona === "fuera") continue;
+      if (zona.zona === "prohibido") {
+        resultado.push({ marcadorId: marcador.id, equipoId: marcador.entidadId, nivel: "error", motivo: zona.motivo, distanciaM: zona.distanciaM });
+        continue;
+      }
+      // zona.zona === "volumen_3": permitido, pero exige diferencial ≤30mA.
+      const equipo = marcador.entidadId ? equipos.find((e) => e.id === marcador.entidadId) : null;
+      const circuito = equipo?.circuitoId ? circuitos.find((c) => c.id === equipo.circuitoId) : null;
+      const diferencial = circuito?.diferencialId ? diferenciales.find((d) => d.id === circuito.diferencialId) : null;
+      const protegido = diferencial != null && Number(diferencial.sensibilidadMA) <= App.plano.SENSIBILIDAD_MAXIMA_VOLUMEN3_MA;
+      if (!protegido) {
+        resultado.push({ marcadorId: marcador.id, equipoId: marcador.entidadId, nivel: "advertencia", motivo: zona.motivo, distanciaM: zona.distanciaM });
+      }
+    }
+    return resultado;
+  }, [normativaActiva, marcadoresEquipoPlano, equipos, circuitos, diferenciales]);
+
   const detalleElectrico = useCallback(
     (id) =>
       App.validacion.detalleElectrico(id, {
@@ -2011,6 +2044,7 @@ export function useCircuitos() {
     desincronizacionRutas,
     advertenciasGFCI,
     advertenciasAFCI,
+    advertenciasVolumenBano,
     detalleElectrico,
     ESTADOS_INTEGRIDAD: App.validacion.ESTADOS,
   };

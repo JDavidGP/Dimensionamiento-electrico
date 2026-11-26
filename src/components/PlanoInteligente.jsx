@@ -105,6 +105,7 @@ export default function PlanoInteligente({
   diferenciales = [],
   advertenciasGFCI = [],
   advertenciasAFCI = [],
+  advertenciasVolumenBano = [],
 }) {
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
@@ -1729,6 +1730,42 @@ export default function PlanoInteligente({
                         </span>
                       </div>
                     )}
+                    {/* Radio del Volumen 1 (ITC-BT-27 §2.1.2) — solo para
+                        "Fuente de agua". Default 0,6m (ducha con rociador
+                        fijo, el único número exacto de la norma para el
+                        caso típico); 1,2m para difusor móvil, o el
+                        medio-ancho real para una bañera/ducha más grande.
+                        Ver modules/plano/volumenesBano.ts. */}
+                    {m.tipo === "fuente_agua" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                        <span style={{ fontSize: 10.5, color: colores.textDim }} title="Huella de la bañera/ducha — ITC-BT-27 §2.1.2. Default 0,6m.">
+                          Radio Volumen 1 (m):
+                        </span>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={m.radioVolumen1M ?? ""}
+                          onChange={(e) => editarMarcadorEquipoPlano(m.id, { radioVolumen1M: e.target.value === "" ? null : e.target.value })}
+                          placeholder="0.6"
+                          style={{ ...inputStyle(), width: 60, padding: "3px 6px", fontSize: 10.5 }}
+                        />
+                      </div>
+                    )}
+                    {advertenciasVolumenBano.some((a) => a.marcadorId === m.id) &&
+                      (() => {
+                        const a = advertenciasVolumenBano.find((x) => x.marcadorId === m.id);
+                        return (
+                          <div style={{ fontSize: 10.5, color: a.nivel === "error" ? colores.error : colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
+                            <span>🛁</span>
+                            <span>
+                              {a.nivel === "error"
+                                ? `Prohibido por ITC-BT-27 (${a.motivo}) — a ${a.distanciaM.toFixed(2)}m de una fuente de agua.`
+                                : `${a.motivo} — sin diferencial ≤30mA asignado a su circuito.`}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     {m.tipo === "interruptor_conmutado" && (() => {
                       // Vínculo marcador-a-marcador (usuario, 2026-11-25):
                       // qué luminaria controla este interruptor conmutado —

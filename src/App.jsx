@@ -165,6 +165,7 @@ export default function App() {
     desincronizacionRutas,
     advertenciasGFCI,
     advertenciasAFCI,
+    advertenciasVolumenBano,
   } = useCircuitos();
 
   const circuitoActivo = circuitos.find((c) => c.id === circuitoActivoId) ?? null;
@@ -405,6 +406,7 @@ export default function App() {
                     desincronizacionRutas={desincronizacionRutas}
                     advertenciasGFCI={advertenciasGFCI}
                     advertenciasAFCI={advertenciasAFCI}
+                    advertenciasVolumenBano={advertenciasVolumenBano}
                   />
 
                   <PanelBreakers resultados={resultados} />
@@ -502,6 +504,7 @@ export default function App() {
                           diferenciales={diferenciales}
                           advertenciasGFCI={advertenciasGFCI}
                           advertenciasAFCI={advertenciasAFCI}
+                          advertenciasVolumenBano={advertenciasVolumenBano}
                         />
                       ),
                     },
