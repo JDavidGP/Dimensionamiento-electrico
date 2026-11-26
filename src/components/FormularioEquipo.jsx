@@ -130,6 +130,19 @@ export default function FormularioEquipo({ form, setForm, onGuardar, onCancelar,
         Protegido por GFCI
       </label>
 
+      {/* esCargaContinua — auditoría 2026-11-26: el dato YA existía de
+          punta a punta (tipos.ts/plantillas.js/formularios.ts/
+          factorDemanda.ts × 1.25 Art. 210.19) pero sin ningún checkbox
+          que lo editara — inalcanzable desde la UI, siempre quedaba en
+          false. Vive en el EQUIPO (no en el circuito, a diferencia del
+          checkbox fantasma "Carga continua" que SÍ vivía en
+          FormularioCircuito.jsx sin persistirse nunca — se quitó de ahí
+          en esta misma auditoría). */}
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: colores.textMain, marginBottom: 14, cursor: "pointer" }}>
+        <input type="checkbox" checked={!!form.esCargaContinua} onChange={(e) => setForm({ ...form, esCargaContinua: e.target.checked })} />
+        Carga continua (&gt;3 horas, ×1.25 — Art. 210.19)
+      </label>
+
       {error && <div style={{ color: colores.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: "flex", gap: 8 }}>

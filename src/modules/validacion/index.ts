@@ -23,7 +23,7 @@ export {
 
 import { validarIntegridadReferencial, ESTADOS } from "./referencial.ts";
 import { validarIntegridadElectrica } from "./electrica.ts";
-import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, NodoDiagrama, MarcadorEquipoPlano, Proyecto } from "./tipos.ts";
+import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, NodoDiagrama, MarcadorEquipoPlano, RutaConductorPlano, Proyecto } from "./tipos.ts";
 import type { OpcionesValidarCircuitoElectrico } from "./electrica.ts";
 import type { Entrada } from "./referencial.ts";
 
@@ -36,9 +36,10 @@ export function obtenerListaIntegridad(
   nodosDiagrama: NodoDiagrama[] = [],
   transformadores: Transformador[] = [],
   marcadoresEquipoPlano: MarcadorEquipoPlano[] = [],
-  diferenciales: Diferencial[] = []
+  diferenciales: Diferencial[] = [],
+  rutasConductorPlano: RutaConductorPlano[] = []
 ): Entrada[] {
-  return validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales);
+  return validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano);
 }
 
 export function obtenerDetalleElectrico(
@@ -60,9 +61,10 @@ export function resumenIntegridad(
   nodosDiagrama: NodoDiagrama[] = [],
   transformadores: Transformador[] = [],
   marcadoresEquipoPlano: MarcadorEquipoPlano[] = [],
-  diferenciales: Diferencial[] = []
+  diferenciales: Diferencial[] = [],
+  rutasConductorPlano: RutaConductorPlano[] = []
 ): Record<"ok" | "advertencia" | "error", number> {
-  const lista = validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales);
+  const lista = validarIntegridadReferencial(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano);
   return lista.reduce(
     (acc, entrada) => {
       acc[entrada.estado] = (acc[entrada.estado] || 0) + 1;

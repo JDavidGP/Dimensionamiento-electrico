@@ -21,7 +21,7 @@ import { DataProvider } from "../services/DataProvider.js";
 export const ValidacionMediator = {
   ESTADOS,
 
-  listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales) {
+  listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano) {
     return obtenerListaIntegridad(
       proyecto ?? DataProvider.getProyecto(),
       circuitos ?? DataProvider.getCircuitos(),
@@ -31,11 +31,12 @@ export const ValidacionMediator = {
       nodosDiagrama ?? DataProvider.getNodosDiagrama(),
       transformadores ?? DataProvider.getTransformadores(),
       marcadoresEquipoPlano ?? [],
-      diferenciales ?? DataProvider.getDiferenciales()
+      diferenciales ?? DataProvider.getDiferenciales(),
+      rutasConductorPlano ?? []
     );
   },
 
-  resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales) {
+  resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano) {
     return resumenIntegridad(
       proyecto ?? DataProvider.getProyecto(),
       circuitos ?? DataProvider.getCircuitos(),
@@ -45,7 +46,8 @@ export const ValidacionMediator = {
       nodosDiagrama ?? DataProvider.getNodosDiagrama(),
       transformadores ?? DataProvider.getTransformadores(),
       marcadoresEquipoPlano ?? [],
-      diferenciales ?? DataProvider.getDiferenciales()
+      diferenciales ?? DataProvider.getDiferenciales(),
+      rutasConductorPlano ?? []
     );
   },
 

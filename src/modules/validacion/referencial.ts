@@ -13,7 +13,7 @@
  *
  * No calcula nada eléctrico aquí — solo estructura y referencias.
  */
-import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, NodoDiagrama, MarcadorEquipoPlano, Proyecto, Estado } from "./tipos.ts";
+import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, NodoDiagrama, MarcadorEquipoPlano, RutaConductorPlano, Proyecto, Estado } from "./tipos.ts";
 import { MAX_CIRCUITOS_POR_DIFERENCIAL } from "../diferencial/index.ts";
 
 const ESTADOS: Record<"OK" | "ADVERTENCIA" | "ERROR", Estado> = { OK: "ok", ADVERTENCIA: "advertencia", ERROR: "error" };
@@ -25,7 +25,7 @@ function peorEstado(a: Estado, b: Estado): Estado {
 
 export interface Entrada {
   id: string;
-  tipo: "tablero" | "circuito" | "equipo" | "fuenteEnergia" | "transformador" | "diferencial";
+  tipo: "tablero" | "circuito" | "equipo" | "fuenteEnergia" | "transformador" | "diferencial" | "rutaConductor";
   nombre: string;
   parentId: string | null | undefined;
   estado: Estado;
@@ -444,6 +444,7 @@ function validarDiferencial(diferencial: Diferencial, circuitos: Circuito[], ids
  * @param transformadores - array plano de transformadores (ver modules/motor/transformador.js) — origen seleccionable solo en instalaciones industriales
  * @param marcadoresEquipoPlano - marcadores de equipo del plano (con entidadId) — caso inverso simétrico al de nodosDiagrama, ver modules/plano/index.js
  * @param diferenciales - array plano de diferenciales (REBT ITC-BT-25, ver modules/diferencial/index.ts) — agrupación opcional de hasta 5 circuitos
+ * @param rutasConductorPlano - rutas de conductor del plano (con entidadId opcional hacia un circuito/tablero) — caso inverso, detecta rutas que quedaron apuntando a una entidad ya eliminada (ver modules/plano/index.ts liberarRutasDeEntidad)
  * @returns lista plana de entradas para la UI
  */
 export function validarIntegridadReferencial(
@@ -455,7 +456,8 @@ export function validarIntegridadReferencial(
   nodosDiagrama: NodoDiagrama[] = [],
   transformadores: Transformador[] = [],
   marcadoresEquipoPlano: MarcadorEquipoPlano[] = [],
-  diferenciales: Diferencial[] = []
+  diferenciales: Diferencial[] = [],
+  rutasConductorPlano: RutaConductorPlano[] = []
 ): Entrada[] {
   const idsVistos = new Set<string>();
   const entradas: Entrada[] = [];
@@ -503,6 +505,35 @@ export function validarIntegridadReferencial(
           })
         );
       }
+    }
+  });
+
+  // Rutas de conductor del plano con entidadId apuntando a un circuito o
+  // tablero que YA NO EXISTE — red de seguridad por si un proyecto
+  // guardado antes de que eliminarCircuito/eliminarTablero liberaran
+  // esta referencia (bug real, auditoría 2026-11-26) quedó con el dato
+  // huérfano; de acá en adelante no debería volver a pasar, pero esto
+  // lo detecta y avisa si ya pasó. Mismo criterio que "Referencia a
+  // tablero inexistente" en validarCircuito: ERROR, no advertencia —
+  // es un dato roto, no solo incompleto.
+  const idsCircuitosRuta = new Set(circuitos.map((c) => c.id));
+  const idsTablerosRuta = new Set(listaTableros.map((t) => t.id));
+  rutasConductorPlano.forEach((ruta) => {
+    if (!ruta.entidadId) return;
+    const existe =
+      ruta.entidadTipo === "tablero" ? idsTablerosRuta.has(ruta.entidadId) : idsCircuitosRuta.has(ruta.entidadId);
+    if (!existe) {
+      entradas.push(
+        crearEntrada({
+          id: ruta.id || ruta.entidadId,
+          tipo: "rutaConductor",
+          nombre: ruta.nombre || "Ruta de conductor",
+          parentId: proj.id,
+          estado: ESTADOS.ERROR,
+          resumen: "Ruta del plano huérfana",
+          problemas: [`Vinculada a ${ruta.entidadTipo || "entidad"} inexistente (${ruta.entidadId})`],
+        })
+      );
     }
   });
 

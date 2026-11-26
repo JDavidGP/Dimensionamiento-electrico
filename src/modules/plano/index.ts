@@ -278,6 +278,18 @@ export function eliminarRutaConductor(rutaId: string, rutas: RutaConductorPlano[
 }
 
 /**
+ * Rutas que apuntaban a una entidad eliminada (circuito/tablero) quedan
+ * desvinculadas (entidadId/entidadTipo -> null), nunca apuntando a un id
+ * muerto — mismo criterio que liberarMarcadoresDeEntidad. Bug real
+ * encontrado en auditoría (usuario, 2026-11-26, "verificá que no hay
+ * datos huérfanos"): eliminarCircuito/eliminarTablero ya liberaban
+ * marcadores del plano, pero nunca las rutas de conductor vinculadas.
+ */
+export function liberarRutasDeEntidad(entidadId: string, rutas: RutaConductorPlano[] = []): RutaConductorPlano[] {
+  return rutas.map((r) => (r.entidadId === entidadId ? { ...r, entidadId: null, entidadTipo: null } : r));
+}
+
+/**
  * Vincula (o desvincula, con `entidadId: null`) una ruta a un circuito
  * o tablero cuya distancia/alimentador se puede autocompletar desde
  * ella — usuario, 2026-11-22, "autocompletar la distancia del

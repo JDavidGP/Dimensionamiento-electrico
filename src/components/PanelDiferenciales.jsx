@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
-import Campo, { inputStyle } from "./Campo";
+import Campo, { inputStyle, colorEstadoDe } from "./Campo";
 
 // Lista propia de Diferenciales (ID), con su CRUD completo — mismo
 // patrón exacto que PanelTransformadores.jsx. REBT ITC-BT-25, cita
@@ -14,13 +14,6 @@ import Campo, { inputStyle } from "./Campo";
 // IEC_ES (ver App.jsx), mismo criterio que PanelFuentesEnergia/
 // PanelTransformadores con sus bloques REBT.
 const FORM_VACIO = { nombre: "", sensibilidadMA: "30", notas: "" };
-
-function colorEstadoDe(entrada) {
-  if (!entrada) return colores.ok;
-  if (entrada.estado === "error") return colores.error;
-  if (entrada.estado === "advertencia") return colores.warn;
-  return colores.ok;
-}
 
 export default function PanelDiferenciales({ diferenciales = [], crearDiferencial, editarDiferencial, eliminarDiferencial, listaIntegridad = [] }) {
   const [activoId, setActivoId] = useState(null);

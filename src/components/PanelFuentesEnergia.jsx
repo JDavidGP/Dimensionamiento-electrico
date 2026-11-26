@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
-import Campo, { inputStyle } from "./Campo";
+import Campo, { inputStyle, colorEstadoDe } from "./Campo";
 import { TIPOS_FUENTE_UI, BotonPill } from "./PanelTableros";
 
 // Rediseño (usuario, 2026-11-20, con el ejemplo de las 3 casas: solo
@@ -40,13 +40,6 @@ function formDetalleDesde(f) {
     horarioFin: f.horarioFin || "",
     notas: f.notas || "",
   };
-}
-
-function colorEstadoDe(entrada) {
-  if (!entrada) return colores.ok;
-  if (entrada.estado === "error") return colores.error;
-  if (entrada.estado === "advertencia") return colores.warn;
-  return colores.ok;
 }
 
 export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEnergia, editarFuenteEnergia, eliminarFuenteEnergia, listaIntegridad = [] }) {

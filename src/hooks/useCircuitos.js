@@ -237,13 +237,13 @@ export function useCircuitos() {
 
   // Integridad vía ValidacionMediator
   const listaIntegridad = useMemo(
-    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales),
-    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales]
+    () => App.validacion.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano]
   );
 
   const resumenInt = useMemo(
-    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales),
-    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales]
+    () => App.validacion.resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano),
+    [proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano]
   );
 
   // Desincronización entre la "Distancia (m)"/"Longitud alimentador"
@@ -496,6 +496,10 @@ export function useCircuitos() {
       marcadoresLiberados = App.plano.liberarMarcadoresDeEntidad(equipo.id, marcadoresLiberados);
     }
     setMarcadoresEquipoPlano(marcadoresLiberados);
+    // Idem para rutas de conductor del plano vinculadas a este circuito
+    // (bug real encontrado en auditoría, 2026-11-26: esta liberación NO
+    // existía — la ruta quedaba con un entidadId muerto para siempre).
+    setRutasConductorPlano(App.plano.liberarRutasDeEntidad(id, rutasConductorPlano));
     setCircuitos(circuitos.filter((c) => c.id !== id));
     setEquipos(equipos.filter((e) => e.circuitoId !== id));
     if (circuitoActivoId === id) setCircuitoActivoId(null);
@@ -813,6 +817,9 @@ export function useCircuitos() {
     setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
     // Idem para su marcador del plano — ver nota en eliminarCircuito.
     setMarcadoresEquipoPlano(App.plano.liberarMarcadoresDeEntidad(id, marcadoresEquipoPlano));
+    // Idem para rutas de conductor vinculadas a este tablero — ver
+    // misma nota de auditoría en eliminarCircuito.
+    setRutasConductorPlano(App.plano.liberarRutasDeEntidad(id, rutasConductorPlano));
     setTableros(tableros.filter((t) => t.id !== id));
   }
 

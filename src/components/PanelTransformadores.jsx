@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
-import Campo, { inputStyle } from "./Campo";
+import Campo, { inputStyle, colorEstadoDe } from "./Campo";
 import { BotonPill } from "./PanelTableros";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { TIPOS_CONEXION_EQUIPO } from "../shared/data/equiposEspeciales.js";
@@ -66,13 +66,6 @@ function simboloConexion(valor) {
   if (valor === TIPOS_CONEXION_EQUIPO.ESTRELLA) return "Y";
   if (valor === TIPOS_CONEXION_EQUIPO.DELTA) return "Δ";
   return "?";
-}
-
-function colorEstadoDe(entrada) {
-  if (!entrada) return colores.ok;
-  if (entrada.estado === "error") return colores.error;
-  if (entrada.estado === "advertencia") return colores.warn;
-  return colores.ok;
 }
 
 const ESQUEMAS_PROTECCION = [

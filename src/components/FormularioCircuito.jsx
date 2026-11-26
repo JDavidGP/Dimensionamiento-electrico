@@ -165,11 +165,6 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
         </div>
       </Campo>
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: colores.textDim, margin: "4px 0 16px" }}>
-        <input type="checkbox" checked={form.continua} onChange={(e) => setForm({ ...form, continua: e.target.checked })} />
-        Carga continua (&gt;3 horas)
-      </label>
-
       {/* AFCI — usuario, 2026-11-26: "sigamos con AFCI" (NEC 210.12(B)).
           A diferencia de GFCI (por tomacorriente), AFCI protege el
           CIRCUITO completo — por eso vive acá, no en el equipo. Dispara

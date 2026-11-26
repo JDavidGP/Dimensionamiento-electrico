@@ -81,6 +81,13 @@ export interface MarcadorEquipoPlano {
   entidadId?: string | null;
 }
 
+export interface RutaConductorPlano {
+  id?: string;
+  nombre?: string;
+  entidadId?: string | null;
+  entidadTipo?: "circuito" | "tablero" | null;
+}
+
 export interface Proyecto {
   id?: string;
   nombre?: string;

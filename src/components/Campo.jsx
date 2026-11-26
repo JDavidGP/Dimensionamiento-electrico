@@ -42,3 +42,14 @@ export function inputStyle() {
     boxSizing: "border-box",
   };
 }
+
+// Extraída de PanelDiferenciales/PanelFuentesEnergia/PanelTransformadores
+// (auditoría 2026-11-26: las 3 tenían la misma función copiada letra por
+// letra) — color del borde/indicador de una tarjeta de entidad según su
+// peor estado de integridad referencial (ver modules/validacion/referencial.ts).
+export function colorEstadoDe(entrada) {
+  if (!entrada) return colores.ok;
+  if (entrada.estado === "error") return colores.error;
+  if (entrada.estado === "advertencia") return colores.warn;
+  return colores.ok;
+}
