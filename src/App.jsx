@@ -163,6 +163,7 @@ export default function App() {
     exportarDXFPlano,
     listaIntegridad,
     desincronizacionRutas,
+    entidadesPorCajaEmpalme,
     advertenciasGFCI,
     advertenciasAFCI,
     advertenciasVolumenBano,
@@ -486,6 +487,7 @@ export default function App() {
                           renombrarRutaConductorPlano={renombrarRutaConductorPlano}
                           vincularRutaConductorPlano={vincularRutaConductorPlano}
                           generarRutasAutomaticasCircuito={generarRutasAutomaticasCircuito}
+                          entidadesPorCajaEmpalme={entidadesPorCajaEmpalme}
                           aplicarLongitudRutaPlano={aplicarLongitudRutaPlano}
                           marcadoresEquipoPlano={marcadoresEquipoPlano}
                           agregarMarcadorEquipoPlano={agregarMarcadorEquipoPlano}

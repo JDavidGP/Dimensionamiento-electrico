@@ -94,6 +94,7 @@ export default function PlanoInteligente({
   renombrarRutaConductorPlano,
   vincularRutaConductorPlano,
   generarRutasAutomaticasCircuito,
+  entidadesPorCajaEmpalme = {},
   aplicarLongitudRutaPlano,
   marcadoresEquipoPlano,
   agregarMarcadorEquipoPlano,
@@ -270,6 +271,11 @@ export default function PlanoInteligente({
   // una acción directa, por eso vive junto al panel "Rutas de
   // conductor", no en la barra de modos.
   const [circuitoRutaAutoSeleccionado, setCircuitoRutaAutoSeleccionado] = useState("");
+  // Origen alternativo (usuario, 2026-11-26, "...y sea el punto de
+  // arranque real"): opcional, el id de un marcador "caja_empalme" ya
+  // colocado — "" = comportamiento de siempre, arranca del tablero del
+  // circuito.
+  const [origenRutaAutoSeleccionado, setOrigenRutaAutoSeleccionado] = useState("");
 
   // Triangulación por recorrido (usuario, 2026-11-21): ubicar un
   // equipo sin tocar la imagen directamente — click en 2 puntos de
@@ -1699,13 +1705,38 @@ export default function PlanoInteligente({
                   </option>
                 ))}
               </select>
+              {/* Origen alternativo (usuario, 2026-11-26, "...y sea el
+                  punto de arranque real"): por default arranca del
+                  tablero del circuito, igual que siempre — elegir una
+                  caja de empalme ya colocada cambia SOLO desde dónde
+                  busca el camino más corto, nunca a qué circuito
+                  pertenece la ruta ni su vínculo eléctrico. */}
+              <select
+                value={origenRutaAutoSeleccionado}
+                onChange={(e) => setOrigenRutaAutoSeleccionado(e.target.value)}
+                title="Por default arranca del tablero del circuito — elegí una caja de empalme ya colocada para arrancar desde ahí en vez de volver siempre al tablero."
+                style={{ padding: "5px 8px", borderRadius: 3, border: `1px solid ${colores.border}`, background: colores.bg, color: colores.textMain, fontSize: 11.5, maxWidth: 190 }}
+              >
+                <option value="">Desde: tablero (automático)</option>
+                {marcadoresEquipoPlano
+                  .filter((m) => m.tipo === "caja_empalme")
+                  .map((m, i) => (
+                    <option key={m.id} value={m.id}>
+                      Desde: {m.nombre || `Caja de empalme ${i + 1}`}
+                    </option>
+                  ))}
+              </select>
               <button
                 type="button"
                 disabled={!circuitoRutaAutoSeleccionado}
                 onClick={() => {
-                  const resultado = generarRutasAutomaticasCircuito(circuitoRutaAutoSeleccionado);
+                  const resultado = generarRutasAutomaticasCircuito(circuitoRutaAutoSeleccionado, origenRutaAutoSeleccionado || null);
                   if (resultado?.sinTablero) {
                     mostrarAviso("Ese circuito no tiene un tablero vinculado a un marcador en el plano todavía — colocalo primero con \"Colocar equipo\".");
+                    return;
+                  }
+                  if (resultado?.sinOrigen) {
+                    mostrarAviso("La caja de empalme elegida como origen ya no existe — elegí otra o volvé a \"tablero (automático)\".");
                     return;
                   }
                   const generadas = resultado?.generadas.length ?? 0;
@@ -1962,6 +1993,23 @@ export default function PlanoInteligente({
                         />
                       </div>
                     )}
+                    {/* "Que la caja de empalme sepa qué circuito(s) pasan
+                        por ella" (usuario, 2026-11-26) — puramente
+                        derivado de las rutas de conductor YA VINCULADAS
+                        cuyo camino pasa cerca de esta caja, nunca un dato
+                        propio del marcador (ver PlanoMediator.
+                        entidadesPorCajaEmpalme). */}
+                    {m.tipo === "caja_empalme" &&
+                      (() => {
+                        const entidades = entidadesPorCajaEmpalme[m.id] ?? [];
+                        return (
+                          <div style={{ fontSize: 10.5, color: colores.textDim, marginTop: 4 }}>
+                            {entidades.length > 0
+                              ? `Pasan por acá: ${entidades.map((e) => e.nombre || "(sin nombre)").join(", ")}`
+                              : "Todavía ningún circuito/tablero vinculado pasa por acá (ver \"Rutas de conductor\" → Vincular a)."}
+                          </div>
+                        );
+                      })()}
                     {advertenciasVolumenBano.some((a) => a.marcadorId === m.id) &&
                       (() => {
                         const a = advertenciasVolumenBano.find((x) => x.marcadorId === m.id);

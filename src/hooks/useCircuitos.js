@@ -296,6 +296,15 @@ export function useCircuitos() {
     return resultado;
   }, [rutasConductorPlano, nodosPlano, segmentosPlano, marcadoresEquipoPlano, equipos, habitacionesPlano, alturaTechoPlanoM, circuitos, tableros]);
 
+  // "Caja de empalme... sepa qué circuito(s) pasan por ella" (usuario,
+  // 2026-11-26) — ver PlanoMediator.entidadesPorCajaEmpalme para el
+  // criterio completo (solo rutas YA vinculadas, nunca una generada
+  // automáticamente pero sin confirmar).
+  const entidadesPorCajaEmpalme = useMemo(
+    () => App.plano.entidadesPorCajaEmpalme({ marcadores: marcadoresEquipoPlano, nodos: nodosPlano, rutas: rutasConductorPlano, circuitos, tableros }),
+    [marcadoresEquipoPlano, nodosPlano, rutasConductorPlano, circuitos, tableros]
+  );
+
   // Protección GFCI por ambiente (NEC 210.8(A)/(B)) — usuario,
   // 2026-11-25/26: "el tipo de tomacorriente... y el ambiente donde se
   // localiza". Gateado a NEC/CIEN (mismo criterio que el resto de la
@@ -1474,16 +1483,33 @@ export function useCircuitos() {
   // Deduplica contra rutas YA registradas con el MISMO camino exacto
   // (mismo conjunto de nodos, sin importar sentido) — correr esta
   // acción de nuevo sobre el mismo circuito no genera duplicados.
-  function generarRutasAutomaticasCircuito(circuitoId) {
+  // `origenMarcadorId` (usuario, 2026-11-26, retomando el punto dejado
+  // pendiente a propósito el 2026-11-24: "...y sea el punto de
+  // arranque real"): opcional, el id de un marcador "caja_empalme" ya
+  // colocado — una instalación real a menudo NO sale directo del
+  // tablero a cada equipo, sale del tablero a una caja principal y de
+  // ahí se reparte. Sigue sin ser un concepto eléctrico (la caja NUNCA
+  // se vincula a nada) — es solo CUÁL nodo de la red ya trazada usar
+  // como punto de partida del camino más corto. Sin este parámetro
+  // (default null), el comportamiento es EXACTAMENTE el de siempre:
+  // arranca del marcador del tablero del circuito.
+  function generarRutasAutomaticasCircuito(circuitoId, origenMarcadorId = null) {
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return null;
-    const marcadorTablero = circuito.tableroId
-      ? marcadoresEquipoPlano.find((m) => m.tipo === "tablero_electrico" && m.entidadId === circuito.tableroId)
-      : null;
-    if (!marcadorTablero) return { generadas: [], sinTablero: true, sinCamino: [] };
 
     const nodoCercaDe = (punto) => App.plano.nodoCercano(punto, nodosPlano, App.plano.RADIO_SNAP_METROS);
-    const nodoTablero = nodoCercaDe(marcadorTablero.punto);
+
+    let marcadorOrigen;
+    if (origenMarcadorId) {
+      marcadorOrigen = marcadoresEquipoPlano.find((m) => m.id === origenMarcadorId && m.tipo === "caja_empalme");
+      if (!marcadorOrigen) return { generadas: [], sinTablero: false, sinOrigen: true, sinCamino: [] };
+    } else {
+      marcadorOrigen = circuito.tableroId ? marcadoresEquipoPlano.find((m) => m.tipo === "tablero_electrico" && m.entidadId === circuito.tableroId) : null;
+      if (!marcadorOrigen) return { generadas: [], sinTablero: true, sinCamino: [] };
+    }
+
+    const nodoOrigen = nodoCercaDe(marcadorOrigen.punto);
+    const nombreOrigen = marcadorOrigen.nombre || (origenMarcadorId ? "Caja de empalme" : "Tablero");
     const clave = (nodoIds) => [...nodoIds].sort().join(",");
     const existentes = new Set(rutasConductorPlano.map((r) => clave(r.nodoIds)));
 
@@ -1494,13 +1520,13 @@ export function useCircuitos() {
     for (const equipo of equiposDelCircuito) {
       const marcadorEquipo = marcadoresEquipoPlano.find((m) => m.entidadId === equipo.id);
       const nodoEquipo = marcadorEquipo ? nodoCercaDe(marcadorEquipo.punto) : null;
-      const camino = nodoTablero && nodoEquipo ? App.plano.caminoMasCorto(nodoTablero.id, nodoEquipo.id, nodosPlano, segmentosPlano) : null;
+      const camino = nodoOrigen && nodoEquipo ? App.plano.caminoMasCorto(nodoOrigen.id, nodoEquipo.id, nodosPlano, segmentosPlano) : null;
       if (!camino) {
         sinCamino.push(equipo.nombre || "Equipo sin nombre");
         continue;
       }
       if (existentes.has(clave(camino.nodoIds))) continue; // ya existe una ruta con este mismo camino — no duplicar
-      const ruta = App.plano.crearRutaConductor(camino.nodoIds, nodosPlano, `Auto: ${marcadorTablero.nombre || "Tablero"} → ${equipo.nombre || "Equipo"}`);
+      const ruta = App.plano.crearRutaConductor(camino.nodoIds, nodosPlano, `Auto: ${nombreOrigen} → ${equipo.nombre || "Equipo"}`);
       if (ruta) nuevasRutas.push(ruta);
     }
 
@@ -2049,6 +2075,7 @@ export function useCircuitos() {
     listaIntegridad,
     resumenIntegridad: resumenInt,
     desincronizacionRutas,
+    entidadesPorCajaEmpalme,
     advertenciasGFCI,
     advertenciasAFCI,
     advertenciasVolumenBano,

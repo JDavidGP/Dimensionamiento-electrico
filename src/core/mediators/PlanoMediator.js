@@ -155,6 +155,43 @@ export const PlanoMediator = {
     return null;
   },
 
+  /**
+   * Para cada marcador "caja_empalme", qué circuitos/tableros tienen
+   * una ruta YA VINCULADA cuyo camino pasa por el nodo más cercano a
+   * esa caja — usuario, 2026-11-26, retomando el punto dejado
+   * pendiente a propósito el 2026-11-24 ("la opción 1 me sirve por el
+   * momento"): "que la caja de empalme sepa qué circuito(s) pasan por
+   * ella". Puramente derivado — la caja sigue sin vincularse a nada
+   * (entidadVinculada: null, ver bibliotecaComponentes.js), esto solo
+   * LEE las rutas que ya existen. Una ruta generada por "Sugerir ruta
+   * automática" pero todavía SIN vincular no cuenta — mismo criterio
+   * que desincronizacionRutas/candidatosEntidadRuta: solo lo que el
+   * usuario ya confirmó como la ruta real de ese circuito/tablero.
+   */
+  entidadesPorCajaEmpalme({ marcadores = [], nodos = [], rutas = [], circuitos = [], tableros = [] } = {}) {
+    const resultado = {};
+    for (const marcador of marcadores) {
+      if (marcador.tipo !== "caja_empalme") continue;
+      const nodo = nodoCercano(marcador.punto, nodos);
+      if (!nodo) {
+        resultado[marcador.id] = [];
+        continue;
+      }
+      const vistas = new Set();
+      const entidades = [];
+      for (const ruta of rutas) {
+        if (!ruta.entidadId || !ruta.nodoIds.includes(nodo.id)) continue;
+        const clave = `${ruta.entidadTipo}:${ruta.entidadId}`;
+        if (vistas.has(clave)) continue;
+        vistas.add(clave);
+        const entidad = ruta.entidadTipo === "circuito" ? circuitos.find((c) => c.id === ruta.entidadId) : tableros.find((t) => t.id === ruta.entidadId);
+        if (entidad) entidades.push({ tipo: ruta.entidadTipo, id: entidad.id, nombre: entidad.nombre });
+      }
+      resultado[marcador.id] = entidades;
+    }
+    return resultado;
+  },
+
   calcularEscala,
   calcularEscalaPorPerimetro,
   imagenAModelo,
