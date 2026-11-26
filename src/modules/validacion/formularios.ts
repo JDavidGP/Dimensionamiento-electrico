@@ -115,6 +115,7 @@ export interface FormularioEquipo {
   corrienteRotorBloqueado?: string | number | null;
   alturaInstalacionM?: string | number | null;
   referenciaAltura?: "techo" | "piso";
+  proteccionGFCI?: boolean;
 }
 
 export function validarEquipo(form: FormularioEquipo): string | null {
@@ -169,6 +170,7 @@ export function formularioAEquipo(form: FormularioEquipo, circuitoId: string | n
       form.tipoEquipoNEC === "MOTOR" && lra != null && lra > 0 ? lra : null,
     alturaInstalacionM: alturaInstalacionM != null && alturaInstalacionM >= 0 ? alturaInstalacionM : null,
     referenciaAltura: form.referenciaAltura === "piso" ? "piso" : "techo",
+    proteccionGFCI: !!form.proteccionGFCI,
   };
 }
 
@@ -187,5 +189,6 @@ export function equipoAFormulario(equipo: Equipo): FormularioEquipo {
       equipo.corrienteRotorBloqueado == null ? "" : String(equipo.corrienteRotorBloqueado),
     alturaInstalacionM: equipo.alturaInstalacionM == null ? "" : String(equipo.alturaInstalacionM),
     referenciaAltura: equipo.referenciaAltura === "piso" ? "piso" : "techo",
+    proteccionGFCI: !!equipo.proteccionGFCI,
   };
 }

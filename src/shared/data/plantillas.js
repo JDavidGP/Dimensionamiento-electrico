@@ -64,6 +64,10 @@ export const EQUIPO_VACIO = {
   // conductor en el Plano.
   alturaInstalacionM: "",
   referenciaAltura: "techo", // "techo" (default) | "piso"
+  // GFCI — documental (ver modules/plano/proteccionGFCI.ts). false = sin
+  // protección todavía; dispara advertencia si el equipo cae en un
+  // ambiente donde NEC 210.8(A)/(B) la exige.
+  proteccionGFCI: false,
 };
 
 // Un TABLERO es dato relacional puro (Fase 3): agrupa circuitos bajo

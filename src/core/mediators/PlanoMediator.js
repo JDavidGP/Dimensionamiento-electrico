@@ -56,6 +56,8 @@ import {
   caminoMasCorto,
   calcularExtraAlturaInstalacion,
   calcularLongitudEsperadaRuta,
+  OPCIONES_TIPO_AMBIENTE,
+  requiereProteccionGFCI,
 } from "../../modules/plano/index.ts";
 import {
   distancia,
@@ -105,6 +107,8 @@ export const PlanoMediator = {
   caminoMasCorto,
   calcularExtraAlturaInstalacion,
   calcularLongitudEsperadaRuta,
+  OPCIONES_TIPO_AMBIENTE,
+  requiereProteccionGFCI,
 
   /**
    * Circuitos/tableros candidatos para vincular a una ruta de

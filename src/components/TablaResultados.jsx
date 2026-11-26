@@ -107,6 +107,7 @@ export default function TablaResultados({
   onAsignarDiferencial,
   listaIntegridad = [],
   desincronizacionRutas = [],
+  advertenciasGFCI = [],
 }) {
   if (circuitos.length === 0) {
     return (
@@ -286,24 +287,32 @@ export default function TablaResultados({
 
                 {equipos.length > 0 && (
                   <div style={{ borderTop: `1px solid ${colores.border}` }}>
-                    {equipos.map((eq) => (
-                      <div
-                        key={eq.id}
-                        style={{ padding: "8px 14px 8px 30px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${colores.border}`, fontSize: 12.5 }}
-                      >
-                        <span style={{ flex: 1, color: colores.textMain }}>{eq.nombre}</span>
-                        <span style={{ fontFamily: fuentes.mono, color: colores.textDim }}>
-                          {eq.cantidad}× {eq.modoEntrada === "corriente" ? `${eq.valor}A` : `${eq.valor}W`}
-                        </span>
-                        <span style={{ fontFamily: fuentes.mono, color: colores.textDim, fontSize: 11 }}>cosφ {eq.cosPhi}</span>
-                        <button onClick={() => onEditarEquipo(eq.id)} style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 13 }} aria-label={`Editar ${eq.nombre}`}>
-                          ✎
-                        </button>
-                        <button onClick={() => onEliminarEquipo(eq.id)} style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 15 }} aria-label={`Eliminar ${eq.nombre}`}>
-                          ×
-                        </button>
-                      </div>
-                    ))}
+                    {equipos.map((eq) => {
+                      const faltaGFCI = advertenciasGFCI.find((a) => a.equipoId === eq.id);
+                      return (
+                        <div
+                          key={eq.id}
+                          style={{ padding: "8px 14px 8px 30px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${colores.border}`, fontSize: 12.5, flexWrap: "wrap" }}
+                        >
+                          <span style={{ flex: 1, color: colores.textMain, minWidth: 120 }}>{eq.nombre}</span>
+                          <span style={{ fontFamily: fuentes.mono, color: colores.textDim }}>
+                            {eq.cantidad}× {eq.modoEntrada === "corriente" ? `${eq.valor}A` : `${eq.valor}W`}
+                          </span>
+                          <span style={{ fontFamily: fuentes.mono, color: colores.textDim, fontSize: 11 }}>cosφ {eq.cosPhi}</span>
+                          <button onClick={() => onEditarEquipo(eq.id)} style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 13 }} aria-label={`Editar ${eq.nombre}`}>
+                            ✎
+                          </button>
+                          <button onClick={() => onEliminarEquipo(eq.id)} style={{ background: "none", border: "none", color: colores.textDim, cursor: "pointer", fontSize: 15 }} aria-label={`Eliminar ${eq.nombre}`}>
+                            ×
+                          </button>
+                          {faltaGFCI && (
+                            <div style={{ width: "100%", color: colores.warn, fontSize: 11, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaGFCI.motivo}>
+                              <span>⚡</span> <span>Requiere protección GFCI ({faltaGFCI.motivo}) y no está marcada — ver "Protegido por GFCI" al editar el equipo.</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </>

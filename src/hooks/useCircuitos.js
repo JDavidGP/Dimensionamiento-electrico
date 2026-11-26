@@ -5,7 +5,7 @@
  */
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
-import { TIPO_INSTALACION_POR_DEFECTO } from "../shared/constants/constantes.js";
+import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../shared/constants/constantes.js";
 import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.js";
 import { rectificarImagen } from "../shared/utils/rectificarImagen.js";
 
@@ -295,6 +295,33 @@ export function useCircuitos() {
     }
     return resultado;
   }, [rutasConductorPlano, nodosPlano, segmentosPlano, marcadoresEquipoPlano, equipos, habitacionesPlano, alturaTechoPlanoM, circuitos, tableros]);
+
+  // Protección GFCI por ambiente (NEC 210.8(A)/(B)) — usuario,
+  // 2026-11-25/26: "el tipo de tomacorriente... y el ambiente donde se
+  // localiza". Gateado a NEC/CIEN (mismo criterio que el resto de la
+  // app trata a CIEN como la misma base normativa que NEC, ver
+  // proteccionTransformador.ts) — bajo REBT queda vacío, sin cita
+  // propia para esto todavía. Solo marcadores tipo "contacto"
+  // (tomacorriente) — una luminaria o un motor no es lo que 210.8
+  // regula. Ver modules/plano/proteccionGFCI.ts para la simplificación
+  // deliberada (por tipo de ambiente completo, no por distancia a un
+  // fregadero/mesón específico).
+  const advertenciasGFCI = useMemo(() => {
+    if (normativaActiva !== "NEC" && normativaActiva !== "CIEN") return [];
+    const esResidencial = tipoInstalacion !== TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL;
+    const resultado = [];
+    for (const marcador of marcadoresEquipoPlano) {
+      if (marcador.tipo !== "contacto" || !marcador.entidadId) continue;
+      const equipo = equipos.find((e) => e.id === marcador.entidadId);
+      if (!equipo || equipo.proteccionGFCI) continue;
+      const ambiente = App.plano.habitacionQueContiene(marcador.punto, habitacionesPlano, nodosPlano);
+      const { requiere, motivo } = App.plano.requiereProteccionGFCI(ambiente?.tipoAmbiente, ambiente?.exterior ?? false, esResidencial);
+      if (requiere) {
+        resultado.push({ equipoId: equipo.id, marcadorId: marcador.id, motivo });
+      }
+    }
+    return resultado;
+  }, [normativaActiva, tipoInstalacion, marcadoresEquipoPlano, equipos, habitacionesPlano, nodosPlano]);
 
   const detalleElectrico = useCallback(
     (id) =>
@@ -1214,6 +1241,14 @@ export function useCircuitos() {
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, exterior: Boolean(exterior) } : h)));
   }
 
+  // Tipo de ambiente (baño/cocina/garaje/...) — usuario, 2026-11-25/26,
+  // para saber dónde exige GFCI el NEC (ver modules/plano/proteccionGFCI.ts
+  // y advertenciasGFCI más abajo). Mismo criterio que editarExteriorHabitacionPlano.
+  function editarTipoAmbienteHabitacionPlano(habitacionId, tipoAmbiente) {
+    guardarPuntoDeshacerPlano();
+    setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, tipoAmbiente } : h)));
+  }
+
   function establecerAlturaTechoPlano(alturaTexto) {
     const texto = String(alturaTexto).trim();
     if (texto === "") {
@@ -1924,6 +1959,7 @@ export function useCircuitos() {
     renombrarHabitacionPlano,
     editarAlturaHabitacionPlano,
     editarExteriorHabitacionPlano,
+    editarTipoAmbienteHabitacionPlano,
     generarHabitacionPlano,
     generarHabitacionPorArrastre,
     moverHabitacionPlano,
@@ -1947,6 +1983,7 @@ export function useCircuitos() {
     listaIntegridad,
     resumenIntegridad: resumenInt,
     desincronizacionRutas,
+    advertenciasGFCI,
     detalleElectrico,
     ESTADOS_INTEGRIDAD: App.validacion.ESTADOS,
   };

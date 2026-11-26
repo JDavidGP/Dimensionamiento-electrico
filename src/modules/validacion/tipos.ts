@@ -20,6 +20,8 @@ export interface Equipo extends EquipoMotor {
   alturaInstalacionM?: number | string | null;
   /** Desde dónde se mide esa altura: "techo" (default, el conductor baja desde el cielo/losa) o "piso" (sube desde el piso) — ver modules/plano/alturaInstalacion.ts para el porqué del default. */
   referenciaAltura?: "techo" | "piso" | null;
+  /** ¿Este tomacorriente/equipo ya está protegido por GFCI (receptáculo propio o breaker aguas arriba)? Documental — ver modules/plano/proteccionGFCI.ts para dónde el NEC lo exige. */
+  proteccionGFCI?: boolean;
 }
 
 export interface Circuito extends CircuitoMotor {

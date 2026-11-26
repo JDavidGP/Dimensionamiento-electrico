@@ -140,6 +140,7 @@ export default function App() {
     renombrarHabitacionPlano,
     editarAlturaHabitacionPlano,
     editarExteriorHabitacionPlano,
+    editarTipoAmbienteHabitacionPlano,
     generarHabitacionPlano,
     generarHabitacionPorArrastre,
     moverHabitacionPlano,
@@ -162,6 +163,7 @@ export default function App() {
     exportarDXFPlano,
     listaIntegridad,
     desincronizacionRutas,
+    advertenciasGFCI,
   } = useCircuitos();
 
   const circuitoActivo = circuitos.find((c) => c.id === circuitoActivoId) ?? null;
@@ -400,6 +402,7 @@ export default function App() {
                     onAsignarDiferencial={normativaActiva === "IEC_ES" ? asignarCircuitoADiferencial : undefined}
                     listaIntegridad={listaIntegridad}
                     desincronizacionRutas={desincronizacionRutas}
+                    advertenciasGFCI={advertenciasGFCI}
                   />
 
                   <PanelBreakers resultados={resultados} />
@@ -468,6 +471,7 @@ export default function App() {
                           renombrarHabitacionPlano={renombrarHabitacionPlano}
                           editarAlturaHabitacionPlano={editarAlturaHabitacionPlano}
                           editarExteriorHabitacionPlano={editarExteriorHabitacionPlano}
+                          editarTipoAmbienteHabitacionPlano={editarTipoAmbienteHabitacionPlano}
                           generarHabitacionPlano={generarHabitacionPlano}
                           generarHabitacionPorArrastre={generarHabitacionPorArrastre}
                           moverHabitacionPlano={moverHabitacionPlano}
@@ -494,6 +498,7 @@ export default function App() {
                           fuentesEnergia={fuentesEnergia}
                           transformadores={transformadores}
                           diferenciales={diferenciales}
+                          advertenciasGFCI={advertenciasGFCI}
                         />
                       ),
                     },

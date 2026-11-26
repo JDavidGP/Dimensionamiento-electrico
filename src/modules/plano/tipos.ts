@@ -12,6 +12,7 @@
 // campo, el tipo en sí es el mismo, solo cambia la unidad según el uso.
 
 import type { Punto } from "../geometria/tipos.ts";
+import type { TipoAmbiente } from "./proteccionGFCI.ts";
 
 export type { Punto };
 
@@ -41,6 +42,8 @@ export interface HabitacionPlano {
   alturaM: number | null;
   /** Instalación de interiores o de exteriores (usuario, 2026-11-25) — false = interior (default). Un cobertizo, un cuarto de bomba separado, una zona de patio/jardín: cada uno es OTRO ambiente marcado exterior=true, no una jerarquía nueva de terreno/edificación. */
   exterior: boolean;
+  /** Función del ambiente (baño/cocina/garaje/...) — usuario, 2026-11-25/26, para saber dónde exige GFCI el NEC (ver modules/plano/proteccionGFCI.ts). "otro" = default, sin requerimiento propio. */
+  tipoAmbiente: TipoAmbiente;
 }
 
 export type EntidadVinculadaRuta = "circuito" | "tablero";

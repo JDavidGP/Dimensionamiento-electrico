@@ -45,6 +45,8 @@ export { cajaDeHabitacion, calcularDeltaConEnganche } from "./enganchePuzzle.ts"
 export { detectarCaras } from "./deteccionCaras.ts";
 export { caminoMasCorto } from "./caminoRed.ts";
 export { calcularExtraAlturaInstalacion, calcularLongitudEsperadaRuta } from "./alturaInstalacion.ts";
+export { OPCIONES_TIPO_AMBIENTE, requiereProteccionGFCI } from "./proteccionGFCI.ts";
+export type { TipoAmbiente, RequerimientoGFCI } from "./proteccionGFCI.ts";
 
 export type {
   Punto,
@@ -174,6 +176,7 @@ export function crearHabitacion(nodoIds: string[], nodos: NodoPlano[] = [], nomb
     perimetroM: perimetroPoligono(puntos),
     alturaM: null,
     exterior: false,
+    tipoAmbiente: "otro",
   };
 }
 

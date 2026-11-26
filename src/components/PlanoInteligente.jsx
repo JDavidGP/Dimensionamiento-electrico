@@ -76,6 +76,7 @@ export default function PlanoInteligente({
   renombrarHabitacionPlano,
   editarAlturaHabitacionPlano,
   editarExteriorHabitacionPlano,
+  editarTipoAmbienteHabitacionPlano,
   generarHabitacionPlano,
   generarHabitacionPorArrastre,
   moverHabitacionPlano,
@@ -102,6 +103,7 @@ export default function PlanoInteligente({
   fuentesEnergia = [],
   transformadores = [],
   diferenciales = [],
+  advertenciasGFCI = [],
 }) {
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
@@ -1440,6 +1442,26 @@ export default function PlanoInteligente({
                       Exterior
                     </label>
                   </div>
+                  {/* Tipo de ambiente — usuario, 2026-11-25/26: "el ambiente
+                      donde se localiza" un tomacorriente. Determina dónde
+                      NEC 210.8(A)/(B) exige GFCI (ver advertenciasGFCI,
+                      modules/plano/proteccionGFCI.ts) — informativo incluso
+                      bajo otra normativa, por si hace falta para REBT más
+                      adelante (ITC-BT-27, volúmenes de baño). */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                    <span style={{ fontSize: 10.5, color: colores.textDim }}>Tipo de ambiente:</span>
+                    <select
+                      value={h.tipoAmbiente ?? "otro"}
+                      onChange={(e) => editarTipoAmbienteHabitacionPlano(h.id, e.target.value)}
+                      style={{ ...inputStyle(), padding: "3px 6px", fontSize: 10.5 }}
+                    >
+                      {App.plano.OPCIONES_TIPO_AMBIENTE.map((o) => (
+                        <option key={o.valor} value={o.valor}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1690,6 +1712,12 @@ export default function PlanoInteligente({
                           </option>
                         ))}
                       </select>
+                    )}
+                    {advertenciasGFCI.some((a) => a.marcadorId === m.id) && (
+                      <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
+                        <span>⚡</span>
+                        <span>Requiere GFCI ({advertenciasGFCI.find((a) => a.marcadorId === m.id).motivo}) — marcalo en "Protegido por GFCI" al editar el equipo.</span>
+                      </div>
                     )}
                     {m.tipo === "interruptor_conmutado" && (() => {
                       // Vínculo marcador-a-marcador (usuario, 2026-11-25):

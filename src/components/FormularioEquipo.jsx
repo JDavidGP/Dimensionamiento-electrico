@@ -120,6 +120,16 @@ export default function FormularioEquipo({ form, setForm, onGuardar, onCancelar,
         </Campo>
       </div>
 
+      {/* GFCI — usuario, 2026-11-25/26: "el tipo de tomacorriente...
+          y el ambiente donde se localiza". Documental: dispara una
+          advertencia (NEC 210.8(A)/(B)) si este equipo cae en un
+          ambiente del Plano donde se exige GFCI y no está marcado acá
+          — ver modules/plano/proteccionGFCI.ts. */}
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: colores.textMain, marginBottom: 14, cursor: "pointer" }}>
+        <input type="checkbox" checked={!!form.proteccionGFCI} onChange={(e) => setForm({ ...form, proteccionGFCI: e.target.checked })} />
+        Protegido por GFCI
+      </label>
+
       {error && <div style={{ color: colores.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: "flex", gap: 8 }}>
