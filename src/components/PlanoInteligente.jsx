@@ -104,6 +104,7 @@ export default function PlanoInteligente({
   transformadores = [],
   diferenciales = [],
   advertenciasGFCI = [],
+  advertenciasAFCI = [],
 }) {
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
@@ -1717,6 +1718,15 @@ export default function PlanoInteligente({
                       <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
                         <span>⚡</span>
                         <span>Requiere GFCI ({advertenciasGFCI.find((a) => a.marcadorId === m.id).motivo}) — marcalo en "Protegido por GFCI" al editar el equipo.</span>
+                      </div>
+                    )}
+                    {advertenciasAFCI.some((a) => a.equipoId === m.entidadId) && (
+                      <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
+                        <span>⚡</span>
+                        <span>
+                          Su circuito requiere AFCI ({advertenciasAFCI.find((a) => a.equipoId === m.entidadId).motivo}) — marcalo en "Protegido por AFCI" al
+                          editar el circuito.
+                        </span>
                       </div>
                     )}
                     {m.tipo === "interruptor_conmutado" && (() => {

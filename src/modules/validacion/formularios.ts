@@ -23,6 +23,8 @@ export interface FormularioCircuito {
   temp: string;
   factorSimultaneidadManual?: string | number | null;
   tableroId?: string | null;
+  diferencialId?: string | null;
+  proteccionAFCI?: boolean;
   lineas?: unknown[];
 }
 
@@ -71,6 +73,14 @@ export function formularioACircuito(form: FormularioCircuito, idExistente: strin
     // TableroMediator), pero no se debe perder al re-guardar un circuito
     // existente que ya tenía tablero asignado.
     tableroId: form.tableroId ?? null,
+    // Pass-through, mismo criterio exacto que tableroId arriba — se
+    // asigna vía DiferencialMediator (ver asignarCircuitoADiferencial en
+    // useCircuitos.js), nunca desde este formulario. Bug encontrado y
+    // corregido en esta misma ronda (2026-11-26): al faltar acá, CUALQUIER
+    // edición del circuito (ej. solo cambiar el nombre) borraba en
+    // silencio el diferencial ya asignado.
+    diferencialId: form.diferencialId ?? null,
+    proteccionAFCI: !!form.proteccionAFCI,
     // Pass-through, mismo criterio: todavía no hay UI para elegir línea
     // (balance de fases), no se debe perder al re-guardar.
     lineas: form.lineas ?? [],
@@ -93,6 +103,8 @@ export function circuitoAFormulario(circuito: Circuito): FormularioCircuito {
     factorSimultaneidadManual:
       circuito.factorSimultaneidadManual == null ? "" : String(circuito.factorSimultaneidadManual),
     tableroId: circuito.tableroId ?? null,
+    diferencialId: circuito.diferencialId ?? null,
+    proteccionAFCI: !!circuito.proteccionAFCI,
     lineas: circuito.lineas ?? [],
   };
 }

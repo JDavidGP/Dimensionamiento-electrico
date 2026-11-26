@@ -32,6 +32,8 @@ export interface Circuito extends CircuitoMotor {
   tableroId?: string | null;
   /** REBT ITC-BT-25 — diferencial (ID) que agrupa este circuito, opcional. */
   diferencialId?: string | null;
+  /** ¿Este circuito ya tiene protección AFCI (breaker combinado o dedicado)? NEC 210.12(B) — ver modules/plano/proteccionAFCI.ts para dónde se exige. */
+  proteccionAFCI?: boolean;
   lineas?: unknown[];
   voltajeManual?: boolean;
   /** No se persiste en el modelo real (se calcula) — algunos llamadores igual lo pasan de largo como dato ya resuelto. */

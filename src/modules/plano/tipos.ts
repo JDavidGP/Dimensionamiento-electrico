@@ -12,7 +12,7 @@
 // campo, el tipo en sí es el mismo, solo cambia la unidad según el uso.
 
 import type { Punto } from "../geometria/tipos.ts";
-import type { TipoAmbiente } from "./proteccionGFCI.ts";
+import type { TipoAmbiente } from "./tipoAmbiente.ts";
 
 export type { Punto };
 

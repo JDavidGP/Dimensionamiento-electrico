@@ -323,6 +323,32 @@ export function useCircuitos() {
     return resultado;
   }, [normativaActiva, tipoInstalacion, marcadoresEquipoPlano, equipos, habitacionesPlano, nodosPlano]);
 
+  // Protección AFCI por ambiente (NEC 210.12(B)) — usuario, 2026-11-26,
+  // "sigamos con AFCI". A diferencia de GFCI (protege un receptáculo),
+  // 210.12(B) protege el CIRCUITO ramal completo — por eso el checkbox
+  // vive en el circuito, y la advertencia dispara si CUALQUIERA de sus
+  // equipos cae en un ambiente de la lista (no solo uno, como en GFCI).
+  // Mismo gateo NEC/CIEN que advertenciasGFCI. Ver modules/plano/proteccionAFCI.ts.
+  const advertenciasAFCI = useMemo(() => {
+    if (normativaActiva !== "NEC" && normativaActiva !== "CIEN") return [];
+    const resultado = [];
+    for (const circuito of circuitos) {
+      if (circuito.proteccionAFCI) continue;
+      const equiposDelCircuito = equipos.filter((e) => e.circuitoId === circuito.id);
+      for (const equipo of equiposDelCircuito) {
+        const marcador = marcadoresEquipoPlano.find((m) => m.entidadId === equipo.id);
+        if (!marcador) continue;
+        const ambiente = App.plano.habitacionQueContiene(marcador.punto, habitacionesPlano, nodosPlano);
+        const { requiere, motivo } = App.plano.requiereProteccionAFCI(ambiente?.tipoAmbiente);
+        if (requiere) {
+          resultado.push({ circuitoId: circuito.id, equipoId: equipo.id, motivo });
+          break; // un motivo alcanza para avisar de este circuito — no hace falta uno por cada equipo que califique
+        }
+      }
+    }
+    return resultado;
+  }, [normativaActiva, circuitos, equipos, marcadoresEquipoPlano, habitacionesPlano, nodosPlano]);
+
   const detalleElectrico = useCallback(
     (id) =>
       App.validacion.detalleElectrico(id, {
@@ -1984,6 +2010,7 @@ export function useCircuitos() {
     resumenIntegridad: resumenInt,
     desincronizacionRutas,
     advertenciasGFCI,
+    advertenciasAFCI,
     detalleElectrico,
     ESTADOS_INTEGRIDAD: App.validacion.ESTADOS,
   };

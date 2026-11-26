@@ -58,6 +58,7 @@ import {
   calcularLongitudEsperadaRuta,
   OPCIONES_TIPO_AMBIENTE,
   requiereProteccionGFCI,
+  requiereProteccionAFCI,
 } from "../../modules/plano/index.ts";
 import {
   distancia,
@@ -109,6 +110,7 @@ export const PlanoMediator = {
   calcularLongitudEsperadaRuta,
   OPCIONES_TIPO_AMBIENTE,
   requiereProteccionGFCI,
+  requiereProteccionAFCI,
 
   /**
    * Circuitos/tableros candidatos para vincular a una ruta de

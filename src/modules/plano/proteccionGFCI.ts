@@ -19,16 +19,9 @@
 // fregadero/mesón es un alcance mucho más grande (geometría de
 // artefactos dentro del ambiente), no esta ronda.
 
-export type TipoAmbiente = "bano" | "cocina" | "garage" | "lavanderia" | "sotano_sin_terminar" | "otro";
-
-export const OPCIONES_TIPO_AMBIENTE: { valor: TipoAmbiente; label: string }[] = [
-  { valor: "otro", label: "Otro" },
-  { valor: "bano", label: "Baño" },
-  { valor: "cocina", label: "Cocina" },
-  { valor: "garage", label: "Garaje" },
-  { valor: "lavanderia", label: "Lavandería" },
-  { valor: "sotano_sin_terminar", label: "Sótano sin terminar" },
-];
+import { OPCIONES_TIPO_AMBIENTE, type TipoAmbiente } from "./tipoAmbiente.ts";
+export type { TipoAmbiente };
+export { OPCIONES_TIPO_AMBIENTE };
 
 /** Tipos de ambiente (además de `exterior`, ya un campo propio) que NEC 210.8(A)/(B) exige proteger con GFCI. */
 const TIPOS_AMBIENTE_GFCI = new Set<TipoAmbiente>(["bano", "cocina", "garage", "lavanderia", "sotano_sin_terminar"]);

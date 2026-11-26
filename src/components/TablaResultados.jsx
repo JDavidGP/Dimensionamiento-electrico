@@ -108,6 +108,7 @@ export default function TablaResultados({
   listaIntegridad = [],
   desincronizacionRutas = [],
   advertenciasGFCI = [],
+  advertenciasAFCI = [],
 }) {
   if (circuitos.length === 0) {
     return (
@@ -125,6 +126,7 @@ export default function TablaResultados({
         const activo = circuitoActivoId === circuito.id;
         const entradaIntegridad = listaIntegridad.find((e) => e.tipo === "circuito" && e.id === circuito.id);
         const desincronizacion = desincronizacionRutas.find((d) => d.entidadTipo === "circuito" && d.entidadId === circuito.id);
+        const faltaAFCI = advertenciasAFCI.find((a) => a.circuitoId === circuito.id);
         const estado = estadoCombinado(r, entradaIntegridad);
         const colorEstado = colores[estado];
 
@@ -254,7 +256,7 @@ export default function TablaResultados({
                   );
                 })()}
 
-                {(r?.advertencias?.length > 0 || entradaIntegridad?.problemas?.length > 0 || desincronizacion) && (
+                {(r?.advertencias?.length > 0 || entradaIntegridad?.problemas?.length > 0 || desincronizacion || faltaAFCI) && (
                   <div style={{ padding: "0 14px 10px 14px" }}>
                     {r?.advertencias?.map((a, i) => (
                       <div key={`e${i}`} style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}>
@@ -280,6 +282,12 @@ export default function TablaResultados({
                           Distancia ({desincronizacion.valorActual.toFixed(2)}m) desincronizada de la ruta "{desincronizacion.rutaNombre}" trazada en el
                           Plano ({desincronizacion.valorEsperado.toFixed(2)}m) — revisá o actualizá con "Usar esta longitud".
                         </span>
+                      </div>
+                    )}
+                    {faltaAFCI && (
+                      <div style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaAFCI.motivo}>
+                        <span>⚡</span>{" "}
+                        <span>Requiere protección AFCI ({faltaAFCI.motivo}) y no está marcada — ver "Protegido por AFCI" al editar el circuito.</span>
                       </div>
                     )}
                   </div>

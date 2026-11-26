@@ -39,7 +39,13 @@ assert(exteriorSinTipo.requiere === true, "Exterior=true incluso sin tipoAmbient
 const nulo = requiereProteccionGFCI(null, false, true);
 assert(nulo.requiere === false, "tipoAmbiente null, no exterior -> no requiere, sin reventar");
 
-// --- 7. OPCIONES_TIPO_AMBIENTE trae las 6 opciones esperadas, "otro" primero (default) ---
-assert(OPCIONES_TIPO_AMBIENTE.length === 6 && OPCIONES_TIPO_AMBIENTE[0].valor === "otro", `OPCIONES_TIPO_AMBIENTE trae 6 opciones con 'otro' primero (real: ${OPCIONES_TIPO_AMBIENTE.length})`);
+// --- 7. OPCIONES_TIPO_AMBIENTE trae al menos los 6 tipos de GFCI, "otro" primero (default) ---
+// Compartida con AFCI (ver modules/plano/tipoAmbiente.ts) — no se fija
+// un total exacto acá, solo que los de GFCI siguen presentes.
+const valoresGFCI = OPCIONES_TIPO_AMBIENTE.map((o) => o.valor);
+assert(OPCIONES_TIPO_AMBIENTE[0].valor === "otro", "OPCIONES_TIPO_AMBIENTE trae 'otro' primero (default)");
+for (const tipo of ["bano", "cocina", "garage", "lavanderia", "sotano_sin_terminar"]) {
+  assert(valoresGFCI.includes(tipo), `OPCIONES_TIPO_AMBIENTE sigue incluyendo '${tipo}' (de GFCI)`);
+}
 
 console.log("\nTodas las pruebas completadas.");

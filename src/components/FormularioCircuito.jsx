@@ -170,6 +170,18 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
         Carga continua (&gt;3 horas)
       </label>
 
+      {/* AFCI — usuario, 2026-11-26: "sigamos con AFCI" (NEC 210.12(B)).
+          A diferencia de GFCI (por tomacorriente), AFCI protege el
+          CIRCUITO completo — por eso vive acá, no en el equipo. Dispara
+          advertencia si algún equipo de este circuito cae en un ambiente
+          de la lista (dormitorio/sala/comedor/pasillo/clóset/cocina/
+          lavandería) y esto sigue sin marcar — ver advertenciasAFCI en
+          useCircuitos.js. */}
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: colores.textDim, margin: "-8px 0 16px" }}>
+        <input type="checkbox" checked={!!form.proteccionAFCI} onChange={(e) => setForm({ ...form, proteccionAFCI: e.target.checked })} />
+        Protegido por AFCI
+      </label>
+
       {error && <div style={{ color: colores.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: "flex", gap: 8 }}>

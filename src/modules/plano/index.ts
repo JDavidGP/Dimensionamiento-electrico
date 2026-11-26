@@ -45,8 +45,12 @@ export { cajaDeHabitacion, calcularDeltaConEnganche } from "./enganchePuzzle.ts"
 export { detectarCaras } from "./deteccionCaras.ts";
 export { caminoMasCorto } from "./caminoRed.ts";
 export { calcularExtraAlturaInstalacion, calcularLongitudEsperadaRuta } from "./alturaInstalacion.ts";
-export { OPCIONES_TIPO_AMBIENTE, requiereProteccionGFCI } from "./proteccionGFCI.ts";
-export type { TipoAmbiente, RequerimientoGFCI } from "./proteccionGFCI.ts";
+export { OPCIONES_TIPO_AMBIENTE } from "./tipoAmbiente.ts";
+export type { TipoAmbiente } from "./tipoAmbiente.ts";
+export { requiereProteccionGFCI } from "./proteccionGFCI.ts";
+export type { RequerimientoGFCI } from "./proteccionGFCI.ts";
+export { requiereProteccionAFCI } from "./proteccionAFCI.ts";
+export type { RequerimientoAFCI } from "./proteccionAFCI.ts";
 
 export type {
   Punto,

@@ -34,6 +34,13 @@ export const CIRCUITO_VACIO = {
   // sin asignar todavía. NO tiene UI propia todavía; se gestiona vía
   // TableroMediator. Ver ARCHITECTURE.md.
   tableroId: null,
+  // Idem — se asigna vía DiferencialMediator (asignarCircuitoADiferencial),
+  // no desde este formulario. REBT ITC-BT-25.
+  diferencialId: null,
+  // NEC 210.12(B) — documental (ver modules/plano/proteccionAFCI.ts).
+  // false = sin protección todavía; dispara advertencia si algún equipo
+  // de este circuito cae en un ambiente donde se exige AFCI.
+  proteccionAFCI: false,
   // A qué línea(s) del tablero está conectado ("L1"/"L2"/"L3", según
   // cuántas tenga disponibles su tablero) — para balance de fases.
   // [] = sin asignar todavía, el circuito NO participa en el balance
