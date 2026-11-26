@@ -188,7 +188,7 @@ export default function InformeTecnico({
             // width:100% se quita del <table> (forzaba columnas angostas
             // de más en vez de dejarlo crecer y scrollear horizontal).
             <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-            <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
+            <table id="tabla-informe-circuitos" style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <Th>Circuito</Th>
@@ -235,7 +235,7 @@ export default function InformeTecnico({
           ) : (
             // Mismo envoltorio que la tabla de Circuitos arriba — mismo motivo.
             <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-            <table style={{ width: "100%", minWidth: 500, borderCollapse: "collapse" }}>
+            <table id="tabla-informe-tableros" style={{ width: "100%", minWidth: 500, borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <Th>Tablero</Th>
@@ -272,6 +272,38 @@ export default function InformeTecnico({
                 ⚠ {t.nombre}: {t.motivo}
               </div>
             ))}
+        </Seccion>
+
+        <Seccion titulo="Materiales — metros de conductor por calibre">
+          {informe.materiales.length === 0 ? (
+            <div style={{ fontSize: 12, color: COLOR_TEXTO_DIM }}>
+              Sin ningún circuito/tablero con calibre calculado Y distancia cargada todavía.
+            </div>
+          ) : (
+            <>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <Th>Calibre</Th>
+                    <Th alinearDerecha>Metros</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {informe.materiales.map((m) => (
+                    <tr key={`${m.seccion}|${m.unidadSeccion}`}>
+                      {celda(`${m.seccion} ${m.unidadSeccion}`)}
+                      {celda(`${formatoNumero(m.metrosTotal)} m`, { textAlign: "right" })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ fontSize: 10.5, color: COLOR_TEXTO_DIM, marginTop: 6 }}>
+                Suma la "Distancia (m)"/"Longitud alimentador" de cada circuito/tablero YA calculado — ya incluye el
+                extra de cruce de pared para cualquier ruta sincronizada desde el Plano con "Usar esta longitud".
+                Metros lineales de conductor real, sin redondear a presentaciones de compra (rollos/tubos).
+              </div>
+            </>
+          )}
         </Seccion>
 
         <Seccion titulo="Diagrama unifilar">

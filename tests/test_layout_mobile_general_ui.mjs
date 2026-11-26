@@ -54,8 +54,12 @@ await page.waitForTimeout(150);
 await page.getByRole("button", { name: "Informe técnico", exact: true }).click();
 await page.waitForTimeout(300);
 
+// Acotado por id a propósito (no por conteo total de <table>): "Materiales"
+// (sección agregada después, 2026-11-26) también es una tabla del informe,
+// pero con solo 2 columnas angostas no necesita el mismo envoltorio — no
+// se cuenta acá, este bloque es específicamente sobre Circuitos/Tableros.
 const tablas = await page.evaluate(() => {
-  const ts = Array.from(document.querySelectorAll("#informe-memoria-tecnica table"));
+  const ts = ["tabla-informe-circuitos", "tabla-informe-tableros"].map((id) => document.getElementById(id));
   return ts.map((t) => {
     const wrapper = t.parentElement;
     return {
@@ -72,7 +76,7 @@ for (const [i, t] of tablas.entries()) {
 
 // Scrollear de verdad revela una columna que antes quedaba invisible (Breaker/Caída, las últimas).
 await page.evaluate(() => {
-  const t = document.querySelectorAll("#informe-memoria-tecnica table")[0];
+  const t = document.getElementById("tabla-informe-circuitos");
   t.parentElement.scrollLeft = t.scrollWidth;
 });
 await page.waitForTimeout(100);

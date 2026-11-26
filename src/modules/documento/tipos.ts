@@ -81,6 +81,8 @@ export interface FilaCircuito {
   unidadSeccion: string | null;
   breaker: number | null;
   caidaPct: number | null;
+  /** Distancia (m) del circuito — el mismo campo que "Usar esta longitud" del Plano sincroniza (ya incluye el extra de cruce de pared, si se sincronizó). null = no cargada. Ver resumenMaterialesPorCalibre. */
+  distanciaM: number | null;
   advertencias: string[];
   error: string | null;
 }
@@ -98,8 +100,16 @@ export interface FilaTablero {
   unidadSeccion: string | null;
   breaker: number | null;
   caidaPct: number | null;
+  /** Longitud del alimentador (m) — mismo criterio que FilaCircuito.distanciaM. */
+  distanciaM: number | null;
   simultaneidadREBT: unknown;
   motivo: string | null;
+}
+
+export interface ResumenMaterialCalibre {
+  seccion: string;
+  unidadSeccion: string;
+  metrosTotal: number;
 }
 
 export interface Totales {
@@ -123,4 +133,5 @@ export interface MemoriaTecnica {
     resumen: Record<string, number>;
     entradas: EntradaIntegridad[];
   };
+  materiales: ResumenMaterialCalibre[];
 }

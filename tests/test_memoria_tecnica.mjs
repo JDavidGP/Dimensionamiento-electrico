@@ -94,4 +94,53 @@ const informeIntegridad = App.documento.memoriaTecnica({
 assert(informeIntegridad.integridad.entradas.length > 0, "Las entradas con problemas de integridad aparecen en el informe");
 assert(informeIntegridad.integridad.resumen.error >= 1, "El resumen de integridad cuenta el error (padre inexistente)");
 
+// --- 6. Materiales — metros de conductor por calibre (usuario,
+//     2026-11-26, "el extra de cruce de pared → conectarlo al cálculo
+//     de materiales"). Reusa el mismo circuito "Iluminación" (SIN
+//     distancia cargada, default "" — no debe contribuir nada) + un
+//     2do circuito CON distancia, + el tablero (longitudAlimentador
+//     "15", ya usado arriba). ---
+const circuitoConDistancia = App.validacion.formularioACircuito(
+  { ...CIRCUITO_VACIO, nombre: "Con distancia", voltaje: "120", fases: "mono", distancia: "20" },
+  null
+);
+const equipoDeCircuitoConDistancia = App.validacion.formularioAEquipo({ ...EQUIPO_VACIO, nombre: "Lámpara 2", valor: "100" }, circuitoConDistancia.id, null);
+const circuitosMateriales = [circuito, circuitoConDistancia, circuitoVacio];
+const equiposMateriales = [equipo, equipoDeCircuitoConDistancia];
+const resultadosMateriales = App.motor.calcularTodos(circuitosMateriales, equiposMateriales, "NEC");
+
+const informeMateriales = App.documento.memoriaTecnica({
+  proyecto, normativaActiva: "NEC", circuitos: circuitosMateriales, equipos: equiposMateriales,
+  resultados: resultadosMateriales, tableros: [tablero], alimentadores,
+  fuentesEnergia: [], transformadores: [], listaIntegridad: [],
+});
+
+const filaIluminacion = informeMateriales.circuitos.find((c) => c.nombre === "Iluminación");
+assert(filaIluminacion.distanciaM === null, "El circuito 'Iluminación' (distancia '' por default) trae distanciaM: null, no un 0 inventado");
+const filaConDistancia = informeMateriales.circuitos.find((c) => c.nombre === "Con distancia");
+assert(filaConDistancia.distanciaM === 20, `El circuito 'Con distancia' trae distanciaM = 20 (real: ${filaConDistancia.distanciaM})`);
+const filaTableroMateriales = informeMateriales.tableros[0];
+assert(filaTableroMateriales.distanciaM === 15, `El tablero trae distanciaM = 15, de longitudAlimentador (real: ${filaTableroMateriales.distanciaM})`);
+
+assert(informeMateriales.materiales.length > 0, "Hay al menos 1 entrada de materiales (con circuitos/tablero OK y con distancia)");
+const metrosTotalesReportados = informeMateriales.materiales.reduce((acc, m) => acc + m.metrosTotal, 0);
+// "Iluminación" (sin distancia) no contribuye nada — el total debe ser EXACTAMENTE 20 (circuito) + 15 (tablero) = 35,
+// nunca más, aunque "Iluminación" también esté OK y calculado.
+assert(Math.abs(metrosTotalesReportados - 35) < 1e-9, `El total de metros es 20 (circuito con distancia) + 15 (tablero) = 35, 'Iluminación' no aporta nada (real: ${metrosTotalesReportados})`);
+
+// Mismo calibre en 2 filas distintas (circuito 'Con distancia' + tablero, si comparten calibre) debe sumarse en UNA sola entrada, no 2.
+if (filaConDistancia.seccion === filaTableroMateriales.seccion && filaConDistancia.unidadSeccion === filaTableroMateriales.unidadSeccion) {
+  assert(
+    informeMateriales.materiales.length === 1,
+    `Mismo calibre en circuito y tablero: se agrupan en 1 sola entrada (real: ${informeMateriales.materiales.length})`
+  );
+}
+
+// Sin ningún dato -> lista vacía, no revienta.
+const informeSinMateriales = App.documento.memoriaTecnica({
+  proyecto, normativaActiva: "NEC", circuitos: [], equipos: [], resultados: [],
+  tableros: [], alimentadores: {}, fuentesEnergia: [], transformadores: [], listaIntegridad: [],
+});
+assert(Array.isArray(informeSinMateriales.materiales) && informeSinMateriales.materiales.length === 0, "Proyecto vacío -> materiales: [] (no revienta)");
+
 console.log("\nTodas las pruebas completadas.");
