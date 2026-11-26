@@ -107,6 +107,21 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   // acertarle al ícono, no "cualquier punto del ambiente" como una
   // habitación) en vez del contenedor entero.
   const arrastreMarcadorRef = useRef(null);
+  // Pellizco de 2 dedos (zoom + pan táctil) — usuario, 2026-11-26,
+  // "continuemos con el mobile táctil". Antes de esto, el único zoom
+  // era la rueda del mouse (alWheel); en un teléfono no hay rueda, y
+  // "pan-y" en touchAction bloqueaba incluso el pinch-zoom NATIVO del
+  // navegador sobre el lienzo, así que no había NINGUNA forma táctil
+  // de acercar/alejar salvo los botones +/-. punterosRef rastrea cada
+  // dedo por su pointerId (nunca por posición), para que un 2do dedo
+  // que cae por accidente durante un arrastre de 1 dedo no lo
+  // corrompa (antes, alPointerMove mezclaba clientX/Y de cualquier
+  // puntero sin distinguirlos). pinchRef guarda la distancia/punto
+  // medio del pellizco activo, para medir el DELTA cuadro a cuadro
+  // (nunca el total desde el inicio, que se desalinearía cada vez que
+  // se recalibra el punto medio).
+  const punterosRef = useRef(new Map());
+  const pinchRef = useRef(null);
   // Arrastre de un rectángulo nuevo — modo "rectangulo" (usuario,
   // 2026-11-23: "click en una esquina... estiramos hacia la otra
   // esquina"). `inicio`/`actual` en espacio IMAGEN (mismo contrato que
@@ -232,9 +247,23 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     return mejor ? { x: x0 + mejor.x, y: y0 + mejor.y } : puntoImagen;
   }
 
-  function puntoPantallaDesdeEvento(e) {
+  function puntoPantallaDesdeCliente(clientX, clientY) {
     const rect = svgRef.current.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  function puntoPantallaDesdeEvento(e) {
+    return puntoPantallaDesdeCliente(e.clientX, e.clientY);
+  }
+
+  // Helpers puros del pellizco de 2 dedos — trabajan en coordenadas de
+  // CLIENTE (clientX/Y), antes de restar el offset del lienzo, porque
+  // ahí es donde llegan desde punterosRef.
+  function distanciaEntreClientes(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+  function puntoMedioDeClientes(a, b) {
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
   }
 
   /** Puntos (espacio MODELO, metros) de los nodos de una habitación, en el orden que ya trae — para el hit-test de arrastre y nada más (el área/perímetro YA están calculados, esto no los vuelve a tocar). */
@@ -266,6 +295,20 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
 
   function alPointerDown(e) {
     if (!imagen) return;
+    punterosRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (punterosRef.current.size >= 2) {
+      // El 2do dedo cancela cualquier arrastre de 1 dedo que ya
+      // hubiera arrancado con el primero (mover vista/ambiente/equipo,
+      // o un rectángulo a medio arrastrar) — el pellizco toma el
+      // control completo mientras haya 2+ dedos en pantalla.
+      arrastreRef.current = null;
+      arrastreAmbienteRef.current = null;
+      arrastreMarcadorRef.current = null;
+      setRectanguloArrastre(null);
+      const [p1, p2] = [...punterosRef.current.values()];
+      pinchRef.current = { distancia: distanciaEntreClientes(p1, p2), medio: puntoMedioDeClientes(p1, p2) };
+      return;
+    }
     if (modo === "mover") {
       arrastreRef.current = { x: e.clientX, y: e.clientY, seMovio: false };
       return;
@@ -285,6 +328,28 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   }
 
   function alPointerMove(e) {
+    if (punterosRef.current.has(e.pointerId)) punterosRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (punterosRef.current.size >= 2 && pinchRef.current) {
+      // Zoom Y pan de 2 dedos a la vez (igual que cualquier mapa
+      // táctil) — funciona en CUALQUIER modo, es un gesto de la VISTA,
+      // no de los datos del proyecto. Siempre contra el cuadro
+      // ANTERIOR (nunca el total desde que empezó el pellizco), para
+      // que no se acumule un error de redondeo ni un salto si el punto
+      // medio se desplaza mucho entre cuadros.
+      const [p1, p2] = [...punterosRef.current.values()];
+      const distanciaNueva = distanciaEntreClientes(p1, p2);
+      const medioNuevo = puntoMedioDeClientes(p1, p2);
+      if (pinchRef.current.distancia > 0) {
+        const factor = distanciaNueva / pinchRef.current.distancia;
+        const medioLocalAnterior = puntoPantallaDesdeCliente(pinchRef.current.medio.x, pinchRef.current.medio.y);
+        setTransformVista((actual) => {
+          const conZoom = App.plano.aplicarZoom(actual, factor, medioLocalAnterior);
+          return App.plano.aplicarPan(conZoom, { x: medioNuevo.x - pinchRef.current.medio.x, y: medioNuevo.y - pinchRef.current.medio.y });
+        });
+      }
+      pinchRef.current = { distancia: distanciaNueva, medio: medioNuevo };
+      return;
+    }
     if (arrastreRef.current && modo === "mover") {
       const dx = e.clientX - arrastreRef.current.x;
       const dy = e.clientY - arrastreRef.current.y;
@@ -326,7 +391,9 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     }
   }
 
-  function alPointerUp() {
+  function alPointerUp(e) {
+    if (e) punterosRef.current.delete(e.pointerId);
+    if (punterosRef.current.size < 2) pinchRef.current = null;
     arrastreRef.current = null;
     arrastreMarcadorRef.current = null;
     arrastreAmbienteRef.current = null;
@@ -358,7 +425,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     <div style={{ position: "relative" }}>
       <div
         ref={contenedorRef}
-        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: modo === "mover" || modo === "mover-ambiente" || modo === "mover-equipo" || esModoArrastreRectangulo(modo) ? "none" : "pan-y" }}
+        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: imagen ? "none" : "pan-y" }}
       >
         {!imagen ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: colores.textDim, fontSize: 13 }}>
@@ -375,6 +442,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
             onPointerDown={alPointerDown}
             onPointerMove={alPointerMove}
             onPointerUp={alPointerUp}
+            onPointerCancel={alPointerUp}
             onPointerLeave={alPointerUp}
           >
             <defs>
