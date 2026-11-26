@@ -88,6 +88,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     onIniciarArrastre,
     onClickParedCandidata,
     onTrazarRectangulo,
+    ocuparAltoDisponible = false,
   },
   ref
 ) {
@@ -174,17 +175,46 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
 
   // Mide el contenedor al montar y en cada resize/orientation-change —
   // así "ajustar a ventana" siempre usa el tamaño REAL del dispositivo
-  // actual, nunca uno guardado de otro dispositivo.
+  // actual, nunca uno guardado de otro dispositivo. SOLO en pantalla
+  // completa (usuario, 2026-11-26, "mobile táctil") se agrega un
+  // ResizeObserver sobre el propio contenedor, porque ahí el tamaño
+  // cambia (position:fixed, ver PlanoInteligente) sin disparar un
+  // resize de ventana. Bug real encontrado probándolo: activar el
+  // ResizeObserver SIEMPRE (no solo en pantalla completa) refitea la
+  // vista (ajustarAVentana, más abajo) cada vez que CUALQUIER cosa de
+  // la página — ni siquiera el propio lienzo — hace que este
+  // contenedor cambie 1px (ej. la lista de "Ambientes" creciendo
+  // empuja el layout) — eso corría la vista a mitad de un arrastre de
+  // mouse, haciendo que un "Mover ambiente" cayera 1px off. Fuera de
+  // pantalla completa, "resize" de window (solo pasa si la VENTANA
+  // cambia, nunca por un vecino de layout) es la única fuente —
+  // exactamente el comportamiento de siempre, sin tocar nada.
   useEffect(() => {
+    if (!contenedorRef.current) return;
     function medir() {
       if (!contenedorRef.current) return;
       const rect = contenedorRef.current.getBoundingClientRect();
-      setTamanoCanvas({ ancho: rect.width, alto: rect.height });
+      // Bail-out con epsilon — un ancho/alto en "calc(100vh - ...)"
+      // puede devolver un valor con un pelo de diferencia entre dos
+      // frames consecutivos por redondeo de subpíxel, y como el
+      // objeto nuevo nunca es === al anterior, React re-renderiza en
+      // CADA frame sin ningún cambio real. Devolver la MISMA
+      // referencia cuando no cambió nada (más de 0.5px) deja que
+      // React descarte el update sin repintar.
+      setTamanoCanvas((anterior) => {
+        if (Math.abs(anterior.ancho - rect.width) < 0.5 && Math.abs(anterior.alto - rect.height) < 0.5) return anterior;
+        return { ancho: rect.width, alto: rect.height };
+      });
     }
     medir();
-    window.addEventListener("resize", medir);
-    return () => window.removeEventListener("resize", medir);
-  }, []);
+    if (!ocuparAltoDisponible) {
+      window.addEventListener("resize", medir);
+      return () => window.removeEventListener("resize", medir);
+    }
+    const observador = new ResizeObserver(medir);
+    observador.observe(contenedorRef.current);
+    return () => observador.disconnect();
+  }, [ocuparAltoDisponible]);
 
   // Al cargar una imagen nueva (o cambiar el tamaño del canvas), ajustar
   // la vista para que entre completa — ver ajustarAVentana en
@@ -425,7 +455,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     <div style={{ position: "relative" }}>
       <div
         ref={contenedorRef}
-        style={{ width: "100%", height: 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: imagen ? "none" : "pan-y" }}
+        style={{ width: "100%", height: ocuparAltoDisponible ? "calc(100vh - 140px)" : 480, background: "#0d0c0a", border: `1px solid ${colores.border}`, borderRadius: 4, overflow: "hidden", touchAction: imagen ? "none" : "pan-y" }}
       >
         {!imagen ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: colores.textDim, fontSize: 13 }}>

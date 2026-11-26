@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import { colores, fuentes } from "../styles/colores";
 import { inputStyle } from "./Campo";
 import { BotonPill } from "./PanelTableros";
@@ -126,6 +126,20 @@ export default function PlanoInteligente({
   // persisten como parte del proyecto) hasta que el instalador acepta
   // una con un click — recién ahí se convierte en una pared real.
   const canvasRef = useRef(null);
+  // Pantalla completa táctil (usuario, 2026-11-26, "al entrar a editar
+  // se expande a pantalla completa... todas las funciones agrupadas en
+  // un botón que puedes expandir o retraer", confirmado Android). Dos
+  // capas independientes, a propósito: (1) un modo CSS propio
+  // (position:fixed cubriendo el viewport) que SIEMPRE funciona, sin
+  // depender de ninguna API del navegador — es la fuente de verdad del
+  // layout; (2) un intento best-effort de la Fullscreen API real +
+  // bloqueo de orientación horizontal, que en iPhone/Safari ni existe
+  // (Element.requestFullscreen no está soportado ahí) — si fallan o no
+  // existen, el modo (1) sigue andando igual, por eso van en try/catch
+  // silenciosos, nunca condicionan nada del estado React.
+  const contenedorPlanoRef = useRef(null);
+  const [pantallaCompletaPlano, setPantallaCompletaPlano] = useState(false);
+  const [menuPlanoExpandido, setMenuPlanoExpandido] = useState(true);
   const [paredesCandidatas, setParedesCandidatas] = useState([]);
   const [puertasCandidatas, setPuertasCandidatas] = useState([]);
   // Asistencia de bordes (Fase 2) — "pega" cada click de trazado al
@@ -786,9 +800,98 @@ export default function PlanoInteligente({
     cambiarModo("pared");
   }
 
+  function entrarPantallaCompletaPlano() {
+    setPantallaCompletaPlano(true);
+    setMenuPlanoExpandido(true);
+    contenedorPlanoRef.current?.requestFullscreen?.().catch(() => {});
+    screen.orientation?.lock?.("landscape").catch(() => {});
+  }
+
+  function salirPantallaCompletaPlano() {
+    setPantallaCompletaPlano(false);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    screen.orientation?.unlock?.();
+  }
+
+  // Si el sistema sale de la Fullscreen API real por su cuenta (botón
+  // atrás de Android, gesto del sistema) sin pasar por nuestro propio
+  // botón "Salir", esto sincroniza el modo CSS de vuelta — nunca al
+  // revés (si requestFullscreen nunca llegó a concederse, este evento
+  // tampoco dispara, y el modo CSS sigue siendo la única fuente de
+  // verdad, sin que la Fullscreen API lo condicione).
+  useEffect(() => {
+    function alCambiarFullscreen() {
+      if (!document.fullscreenElement) setPantallaCompletaPlano(false);
+    }
+    document.addEventListener("fullscreenchange", alCambiarFullscreen);
+    return () => document.removeEventListener("fullscreenchange", alCambiarFullscreen);
+  }, []);
+
   return (
-    <div className="plano-grid" style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 14, alignItems: "start" }}>
-      <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
+    <div
+      ref={contenedorPlanoRef}
+      className="plano-grid"
+      style={
+        pantallaCompletaPlano
+          ? { position: "fixed", inset: 0, zIndex: 2000, background: colores.bg, padding: 10, overflow: "auto", display: "grid", gridTemplateColumns: "1fr 280px", gap: 14, alignItems: "start" }
+          : { display: "grid", gridTemplateColumns: "1fr 280px", gap: 14, alignItems: "start" }
+      }
+    >
+      {/* minWidth:0 — bug real encontrado probando pantalla completa
+          (usuario, 2026-11-26): esta columna "1fr" de la grilla, sin
+          esto, toma por defecto minmax(auto, 1fr) — el SVG del lienzo
+          adentro trae un ancho en PÍXELES (no %), que cuenta como su
+          "ancho preferido" para ese "auto". Cada vez que PlanoCanvas
+          medía su contenedor y achicaba/agrandaba el <svg> a ese
+          tamaño, la columna se re-media UN PELO más grande (así nunca
+          recorta nada), lo que hacía crecer el <svg> de nuevo — un
+          loop infinito que corría cada frame sin romper nada visible
+          salvo que TODO lo de esta columna derivaba 4px por cuadro
+          hacia la derecha para siempre. minWidth:0 fuerza el track a
+          NO crecer por el contenido — el ancho real lo sigue dando la
+          grilla, nunca el <svg>. */}
+      <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14, minWidth: 0, position: "relative" }}>
+        {/* position:absolute, SIN reservar padding — 2 bugs reales
+            encontrados probando esto (usuario, 2026-11-26): (1) metido
+            como un botón más en la fila de acciones (flexWrap), una
+            vez que TODAS las acciones condicionales ya están visibles
+            (Deshacer + Restablecer + Exportar DXF + Quitar + este),
+            7 botones ya no entraban en una sola línea a 1280px — la
+            fila envolvía a una 2da línea, empujando el lienzo 22px
+            hacia abajo (la MISMA categoría de regresión que ya atrapó
+            test_enganche_puzzle_ui una vez con la barra de modos).
+            (2) Flotarlo absoluto arriba de TODO SIN tocar la fila
+            parecía la solución, pero reservarle espacio con
+            paddingRight en esa fila achicaba su ancho disponible IGUAL
+            — mismo problema, otra vía. Se sacó el padding del todo y
+            se bajó el botón a top:44 (debajo de la fila de acciones de
+            una sola línea, que mide ~28px) — así nunca compite por
+            ancho con nada, y solo se superpondría en el caso raro de
+            que esa fila YA wrapeara por su cuenta sin este botón
+            (no pasa hoy). */}
+        {planoImagen && (
+          <button
+            type="button"
+            onClick={pantallaCompletaPlano ? salirPantallaCompletaPlano : entrarPantallaCompletaPlano}
+            style={{
+              position: "absolute",
+              top: 44,
+              right: 14,
+              padding: "6px 10px",
+              borderRadius: 3,
+              border: `1px solid ${colores.copper}`,
+              background: pantallaCompletaPlano ? colores.copper : "transparent",
+              color: pantallaCompletaPlano ? colores.textSobreAcento : colores.copper,
+              fontWeight: 700,
+              fontSize: 11.5,
+              cursor: "pointer",
+              zIndex: 1,
+            }}
+            title={pantallaCompletaPlano ? "Volver a la vista normal, con el resto de la app alrededor." : "Maximiza el Plano ocupando toda la pantalla — pensado para editar desde el celular."}
+          >
+            {pantallaCompletaPlano ? "⤡ Salir" : "⛶ Pantalla completa"}
+          </button>
+        )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
           <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase" }}>
             Plano inteligente
@@ -942,6 +1045,26 @@ export default function PlanoInteligente({
 
         {planoImagen && (
           <>
+            {/* En pantalla completa, el selector de modos + "Mostrar:"
+                (lo más ancho de toda la pantalla, 17 botones) se
+                esconde detrás de este botón — colapsado por defecto NO
+                tendría sentido (nadie podría elegir un modo para
+                empezar), así que arranca expandido y el instalador lo
+                retrae cuando quiere ver el lienzo completo. Fuera de
+                pantalla completa este botón ni existe — nada cambia en
+                el uso normal de escritorio. */}
+            {pantallaCompletaPlano && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setMenuPlanoExpandido((v) => !v)}
+                  style={{ padding: "6px 12px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.copper, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+                >
+                  {menuPlanoExpandido ? "▾ Ocultar herramientas" : "☰ Herramientas"}
+                </button>
+              </div>
+            )}
+            <div style={pantallaCompletaPlano && !menuPlanoExpandido ? { display: "none" } : undefined}>
             {/* Una sola fila que se acomoda sola (igual que la versión
                 original, sin grupo) — una primera versión forzaba 5
                 filas fijas (una por grupo), lo que empujaba el lienzo
@@ -993,6 +1116,7 @@ export default function PlanoInteligente({
                   {c.label}
                 </label>
               ))}
+            </div>
             </div>
 
             {/* Estado de "Reconocer paredes (área)" (modo arriba) — no es un
@@ -1295,6 +1419,7 @@ export default function PlanoInteligente({
               ? candidatosTriangulacion.map((c) => App.plano.modeloAImagen(c, planoCalibracion.escalaMetrosPorPixel))
               : []
           }
+          ocuparAltoDisponible={pantallaCompletaPlano}
         />
 
         {modo === "perspectiva" && puntosPerspectiva.length === 4 && (
