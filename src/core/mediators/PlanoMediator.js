@@ -81,6 +81,8 @@ import {
   ajustarAVentana,
   ZOOM_MIN,
   ZOOM_MAX,
+  puntoConAnguloSnapeado,
+  SNAP_ANGULO_TOLERANCIA_GRADOS,
 } from "../../modules/geometria/index.ts";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
 import { OrigenMediator } from "./OrigenMediator.js";
@@ -93,6 +95,8 @@ export const PlanoMediator = {
   UMBRAL_MAGNITUD_BORDE,
   pixelBordeMasFuerte,
   detectarParedesCandidatas,
+  puntoConAnguloSnapeado,
+  SNAP_ANGULO_TOLERANCIA_GRADOS,
 
   crearNodo,
   nodoCercano,

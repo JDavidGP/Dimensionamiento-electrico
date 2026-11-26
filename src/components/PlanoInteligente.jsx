@@ -134,6 +134,15 @@ export default function PlanoInteligente({
   // se persiste (no es un dato del proyecto, es solo cómo trabaja
   // ahora mismo quien está trazando).
   const [asistenciaBordes, setAsistenciaBordes] = useState(true);
+  // Snap de ángulo al trazar pared/conductor (usuario, 2026-11-25/26,
+  // "¿cómo tener trazos más limpios?") — mismo criterio que
+  // asistenciaBordes: preferencia de herramienta, NO se persiste.
+  // Prendido por defecto; "pega" el siguiente punto del trazo a la
+  // horizontal/vertical/diagonal más cercana (cada 15°) SOLO si el
+  // ángulo real ya está bastante cerca (ver SNAP_ANGULO_TOLERANCIA_GRADOS
+  // en modules/geometria/index.ts) — nunca fuerza un trazo que el
+  // instalador quiso en un ángulo cualquiera a propósito.
+  const [snapAngulo, setSnapAngulo] = useState(true);
 
   // Enganche automático de "Mover ambiente" (usuario, 2026-11-25) —
   // mismo criterio que asistenciaBordes: preferencia de herramienta,
@@ -371,6 +380,34 @@ export default function PlanoInteligente({
     }
   }
 
+  /**
+   * Aplica el snap de ángulo (ver modules/geometria/index.ts) contra el
+   * ÚLTIMO punto ya trazado de `trazoActual` — nada que snapear si es
+   * el primer punto del trazo (no hay tramo anterior) o si el toggle
+   * está apagado. Convierte a espacio MODELO para el cálculo (el
+   * propio módulo de geometría trabaja en metros, nunca en píxeles) y
+   * de vuelta a espacio IMAGEN para que agregarNodoPlano siga
+   * recibiendo lo que siempre espera.
+   *
+   * Si el click YA cae cerca de un nodo existente (o, en modo
+   * "conductor", de un marcador de equipo — `pegarAEquipo`), ese
+   * pegado manda siempre y el ángulo no se toca: agregarNodoPlano ya
+   * resuelve ESE caso solo (conectar paredes exactas, "pegar
+   * conductor a equipo"), y correrlo con el snap de ángulo podría
+   * alejarlo lo suficiente como para perder ese pegado.
+   */
+  function puntoImagenConSnapAngulo(puntoImagen, pegarAEquipo = false) {
+    if (!snapAngulo || trazoActual.length === 0 || !planoCalibracion) return puntoImagen;
+    const escala = planoCalibracion.escalaMetrosPorPixel;
+    const puntoModelo = App.plano.imagenAModelo(puntoImagen, escala);
+    if (App.plano.nodoCercano(puntoModelo, nodosPlano)) return puntoImagen;
+    if (pegarAEquipo && App.plano.nodoCercano(puntoModelo, marcadoresEquipoPlano)) return puntoImagen;
+    const nodoAnterior = nodosPlano.find((n) => n.id === trazoActual[trazoActual.length - 1]);
+    if (!nodoAnterior) return puntoImagen;
+    const puntoModeloSnapeado = App.plano.puntoConAnguloSnapeado(nodoAnterior.punto, puntoModelo);
+    return App.plano.modeloAImagen(puntoModeloSnapeado, escala);
+  }
+
   function alClickImagen(puntoImagen) {
     if (modo === "perspectiva") {
       if (puntosPerspectiva.length < 4) {
@@ -421,6 +458,7 @@ export default function PlanoInteligente({
     }
 
     if (modo === "pared") {
+      puntoImagen = puntoImagenConSnapAngulo(puntoImagen);
       const nodo = agregarNodoPlano(puntoImagen);
       if (!nodo) return; // sin calibrar todavía
       if (trazoActual.length === 0) {
@@ -444,6 +482,7 @@ export default function PlanoInteligente({
     }
 
     if (modo === "conductor") {
+      puntoImagen = puntoImagenConSnapAngulo(puntoImagen, true);
       const nodo = agregarNodoPlano(puntoImagen, true); // true: pegar al equipo marcado más cercano, si hay uno
       if (!nodo) return; // sin calibrar todavía
       if (trazoActual.length === 0) {
@@ -985,6 +1024,15 @@ export default function PlanoInteligente({
                   <label style={{ cursor: "pointer" }}>
                     <input type="checkbox" checked={asistenciaBordes} onChange={(e) => setAsistenciaBordes(e.target.checked)} style={{ marginRight: 4 }} />
                     Asistencia de bordes (pega el click al filo más cercano)
+                  </label>
+                </>
+              )}
+              {(modo === "pared" || modo === "conductor") && planoCalibracion && (
+                <>
+                  {" "}·{" "}
+                  <label style={{ cursor: "pointer" }}>
+                    <input type="checkbox" checked={snapAngulo} onChange={(e) => setSnapAngulo(e.target.checked)} style={{ marginRight: 4 }} />
+                    Snap de ángulo (pega cada tramo a 0°/15°/30°/45°... si ya está cerca)
                   </label>
                 </>
               )}

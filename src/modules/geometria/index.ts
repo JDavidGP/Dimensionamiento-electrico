@@ -205,6 +205,46 @@ export function anguloAgudoEntreSegmentos(p1: Punto, p2: Punto, p3: Punto, p4: P
   return theta > Math.PI / 2 ? Math.PI - theta : theta;
 }
 
+// Snap de ángulo al trazar pared/conductor — usuario, 2026-11-25/26
+// ("¿cómo tener trazos más limpios?"): sin esto, nada ayuda a que una
+// pared salga perfectamente horizontal/vertical/45° al trazar a mano,
+// causa típica de que quede ligeramente torcida. Mismo criterio que
+// ajustarABorde en PlanoCanvas.jsx (una AYUDA opcional al trazado
+// manual, nunca una corrección forzada): si el ángulo real ya está
+// LEJOS del múltiplo más cercano (más de `toleranciaGrados`), el punto
+// vuelve sin tocar — nunca "tira" de un trazo que el instalador quiso
+// en diagonal a propósito.
+/** Incremento de ángulo al que se intenta "pegar" un trazo — 15° cubre horizontal/vertical/diagonales comunes (0/15/30/45/60/75/90...). */
+export const SNAP_ANGULO_INCREMENTO_GRADOS = 15;
+/** Si el ángulo real difiere del múltiplo más cercano por más de esto, no se snapea — se respeta el trazo tal cual. */
+export const SNAP_ANGULO_TOLERANCIA_GRADOS = 6;
+
+/**
+ * Punto ajustado para que el ángulo del segmento `origen->punto` caiga
+ * en el múltiplo más cercano de `incrementoGrados`, SI la diferencia
+ * real está dentro de `toleranciaGrados` (si no, devuelve `punto` tal
+ * cual). La DISTANCIA origen->punto nunca cambia, solo la dirección —
+ * mismo radio, ángulo corregido.
+ */
+export function puntoConAnguloSnapeado(
+  origen: Punto,
+  punto: Punto,
+  incrementoGrados: number = SNAP_ANGULO_INCREMENTO_GRADOS,
+  toleranciaGrados: number = SNAP_ANGULO_TOLERANCIA_GRADOS
+): Punto {
+  const dx = punto.x - origen.x;
+  const dy = punto.y - origen.y;
+  const distanciaTramo = Math.hypot(dx, dy);
+  if (distanciaTramo === 0) return punto;
+
+  const anguloGrados = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const anguloRedondeado = Math.round(anguloGrados / incrementoGrados) * incrementoGrados;
+  if (Math.abs(anguloGrados - anguloRedondeado) > toleranciaGrados) return punto;
+
+  const anguloRad = (anguloRedondeado * Math.PI) / 180;
+  return { x: origen.x + distanciaTramo * Math.cos(anguloRad), y: origen.y + distanciaTramo * Math.sin(anguloRad) };
+}
+
 export {
   ZOOM_MIN,
   ZOOM_MAX,
