@@ -11,6 +11,9 @@ import {
   ANCHO_VOLUMEN_2_M,
   ANCHO_VOLUMEN_3_M,
   RADIO_VOLUMEN1_DEFECTO_M,
+  ALTURA_LIMITE_VOLUMEN_BASE_M,
+  ALTURA_LIMITE_VOLUMEN_TECHO_MAX_M,
+  limiteAlturaM,
 } from "../src/modules/plano/index.ts";
 
 function assert(cond, msg) {
@@ -75,5 +78,42 @@ assert(evaluarZonaBano({ x: 0, y: 0 }, []) === null, "Sin ninguna fuente de agua
 assert(ANCHO_VOLUMEN_2_M === 0.6, "ANCHO_VOLUMEN_2_M = 0.6m (§2.1.3, cita exacta)");
 assert(ANCHO_VOLUMEN_3_M === 2.4, "ANCHO_VOLUMEN_3_M = 2.4m (§2.1.4, cita exacta)");
 assert(RADIO_VOLUMEN1_DEFECTO_M === 0.6, "RADIO_VOLUMEN1_DEFECTO_M = 0.6m (§2.1.2, ducha con rociador fijo)");
+
+// --- 8. limiteAlturaM — fórmula de altura combinada (ITC-BT-27 §2.1.2/3/4) ---
+assert(limiteAlturaM(2) === 2, "Techo bajo (2m, < 2.25m): el límite es el techo real, no 2.25m (no hay espacio que exista por encima de 2m)");
+assert(limiteAlturaM(2.25) === 2.25, "Techo justo en 2.25m: el límite es 2.25m");
+assert(limiteAlturaM(2.6) === 2.6, "Techo de 2.6m (entre 2.25 y 3m): el límite es el techo real completo");
+assert(limiteAlturaM(3) === 3, "Techo de exactamente 3m: el límite es 3m");
+assert(limiteAlturaM(4) === 3, "Techo MUY alto (4m): el límite se topa en 3m exactos, nunca el techo real completo (§2.1.3/4, 'cualquiera que sea el valor menor')");
+assert(ALTURA_LIMITE_VOLUMEN_BASE_M === 2.25, "ALTURA_LIMITE_VOLUMEN_BASE_M = 2.25m (§2.1.2, cita exacta)");
+assert(ALTURA_LIMITE_VOLUMEN_TECHO_MAX_M === 3, "ALTURA_LIMITE_VOLUMEN_TECHO_MAX_M = 3m (§2.1.3/4, cita exacta)");
+
+// --- 9. evaluarZonaBano con altura: exime SOLO con los 2 datos Y por encima del límite ---
+const fuenteCerca = [{ punto: { x: 0, y: 0 }, tipo: "fuente_agua" }]; // distancia 0 -> prohibido por horizontal, siempre que no se exima por altura
+const puntoBano = { x: 0, y: 0 };
+
+// Sin ninguno de los 2 datos de altura -> exactamente el resultado horizontal de siempre (comportamiento ya probado arriba, cero cambio).
+assert(evaluarZonaBano(puntoBano, fuenteCerca).zona === "prohibido", "Sin datos de altura, sigue siendo 'prohibido' por distancia (comportamiento de siempre)");
+
+// Con SOLO la altura del punto (sin techo) -> no se puede juzgar, sigue "prohibido".
+assert(evaluarZonaBano(puntoBano, fuenteCerca, 2.5, null).zona === "prohibido", "Falta la altura de techo -> no se exime (no se adivina)");
+
+// Con SOLO la altura de techo (sin altura del punto) -> no se puede juzgar, sigue "prohibido".
+assert(evaluarZonaBano(puntoBano, fuenteCerca, null, 2.4).zona === "prohibido", "Falta la altura del punto -> no se exime (no se adivina)");
+
+// Con los 2 datos, pero el punto queda POR DEBAJO del límite (techo 2.4m -> límite 2.4m) -> sigue prohibido.
+assert(evaluarZonaBano(puntoBano, fuenteCerca, 1.4, 2.4).zona === "prohibido", "Con los 2 datos pero por DEBAJO del límite de altura, sigue prohibido");
+
+// Con los 2 datos, el punto EXACTO en el límite -> todavía prohibido (límite inclusivo, mismo criterio que la distancia).
+assert(evaluarZonaBano(puntoBano, fuenteCerca, 2.4, 2.4).zona === "prohibido", "Exactamente en el límite de altura -> todavía prohibido (inclusivo)");
+
+// Con los 2 datos, el punto POR ENCIMA del límite (techo alto, 4m -> límite 3m; punto a 3.5m) -> se exime a "fuera".
+const zonaEximida = evaluarZonaBano(puntoBano, fuenteCerca, 3.5, 4);
+assert(zonaEximida.zona === "fuera", `Punto a 3.5m con techo de 4m (límite real 3m) -> se exime a 'fuera' (real: ${zonaEximida.zona})`);
+assert(zonaEximida.motivo === "", "Eximido por altura: sin motivo que citar, como cualquier 'fuera'");
+
+// Un punto YA "fuera" por distancia nunca se ve afectado por la altura (la altura solo exime, nunca agrava).
+const fuenteLejos = [{ punto: { x: 100, y: 100 }, tipo: "fuente_agua" }];
+assert(evaluarZonaBano(puntoBano, fuenteLejos, 0, 5).zona === "fuera", "Ya 'fuera' por distancia: la altura (aunque disponible) no lo cambia a algo peor");
 
 console.log("\nTodas las pruebas completadas.");

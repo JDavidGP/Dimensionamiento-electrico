@@ -19,19 +19,47 @@
 // dispositivo de protección por corriente diferencial de valor no
 // superior a los 30 mA".
 //
-// SIMPLIFICACIÓN DELIBERADA (mismo criterio que GFCI/AFCI): el Plano
-// es 2D — la norma real también acota cada volumen por ALTURA (2,25m,
-// o hasta el techo/3m) y el Volumen 1 por la propia huella 3D de la
-// bañera/ducha. Acá se mide solo la distancia HORIZONTAL desde un
-// marcador "Fuente de agua", con un radio de Volumen 1 editable por
-// marcador (default 0,6m — el único número exacto que da la norma
-// para el caso típico, ducha con rociador fijo; el instalador lo
-// ajusta para una bañera más grande o un difusor móvil con el 1,2m
-// también citado). Omitir la altura real casi nunca cambia el
-// resultado — un tomacorriente residencial normal siempre queda bien
-// por debajo del límite de 2,25m de todas formas. Las excepciones MBTS
-// / bloques de afeitadoras de la Tabla 1 tampoco se modelan — son
-// casos especiales, no el tomacorriente estándar que esto evalúa.
+// ALTURA real (usuario, 2026-11-26, "citar normativas para las
+// distancias de instalación" — cerrando la simplificación 2D que
+// dejaba este archivo desde su primera ronda). Cita LITERAL, extraída
+// del texto consolidado oficial (BOE-A-2002-18099-consolidado.pdf),
+// §2.1.2/§2.1.3/§2.1.4:
+//   Volumen 1, límite superior (§2.1.2.a): "El plano horizontal
+//   superior al volumen 0 y el plano horizontal situado a 2,25 m por
+//   encima del suelo".
+//   Volumen 2 (§2.1.3.b + párrafo siguiente): "El suelo y plano
+//   horizontal situado a 2,25 m por encima del suelo. Además, cuando
+//   la altura del techo exceda los 2,25 m por encima del suelo, el
+//   espacio comprendido entre el volumen 1 y el techo o hasta una
+//   altura de 3 m por encima del suelo, cualquiera que sea el valor
+//   menor, se considera volumen 2."
+//   Volumen 3 (§2.1.4.b + párrafo siguiente): MISMA estructura exacta,
+//   solo que "entre el volumen 2 y el techo" en vez de "el volumen 1".
+// En los 2 casos el límite de altura combinado (base + extensión de
+// techo) es el MISMO número: min(altura de techo, 3m) — si el techo
+// mide 2,25m o menos, el límite es la altura real del techo (no hay
+// "extra" que agregar, la norma ya topa en 3m); si el techo es más
+// alto, el límite es 3m exactos, nunca la altura real completa del
+// techo. `limiteAlturaM` abajo implementa EXACTAMENTE esa fórmula.
+//
+// Se aplica como una EXENCIÓN conservadora, nunca al revés: un punto
+// ya clasificado "prohibido"/"volumen_3" por distancia horizontal solo
+// pasa a "fuera" si hay altura de instalación Y altura de techo
+// CARGADAS y el punto queda positivamente por encima de ese límite —
+// faltando cualquiera de los 2 datos, se mantiene el resultado
+// horizontal de siempre (nunca se adivina para aflojar una
+// restricción de seguridad). El Volumen 1 por la propia huella 3D de
+// la bañera/ducha (en vez de solo un radio horizontal) y las
+// excepciones MBTS/bloques de afeitadoras de la Tabla 1 siguen sin
+// modelarse — casos especiales, no el tomacorriente estándar que esto
+// evalúa.
+export const ALTURA_LIMITE_VOLUMEN_BASE_M = 2.25;
+export const ALTURA_LIMITE_VOLUMEN_TECHO_MAX_M = 3;
+
+/** Altura real (desde el suelo) hasta la que se extiende el Volumen 1/2/3 en este ambiente — ver cita literal arriba. */
+export function limiteAlturaM(alturaTechoM: number): number {
+  return Math.min(alturaTechoM, ALTURA_LIMITE_VOLUMEN_TECHO_MAX_M);
+}
 
 import type { Punto } from "../geometria/tipos.ts";
 import { distancia } from "../geometria/index.ts";
@@ -94,11 +122,34 @@ export function fuenteAguaMasCercana<M extends MarcadorFuenteAgua>(punto: Punto,
   return mejor ? { marcador: mejor, distanciaM: menorDistancia } : null;
 }
 
-/** Punto de entrada único: ¿en qué zona de ITC-BT-27 cae `punto` (el de un tomacorriente), según la fuente de agua más cercana del plano? null = no hay ninguna fuente de agua marcada todavía, nada que evaluar. */
-export function evaluarZonaBano<M extends MarcadorFuenteAgua>(punto: Punto, marcadores: M[] = []): ResultadoZonaBano | null {
+/**
+ * Punto de entrada único: ¿en qué zona de ITC-BT-27 cae `punto` (el de
+ * un tomacorriente), según la fuente de agua más cercana del plano?
+ * null = no hay ninguna fuente de agua marcada todavía, nada que
+ * evaluar.
+ *
+ * `alturaPuntoM`/`alturaTechoM` (ambas opcionales, default null = el
+ * comportamiento de siempre, horizontal únicamente): con las 2
+ * cargadas, un punto que por distancia cae en zona restringida se
+ * exime a "fuera" si está positivamente por encima de `limiteAlturaM`
+ * — ver la cita literal de ITC-BT-27 §2.1.2/3/4 en la cabecera del
+ * archivo. Nunca al revés (la altura no puede EMPEORAR un resultado
+ * "fuera" por distancia).
+ */
+export function evaluarZonaBano<M extends MarcadorFuenteAgua>(
+  punto: Punto,
+  marcadores: M[] = [],
+  alturaPuntoM: number | null = null,
+  alturaTechoM: number | null = null
+): ResultadoZonaBano | null {
   const cercana = fuenteAguaMasCercana(punto, marcadores);
   if (!cercana) return null;
   const radioVolumen1M =
     cercana.marcador.radioVolumen1M === "" || cercana.marcador.radioVolumen1M == null ? RADIO_VOLUMEN1_DEFECTO_M : Number(cercana.marcador.radioVolumen1M);
-  return clasificarDistanciaBano(cercana.distanciaM, radioVolumen1M);
+  const resultado = clasificarDistanciaBano(cercana.distanciaM, radioVolumen1M);
+  if (resultado.zona === "fuera" || alturaPuntoM == null || alturaTechoM == null || !(alturaPuntoM >= 0) || !(alturaTechoM > 0)) return resultado;
+  if (alturaPuntoM > limiteAlturaM(alturaTechoM)) {
+    return { zona: "fuera", distanciaM: resultado.distanciaM, motivo: "" };
+  }
+  return resultado;
 }

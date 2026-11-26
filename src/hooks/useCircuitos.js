@@ -373,15 +373,25 @@ export function useCircuitos() {
     const resultado = [];
     for (const marcador of marcadoresEquipoPlano) {
       if (marcador.tipo !== "contacto") continue;
-      const zona = App.plano.evaluarZonaBano(marcador.punto, marcadoresEquipoPlano);
+      // Altura real (ITC-BT-27 §2.1.2/3/4, ver volumenesBano.ts) — el
+      // mismo par altura-de-instalación/altura-de-techo que ya resuelve
+      // calcularExtraAlturaInstalacion, acá para EXIMIR (nunca agravar)
+      // un punto que por distancia horizontal cae en zona restringida.
+      // Sin alguno de los 2 datos, exactamente el comportamiento
+      // horizontal de siempre (ver evaluarZonaBano, nunca se adivina).
+      const equipoDelMarcador = marcador.entidadId ? equipos.find((e) => e.id === marcador.entidadId) : null;
+      const alturaPuntoM =
+        equipoDelMarcador?.alturaInstalacionM === "" || equipoDelMarcador?.alturaInstalacionM == null ? null : Number(equipoDelMarcador.alturaInstalacionM);
+      const ambienteDelMarcador = App.plano.habitacionQueContiene(marcador.punto, habitacionesPlano, nodosPlano);
+      const alturaTechoM = ambienteDelMarcador?.alturaM ?? alturaTechoPlanoM ?? null;
+      const zona = App.plano.evaluarZonaBano(marcador.punto, marcadoresEquipoPlano, alturaPuntoM, alturaTechoM);
       if (!zona || zona.zona === "fuera") continue;
       if (zona.zona === "prohibido") {
         resultado.push({ marcadorId: marcador.id, equipoId: marcador.entidadId, nivel: "error", motivo: zona.motivo, distanciaM: zona.distanciaM });
         continue;
       }
       // zona.zona === "volumen_3": permitido, pero exige diferencial ≤30mA.
-      const equipo = marcador.entidadId ? equipos.find((e) => e.id === marcador.entidadId) : null;
-      const circuito = equipo?.circuitoId ? circuitos.find((c) => c.id === equipo.circuitoId) : null;
+      const circuito = equipoDelMarcador?.circuitoId ? circuitos.find((c) => c.id === equipoDelMarcador.circuitoId) : null;
       const diferencial = circuito?.diferencialId ? diferenciales.find((d) => d.id === circuito.diferencialId) : null;
       const protegido = diferencial != null && Number(diferencial.sensibilidadMA) <= App.plano.SENSIBILIDAD_MAXIMA_VOLUMEN3_MA;
       if (!protegido) {
@@ -389,7 +399,7 @@ export function useCircuitos() {
       }
     }
     return resultado;
-  }, [normativaActiva, marcadoresEquipoPlano, equipos, circuitos, diferenciales]);
+  }, [normativaActiva, marcadoresEquipoPlano, equipos, circuitos, diferenciales, habitacionesPlano, nodosPlano, alturaTechoPlanoM]);
 
   const detalleElectrico = useCallback(
     (id) =>
