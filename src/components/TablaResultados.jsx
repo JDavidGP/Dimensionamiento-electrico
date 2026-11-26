@@ -110,6 +110,7 @@ export default function TablaResultados({
   advertenciasGFCI = [],
   advertenciasAFCI = [],
   advertenciasVolumenBano = [],
+  advertenciasDiferencialREBT = [],
 }) {
   if (circuitos.length === 0) {
     return (
@@ -128,6 +129,7 @@ export default function TablaResultados({
         const entradaIntegridad = listaIntegridad.find((e) => e.tipo === "circuito" && e.id === circuito.id);
         const desincronizacion = desincronizacionRutas.find((d) => d.entidadTipo === "circuito" && d.entidadId === circuito.id);
         const faltaAFCI = advertenciasAFCI.find((a) => a.circuitoId === circuito.id);
+        const faltaDiferencial = advertenciasDiferencialREBT.find((a) => a.circuitoId === circuito.id);
         const estado = estadoCombinado(r, entradaIntegridad);
         const colorEstado = colores[estado];
 
@@ -257,7 +259,7 @@ export default function TablaResultados({
                   );
                 })()}
 
-                {(r?.advertencias?.length > 0 || entradaIntegridad?.problemas?.length > 0 || desincronizacion || faltaAFCI) && (
+                {(r?.advertencias?.length > 0 || entradaIntegridad?.problemas?.length > 0 || desincronizacion || faltaAFCI || faltaDiferencial) && (
                   <div style={{ padding: "0 14px 10px 14px" }}>
                     {r?.advertencias?.map((a, i) => (
                       <div key={`e${i}`} style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}>
@@ -289,6 +291,12 @@ export default function TablaResultados({
                       <div style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaAFCI.motivo}>
                         <span>⚡</span>{" "}
                         <span>Requiere protección AFCI ({faltaAFCI.motivo}) y no está marcada — ver "Protegido por AFCI" al editar el circuito.</span>
+                      </div>
+                    )}
+                    {faltaDiferencial && (
+                      <div style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaDiferencial.motivo}>
+                        <span>⚡</span>{" "}
+                        <span>{faltaDiferencial.motivo} — asignale un Diferencial con el selector de abajo.</span>
                       </div>
                     )}
                   </div>

@@ -63,3 +63,42 @@ export function asignarCircuitoADiferencial<C extends ConDiferencialId>(circuito
 export function liberarCircuitosDeDiferencial<C extends ConDiferencialId>(diferencialId: string, circuitos: C[] = []): C[] {
   return circuitos.map((c) => (c.diferencialId === diferencialId ? { ...c, diferencialId: null } : c));
 }
+
+// Usuario, 2026-11-26, "citar normativas para las distancias de
+// instalación" — al investigar el equivalente REBT de GFCI/AFCI (que
+// hasta esta ronda no tenían ninguna cita propia bajo IEC_ES), el
+// texto consolidado oficial (BOE-A-2002-18099-consolidado.pdf) da la
+// respuesta real: REBT NO distingue por tipo de ambiente como NEC
+// 210.8 (GFCI) — exige diferencial ≤30mA para TODOS los circuitos, sin
+// excepción, desde ITC-BT-25 §2.1. Cita LITERAL: "Uno o varios
+// interruptores diferenciales que garanticen la protección contra
+// contactos indirectos de todos los circuitos, con una intensidad
+// diferencial-residual máxima de 30 mA". No existe un equivalente de
+// AFCI (protección por detección de arco) para circuitos ramales
+// residenciales en el texto consolidado — la única mención de
+// detección de arco en todo el reglamento es para corriente continua
+// de sistemas fotovoltaicos (ITC-BT-40), un contexto distinto; esto no
+// es una laguna de esta app, es que REBT de verdad no lo exige.
+export const SENSIBILIDAD_MAXIMA_DIFERENCIAL_GENERAL_MA = 30;
+
+export interface RequerimientoDiferencialREBT {
+  requiere: boolean;
+  /** Cita de sección — null si ya tiene un diferencial asignado. */
+  motivo: string | null;
+}
+
+/**
+ * ¿Este circuito (bajo REBT) le falta un diferencial que lo proteja?
+ * A diferencia de GFCI/AFCI (NEC, por tipo de ambiente), ITC-BT-25
+ * exige diferencial en TODOS los circuitos sin excepción — por eso no
+ * toma ningún tipo de ambiente. No conoce normativas: el llamador
+ * gatea esto a IEC_ES (mismo criterio que proteccionGFCI.ts/
+ * proteccionAFCI.ts/volumenesBano.ts).
+ */
+export function requiereDiferencialREBT<C extends ConDiferencialId>(circuito: C): RequerimientoDiferencialREBT {
+  if (circuito.diferencialId) return { requiere: false, motivo: null };
+  return {
+    requiere: true,
+    motivo: `ITC-BT-25 §2.1 — todo circuito debe quedar protegido por un diferencial ≤${SENSIBILIDAD_MAXIMA_DIFERENCIAL_GENERAL_MA}mA`,
+  };
+}

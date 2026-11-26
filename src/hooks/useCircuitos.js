@@ -401,6 +401,23 @@ export function useCircuitos() {
     return resultado;
   }, [normativaActiva, marcadoresEquipoPlano, equipos, circuitos, diferenciales, habitacionesPlano, nodosPlano, alturaTechoPlanoM]);
 
+  // Diferencial faltante bajo REBT — ITC-BT-25 §2.1 (usuario,
+  // 2026-11-26, "citar normativas para las distancias de instalación"
+  // — investigando el equivalente REBT de GFCI/AFCI, que hasta esta
+  // ronda no tenían ninguna cita propia bajo IEC_ES). A diferencia de
+  // GFCI/AFCI (NEC, por tipo de ambiente), REBT exige diferencial
+  // ≤30mA en TODOS los circuitos sin excepción — por eso recorre TODOS
+  // los circuitos, no solo los de cierto ambiente. Ver
+  // modules/diferencial/index.ts para la cita completa y la nota sobre
+  // por qué NO existe un equivalente de AFCI en REBT (no es una laguna
+  // de esta app).
+  const advertenciasDiferencialREBT = useMemo(() => {
+    if (normativaActiva !== "IEC_ES") return [];
+    return circuitos
+      .map((c) => ({ circuitoId: c.id, ...App.diferencial.requiereDiferencial(c) }))
+      .filter((r) => r.requiere);
+  }, [normativaActiva, circuitos]);
+
   const detalleElectrico = useCallback(
     (id) =>
       App.validacion.detalleElectrico(id, {
@@ -2089,6 +2106,7 @@ export function useCircuitos() {
     advertenciasGFCI,
     advertenciasAFCI,
     advertenciasVolumenBano,
+    advertenciasDiferencialREBT,
     detalleElectrico,
     ESTADOS_INTEGRIDAD: App.validacion.ESTADOS,
   };

@@ -103,9 +103,28 @@ await page.waitForTimeout(250);
 await page.getByLabel("Diferencial de Circuito 6").selectOption({ label: "— sin diferencial —" });
 await page.waitForTimeout(150);
 
+// --- 3c. ITC-BT-25 §2.1 (usuario, 2026-11-26, "citar normativas para
+//     las distancias de instalación"): a diferencia del límite de 5 (un
+//     exceso puntual), REBT exige diferencial en TODOS los circuitos
+//     sin excepción — "Circuito 6" recién desasignado debe avisarlo, los
+//     5 que SIGUEN con ID-1 asignado no. Cada tarjeta se acota desde el
+//     botón "Editar circuito X" (único por nombre) hasta su tarjeta
+//     completa (2 niveles arriba: botón -> fila de encabezado -> tarjeta
+//     con el detalle), para no mezclarla con las de otros circuitos.
+const tarjetaCircuito6 = page.getByRole("button", { name: "Editar circuito Circuito 6" }).locator("xpath=../..");
+assert((await tarjetaCircuito6.getByText(/ITC-BT-25 §2.1/).count()) === 1, "'Circuito 6', recién sin diferencial, avisa ITC-BT-25 §2.1 (todo circuito debe tener uno)");
+
+// "Circuito 1" no se auto-expande solo (solo el último creado lo hace)
+// — hay que abrirlo a mano para poder revisar su propio detalle.
+const filaCircuito1 = page.getByRole("button", { name: "Editar circuito Circuito 1" }).locator("xpath=..");
+await filaCircuito1.click({ position: { x: 10, y: 10 } }); // esquina izquierda de la fila — lejos de los botones ✎/× de la derecha
+await page.waitForTimeout(150);
+const tarjetaCircuito1 = page.getByRole("button", { name: "Editar circuito Circuito 1" }).locator("xpath=../..");
+assert((await tarjetaCircuito1.getByText(/ITC-BT-25 §2.1/).count()) === 0, "'Circuito 1', que SIGUE con ID-1 asignado, no muestra el aviso");
+
 await page.getByRole("button", { name: "Tableros", exact: true }).click();
 await page.waitForTimeout(250);
-assert((await page.getByText(/Agrupa 6 circuitos/).count()) === 0, "Al volver a 5 circuitos, la advertencia de ITC-BT-25 desaparece");
+assert((await page.getByText(/Agrupa 6 circuitos/).count()) === 0, "Al volver a 5 circuitos, la advertencia de ITC-BT-25 (límite de 5) desaparece");
 
 // --- 4. Marcador propio en el Plano: colocar a mano, vincular, mover ---
 await page.getByRole("button", { name: "Esquemas", exact: true }).click();

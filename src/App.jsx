@@ -167,6 +167,7 @@ export default function App() {
     advertenciasGFCI,
     advertenciasAFCI,
     advertenciasVolumenBano,
+    advertenciasDiferencialREBT,
   } = useCircuitos();
 
   const circuitoActivo = circuitos.find((c) => c.id === circuitoActivoId) ?? null;
@@ -409,6 +410,7 @@ export default function App() {
                     advertenciasGFCI={advertenciasGFCI}
                     advertenciasAFCI={advertenciasAFCI}
                     advertenciasVolumenBano={advertenciasVolumenBano}
+                    advertenciasDiferencialREBT={advertenciasDiferencialREBT}
                   />
 
                   <PanelBreakers resultados={resultados} />

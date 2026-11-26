@@ -13,6 +13,8 @@ import {
   asignarCircuitoADiferencial,
   liberarCircuitosDeDiferencial,
   MAX_CIRCUITOS_POR_DIFERENCIAL,
+  requiereDiferencialREBT,
+  SENSIBILIDAD_MAXIMA_DIFERENCIAL_GENERAL_MA,
 } from "../../modules/diferencial/index.ts";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
@@ -20,6 +22,12 @@ import { Logger } from "../services/Logger.js";
 export const DiferencialMediator = {
   /** ITC-BT-25: máximo de circuitos por diferencial, expuesto para la UI y la validación (ver modules/validacion/referencial.ts). */
   MAX_CIRCUITOS_POR_DIFERENCIAL,
+  SENSIBILIDAD_MAXIMA_DIFERENCIAL_GENERAL_MA,
+
+  /** ¿Le falta un diferencial a este circuito? (ITC-BT-25 §2.1 — todos los circuitos, sin excepción). El llamador gatea esto a IEC_ES. */
+  requiereDiferencial(circuito) {
+    return requiereDiferencialREBT(circuito);
+  },
 
   crear(datos) {
     return crearDiferencial(datos);
