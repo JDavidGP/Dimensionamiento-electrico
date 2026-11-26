@@ -213,6 +213,21 @@ export default function App() {
           .plano-grid { grid-template-columns: 1fr !important; }
         }
 
+        /* La fila de pestañas (TabsViewPager.jsx) ya se podía scrollear
+           horizontalmente en un celular angosto (6 pestañas no entran en
+           ~390px), pero sin ninguna pista visual — se veía "cortada" a
+           mitad de una pestaña, igual que el bug de las grillas de
+           arriba pero sin ningún arreglo todavía (usuario, 2026-11-26,
+           "layout mobile general"). El fundido (mask-image) solo se
+           activa bajo 680px — en desktop, donde las 6 pestañas ya entran
+           sin overflow, no tiene sentido y no se aplica. */
+        @media (max-width: 680px) {
+          .tabs-viewpager-tabbar {
+            -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+            mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+          }
+        }
+
         /* Informe técnico (InformeTecnico.jsx): al imprimir/"Guardar como PDF",
            mostrar SOLO el informe, sin importar qué pestaña está activa en
            pantalla (TabsViewPager monta todas las pestañas siempre, solo

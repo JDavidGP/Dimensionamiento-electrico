@@ -180,7 +180,15 @@ export default function InformeTecnico({
           {informe.circuitos.length === 0 ? (
             <div style={{ fontSize: 12, color: COLOR_TEXTO_DIM }}>Sin circuitos cargados todavía.</div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            // overflowX:auto (usuario, 2026-11-26, "layout mobile") — con
+            // 9 columnas, esta tabla nunca entra en un celular angosto;
+            // sin este envoltorio quedaba recortada en silencio por el
+            // overflow:hidden de cada panel de TabsViewPager, sin ninguna
+            // forma de ver las columnas de la derecha (Breaker/Caída).
+            // width:100% se quita del <table> (forzaba columnas angostas
+            // de más en vez de dejarlo crecer y scrollear horizontal).
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <Th>Circuito</Th>
@@ -210,6 +218,7 @@ export default function InformeTecnico({
                 ))}
               </tbody>
             </table>
+            </div>
           )}
           {informe.circuitos
             .filter((c) => !c.ok || c.advertencias.length > 0)
@@ -224,7 +233,9 @@ export default function InformeTecnico({
           {informe.tableros.length === 0 ? (
             <div style={{ fontSize: 12, color: COLOR_TEXTO_DIM }}>Sin tableros cargados todavía.</div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            // Mismo envoltorio que la tabla de Circuitos arriba — mismo motivo.
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <table style={{ width: "100%", minWidth: 500, borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <Th>Tablero</Th>
@@ -252,6 +263,7 @@ export default function InformeTecnico({
                 ))}
               </tbody>
             </table>
+            </div>
           )}
           {informe.tableros
             .filter((t) => !t.ok)

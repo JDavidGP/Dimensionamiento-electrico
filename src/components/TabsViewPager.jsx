@@ -92,7 +92,17 @@ export default function TabsViewPager({ paneles }) {
 
   return (
     <div>
+      {/* className "tabs-viewpager-tabbar" (usuario, 2026-11-26, "layout
+          mobile general"): esta fila YA era overflowX:auto — con 6
+          pestañas, en un celular angosto se corta a mitad de
+          "Esquemas" sin ningún indicio visual de que hay más pestañas
+          (Informe técnico, Directorio) para deslizar. El fundido del
+          borde derecho (mask-image, solo bajo 680px — ver App.jsx) es
+          una pista puramente visual, nunca un cambio de comportamiento:
+          las pestañas ya eran alcanzables por swipe/scroll antes de
+          esto, lo que faltaba era que se notara. */}
       <div
+        className="tabs-viewpager-tabbar"
         style={{
           display: "flex",
           gap: 2,
