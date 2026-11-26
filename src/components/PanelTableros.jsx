@@ -1031,6 +1031,7 @@ export default function PanelTableros({
   editarTablero,
   eliminarTablero,
   listaIntegridad = [],
+  desincronizacionRutas = [],
   normativaActiva,
   tipoInstalacion,
   fuentesEnergia = [],
@@ -1621,6 +1622,7 @@ export default function PanelTableros({
             // que TablaResultados.jsx ya usa para circuitos, hasta hoy
             // nunca conectado acá.
             const entradaIntegridad = listaIntegridad.find((e) => e.tipo === "tablero" && e.id === t.id);
+            const desincronizacion = desincronizacionRutas.find((d) => d.entidadTipo === "tablero" && d.entidadId === t.id);
             const colorEstado = entradaIntegridad
               ? entradaIntegridad.estado === "error"
                 ? colores.error
@@ -1693,6 +1695,19 @@ export default function PanelTableros({
                             <span>🗂</span> <span>{p}</span>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {desincronizacion && (
+                      <div
+                        style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}
+                        title="La ruta trazada en el Plano ya no coincide con este campo — 'Usar esta longitud' en el Plano lo vuelve a sincronizar"
+                      >
+                        <span>📐</span>{" "}
+                        <span>
+                          Longitud alimentador ({desincronizacion.valorActual.toFixed(2)}m) desincronizada de la ruta "{desincronizacion.rutaNombre}" trazada
+                          en el Plano ({desincronizacion.valorEsperado.toFixed(2)}m) — revisá o actualizá con "Usar esta longitud".
+                        </span>
                       </div>
                     )}
 

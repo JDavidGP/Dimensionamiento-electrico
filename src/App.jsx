@@ -278,6 +278,7 @@ export default function App() {
                   alimentadores={alimentadores}
                   balancesFases={balancesFases}
                   listaIntegridad={listaIntegridad}
+                  desincronizacionRutas={desincronizacionRutas}
                   crearTablero={crearTablero}
                   editarTablero={editarTablero}
                   eliminarTablero={eliminarTablero}
