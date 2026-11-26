@@ -37,7 +37,7 @@
 // responsabilidad de PlanoCanvas.jsx.
 
 import { magnitudGradiente, type Grises } from "./deteccionBordes.ts";
-import type { RangoIndice, ResultadoDeteccionParedes, Punto } from "./tipos.ts";
+import type { RangoIndice, ResultadoDeteccionParedes, LineaCandidata, Punto } from "./tipos.ts";
 
 export const UMBRAL_RELATIVO_PICO = 0.5; // una fila/columna es "candidata" si su suma de magnitud es >= 50% del máximo de todas
 export const UMBRAL_PIXEL_BORDE = 35; // un píxel individual cuenta como "borde fuerte" si supera esto
@@ -45,6 +45,21 @@ export const BRECHA_MAXIMA_RUIDO_PX = 4; // huecos de hasta esto se puentean (ru
 export const LARGO_MINIMO_TRAMO_PX = 20; // un tramo más corto que esto no se sugiere (ruido disperso, no una pared)
 export const PUERTA_ANCHO_MIN_M = 0.5;
 export const PUERTA_ANCHO_MAX_M = 1.3;
+
+// 2 mejoras agregadas (usuario, 2026-11-26, probando "Reconocer
+// paredes" en una foto/escaneo REAL: "sigue molestando un poco... que
+// todavía no funcione bien" — muchas candidatas para revisar una por
+// una, ej. 48 en una sola pasada). Las 2, a propósito, SOLO corren con
+// escala YA calibrada — mismo criterio que PUERTA_ANCHO_MIN/MAX_M más
+// arriba ("sin escala no se puede juzgar... no se adivina"): sin
+// calibrar, el comportamiento queda IDÉNTICO al de siempre.
+export const GROSOR_PARED_MAX_FUSION_M = 0.3; // 2 candidatas de la MISMA orientación, con rango superpuesto y más cerca que esto, son las 2 CARAS de una sola pared gruesa (dibujada con doble línea) — se fusionan en 1. Más lejos que esto YA son 2 paredes reales (ej. un pasillo angosto) — nunca se fusionan.
+export const LARGO_MINIMO_PARED_M = 0.5; // una candidata más corta que esto (en METROS reales) casi seguro es un mueble/cota/texto, no una pared estructural — se descarta. Complementa, no reemplaza, el filtro en píxeles (LARGO_MINIMO_TRAMO_PX) que ya corre siempre, con o sin escala.
+
+/** Longitud en píxeles de una candidata (sirve para horizontal Y vertical, sin ramificar por orientación). */
+function longitudPx(l: { x1: number; y1: number; x2: number; y2: number }): number {
+  return Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
+}
 
 /** Suma de magnitud de gradiente por fila — un pico sostenido indica una línea horizontal real. */
 export function perfilFilas(magnitud: Float32Array, ancho: number, alto: number): Float64Array {
@@ -170,6 +185,57 @@ export interface OpcionesDeteccionParedes {
 }
 
 /**
+ * Fusiona candidatas de la MISMA orientación cuyo rango se superpone y
+ * están más cerca que `GROSOR_PARED_MAX_FUSION_M` (en metros reales) —
+ * típicamente las 2 caras de una pared con espesor, dibujada con doble
+ * línea paralela, que de otro modo se ofrecerían como 2 candidatas
+ * separadas para confirmar una por una. Recorre cada orientación por
+ * separado, ordenada por posición (y para horizontales, x para
+ * verticales), fusionando de a 2 consecutivas en una sola pasada —
+ * encadena sola si hay 3+ líneas muy juntas (cada fusión actualiza la
+ * última candidata ya fusionada antes de comparar con la siguiente).
+ */
+export function fusionarParedesCercanas(paredes: LineaCandidata[], escalaMetrosPorPixel: number): LineaCandidata[] {
+  const distanciaMaxPx = GROSOR_PARED_MAX_FUSION_M / escalaMetrosPorPixel;
+  const resultado: LineaCandidata[] = [];
+  for (const orientacion of ["horizontal", "vertical"] as const) {
+    const delMismoTipo = paredes
+      .filter((p) => p.orientacion === orientacion)
+      .map((p) => ({ ...p }))
+      .sort((a, b) => (orientacion === "horizontal" ? a.y1 - b.y1 : a.x1 - b.x1));
+    const fusionadas: LineaCandidata[] = [];
+    for (const actual of delMismoTipo) {
+      const anterior = fusionadas[fusionadas.length - 1];
+      if (anterior) {
+        const posAnterior = orientacion === "horizontal" ? anterior.y1 : anterior.x1;
+        const posActual = orientacion === "horizontal" ? actual.y1 : actual.x1;
+        const [rangoAnteriorInicio, rangoAnteriorFin] = orientacion === "horizontal" ? [anterior.x1, anterior.x2] : [anterior.y1, anterior.y2];
+        const [rangoActualInicio, rangoActualFin] = orientacion === "horizontal" ? [actual.x1, actual.x2] : [actual.y1, actual.y2];
+        const seSuperponen = Math.max(rangoAnteriorInicio, rangoActualInicio) <= Math.min(rangoAnteriorFin, rangoActualFin);
+        if (Math.abs(posActual - posAnterior) <= distanciaMaxPx && seSuperponen) {
+          const nuevaPos = (posAnterior + posActual) / 2;
+          const nuevoInicio = Math.min(rangoAnteriorInicio, rangoActualInicio);
+          const nuevoFin = Math.max(rangoAnteriorFin, rangoActualFin);
+          if (orientacion === "horizontal") {
+            anterior.y1 = anterior.y2 = nuevaPos;
+            anterior.x1 = nuevoInicio;
+            anterior.x2 = nuevoFin;
+          } else {
+            anterior.x1 = anterior.x2 = nuevaPos;
+            anterior.y1 = nuevoInicio;
+            anterior.y2 = nuevoFin;
+          }
+          continue;
+        }
+      }
+      fusionadas.push(actual);
+    }
+    resultado.push(...fusionadas);
+  }
+  return resultado;
+}
+
+/**
  * Detecta paredes candidatas (horizontales + verticales) y, si hay
  * escala calibrada, huecos entre tramos de la MISMA línea con ancho
  * plausible de puerta — puramente informativo, nada se crea solo.
@@ -214,5 +280,23 @@ export function detectarParedesCandidatas(grises: Grises, ancho: number, alto: n
     registrarPuertasEntreTramos(tramos, (y) => ({ x, y }));
   }
 
-  return { paredes, puertas };
+  // Con escala calibrada: fusiona las 2 caras de una pared gruesa en 1
+  // sola candidata, y descarta lo más corto que una pared estructural
+  // plausible — las 2 mejoras de esta ronda (ver nota en las
+  // constantes, arriba). Sin calibrar, ninguna de las 2 corre —
+  // comportamiento idéntico al de siempre.
+  let paredesFinal: ResultadoDeteccionParedes["paredes"] = paredes;
+  if (opciones.escalaMetrosPorPixel) {
+    paredesFinal = fusionarParedesCercanas(paredesFinal, opciones.escalaMetrosPorPixel);
+    const largoMinimoPx = LARGO_MINIMO_PARED_M / opciones.escalaMetrosPorPixel;
+    paredesFinal = paredesFinal.filter((p) => longitudPx(p) >= largoMinimoPx);
+  }
+  // Las más largas primero — SIEMPRE, con o sin calibrar: en la
+  // práctica son las que con más confianza son una pared real (un
+  // mueble/cota/texto rara vez iguala el largo de una pared entera),
+  // así que revisar "una por una" en ese orden encuentra las buenas
+  // primero en vez de perder tiempo descartando ruido corto al principio.
+  paredesFinal = [...paredesFinal].sort((a, b) => longitudPx(b) - longitudPx(a));
+
+  return { paredes: paredesFinal, puertas };
 }

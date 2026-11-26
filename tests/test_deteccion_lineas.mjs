@@ -75,4 +75,60 @@ assert(verticalesRuido.length === 1, `Un hueco chico (2px, ruido) se puentea —
 const r5 = App.plano.detectarParedesCandidatas(conPuerta, ANCHO, ALTO);
 assert(r5.puertas.length === 0, "Sin escala, el mismo hueco NO se sugiere como puerta (no hay cómo juzgar el ancho real)");
 
+// --- 6. Pared gruesa dibujada con 2 líneas paralelas MUY cerca (ej.
+//     interior/exterior de una pared de bloque) — con escala, se
+//     fusionan en 1 sola candidata (usuario, 2026-11-26, "Reconocer
+//     paredes... todavía no funciona bien", demasiadas candidatas para
+//     revisar una por una). ---
+const paredGruesa = lienzoBlanco();
+trazarLineaHorizontal(paredGruesa, 50, 10, 190);
+trazarLineaHorizontal(paredGruesa, 70, 10, 190); // 20px más abajo — con escala 0.01 m/px, 0.2m real: una pared de bloque gruesa, dentro del umbral de fusión (0.3m)
+const r6 = App.plano.detectarParedesCandidatas(paredGruesa, ANCHO, ALTO, { escalaMetrosPorPixel: 0.01 });
+assert(r6.paredes.length === 1, `Con escala, las 2 caras de la pared gruesa se fusionan en 1 sola candidata (real: ${r6.paredes.length})`);
+
+// Sin escala, NO hay cómo distinguir "2 caras de 1 pared" de "2
+// paredes reales de un pasillo angosto" — no se fusiona nada (mismo
+// criterio que las puertas: no se adivina sin calibrar).
+const r6b = App.plano.detectarParedesCandidatas(paredGruesa, ANCHO, ALTO);
+assert(r6b.paredes.length === 2, `Sin escala, NO se fusiona — quedan las 2 candidatas separadas, tal como siempre (real: ${r6b.paredes.length})`);
+
+// --- 7. 2 paredes REALES, paralelas, de un pasillo angosto — más
+//     lejos que GROSOR_PARED_MAX_FUSION_M (0.3m) entre sí — NUNCA se
+//     fusionan, aunque haya escala (perderías el pasillo entero). ---
+const pasillo = lienzoBlanco();
+trazarLineaHorizontal(pasillo, 50, 10, 190);
+trazarLineaHorizontal(pasillo, 100, 10, 190); // 50px más abajo — con la MISMA escala 0.01 m/px, 0.5m real: ya un pasillo angosto, no el espesor de una pared
+const r7 = App.plano.detectarParedesCandidatas(pasillo, ANCHO, ALTO, { escalaMetrosPorPixel: 0.01 });
+assert(r7.paredes.length === 2, `Un pasillo angosto real (0.5m) NUNCA se fusiona en 1, aunque esté calibrado (real: ${r7.paredes.length})`);
+
+// --- 8. Candidata corta (mueble/cota/texto, no una pared estructural)
+//     — con escala, se descarta si su largo REAL cae por debajo de
+//     LARGO_MINIMO_PARED_M (0.5m); sin escala, el filtro en píxeles de
+//     siempre (LARGO_MINIMO_TRAMO_PX) es el único que corre. ---
+const lienzoCorta = lienzoBlanco();
+trazarLineaHorizontal(lienzoCorta, 50, 10, 34); // 25px — pasa el filtro en píxeles (20px) de siempre
+const r8calibrado = App.plano.detectarParedesCandidatas(lienzoCorta, ANCHO, ALTO, { escalaMetrosPorPixel: 0.01 }); // 25px × 0.01 = 0.25m real, por debajo de 0.5m
+assert(r8calibrado.paredes.length === 0, `Candidata de 25px (0.25m real) se descarta por corta al estar calibrado (real: ${r8calibrado.paredes.length})`);
+const r8sinCalibrar = App.plano.detectarParedesCandidatas(lienzoCorta, ANCHO, ALTO);
+assert(r8sinCalibrar.paredes.length === 1, `La MISMA candidata, sin escala, sigue apareciendo — sin escala no hay largo real que juzgar (real: ${r8sinCalibrar.paredes.length})`);
+
+// --- 9. Las candidatas vuelven ordenadas de más larga a más corta —
+//     revisar "una por una" encuentra primero las que con más
+//     confianza son una pared real. ---
+// Largos DELIBERADAMENTE parecidos entre sí (100/120/150px, nunca por
+// debajo de la mitad de la más larga) — el umbral RELATIVO de siempre
+// (UMBRAL_RELATIVO_PICO, 50% del máximo) ya descarta de entrada una
+// candidata mucho más corta que la más fuerte de la imagen (ej. 25px
+// contra una de 150px no llega ni a "candidata" — esperado, no es lo
+// que esta prueba puntual quiere ejercitar); lo que se prueba acá es
+// SOLO el orden final entre candidatas que de verdad se detectaron.
+const variasLargas = lienzoBlanco();
+trazarLineaHorizontal(variasLargas, 20, 10, 109); // 100px, la más corta
+trazarLineaHorizontal(variasLargas, 70, 10, 129); // 120px, media
+trazarLineaHorizontal(variasLargas, 120, 10, 159); // 150px, la más larga
+const r9 = App.plano.detectarParedesCandidatas(variasLargas, ANCHO, ALTO);
+assert(r9.paredes.length === 3, `Las 3 candidatas de distinto largo se detectan (real: ${r9.paredes.length})`);
+const largos = r9.paredes.map((p) => Math.hypot(p.x2 - p.x1, p.y2 - p.y1));
+assert(largos[0] > largos[1] && largos[1] > largos[2], `Vienen ordenadas de más larga a más corta (real: ${JSON.stringify(largos.map((l) => Math.round(l)))})`);
+
 console.log("\nTodas las pruebas completadas.");
