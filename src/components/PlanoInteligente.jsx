@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import { colores, fuentes } from "../styles/colores";
 import { inputStyle } from "./Campo";
 import { BotonPill } from "./PanelTableros";
@@ -407,6 +407,25 @@ export default function PlanoInteligente({
     const puntoModeloSnapeado = App.plano.puntoConAnguloSnapeado(nodoAnterior.punto, puntoModelo);
     return App.plano.modeloAImagen(puntoModeloSnapeado, escala);
   }
+
+  // Promover "Detectar ambientes automáticamente" (usuario, 2026-11-25,
+  // señalado de pasada: "está poco promovido en la UI" — hasta ahora
+  // era un botón siempre visible pero pasivo, sin ninguna señal de
+  // cuándo realmente hay algo nuevo que detectar). Recorre TODAS las
+  // caras cerradas de las paredes trazadas (mismo `detectarCaras` que
+  // ya usa el botón al hacer click) y cuenta cuántas NO coinciden
+  // todavía con ningún ambiente ya registrado (mismo criterio de
+  // dedup por conjunto de nodos que usa detectarAmbientesPlano en el
+  // hook) — puramente de LECTURA, no registra nada hasta que se hace
+  // click. Con esto, el botón puede "iluminarse" solo cuando de verdad
+  // hay algo para detectar, en vez de ser un botón mudo todo el tiempo.
+  const ambientesSinDetectar = useMemo(() => {
+    if (nodosPlano.length === 0) return 0;
+    const caras = App.plano.detectarCaras(nodosPlano, segmentosPlano);
+    const clave = (nodoIds) => [...nodoIds].sort().join(",");
+    const existentes = new Set(habitacionesPlano.map((h) => clave(h.nodoIds)));
+    return caras.filter((c) => !existentes.has(clave(c.nodoIds))).length;
+  }, [nodosPlano, segmentosPlano, habitacionesPlano]);
 
   function alClickImagen(puntoImagen) {
     if (modo === "perspectiva") {
@@ -1427,8 +1446,13 @@ export default function PlanoInteligente({
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <div style={{ fontSize: 11, color: colores.textDim, letterSpacing: "0.06em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 8 }}>
               Ambientes ({habitacionesPlano.length})
+              {ambientesSinDetectar > 0 && (
+                <span style={{ color: colores.warn, textTransform: "none", letterSpacing: "normal", fontWeight: 600 }}>
+                  · 💡 {ambientesSinDetectar} sin registrar
+                </span>
+              )}
             </div>
             {nodosPlano.length > 0 && (
               <button
@@ -1441,8 +1465,16 @@ export default function PlanoInteligente({
                       : "No se encontró ningún ambiente nuevo — ¿las paredes ya forman un lazo cerrado?"
                   );
                 }}
-                title="Analiza TODAS las paredes trazadas y registra cada ambiente cerrado que encuentre — incluidos los que una pared interior separa de otro, sin tener que volver a trazarlos a mano."
-                style={{ padding: "5px 10px", borderRadius: 3, border: `1px solid ${colores.copper}`, background: "transparent", color: colores.copper, fontWeight: 600, fontSize: 11, cursor: "pointer" }}
+                title={
+                  ambientesSinDetectar > 0
+                    ? `Hay ${ambientesSinDetectar} ambiente(s) cerrado(s) por las paredes trazadas que todavía no están registrados — click para agregarlos de una.`
+                    : "Analiza TODAS las paredes trazadas y registra cada ambiente cerrado que encuentre — incluidos los que una pared interior separa de otro, sin tener que volver a trazarlos a mano."
+                }
+                style={
+                  ambientesSinDetectar > 0
+                    ? { padding: "5px 10px", borderRadius: 3, border: `1px solid ${colores.copper}`, background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 11, cursor: "pointer" }
+                    : { padding: "5px 10px", borderRadius: 3, border: `1px solid ${colores.border}`, background: "transparent", color: colores.textDim, fontWeight: 600, fontSize: 11, cursor: "pointer" }
+                }
               >
                 Detectar ambientes automáticamente
               </button>
@@ -1450,7 +1482,9 @@ export default function PlanoInteligente({
           </div>
           {habitacionesPlano.length === 0 ? (
             <div style={{ fontSize: 12, color: colores.textDim, lineHeight: 1.4 }}>
-              Cerrá un trazo de pared (volvé al punto de inicio) para que aparezca acá, con su área y perímetro ya calculados — o trazá varios cuartos compartiendo paredes y usá "Detectar ambientes automáticamente".
+              {ambientesSinDetectar > 0
+                ? `Ya hay ${ambientesSinDetectar} ambiente${ambientesSinDetectar === 1 ? "" : "s"} cerrado${ambientesSinDetectar === 1 ? "" : "s"} formado${ambientesSinDetectar === 1 ? "" : "s"} por las paredes trazadas — usá "Detectar ${ambientesSinDetectar} ambiente${ambientesSinDetectar === 1 ? "" : "s"} nuevo${ambientesSinDetectar === 1 ? "" : "s"}" arriba para agregarlo${ambientesSinDetectar === 1 ? "" : "s"} de una, sin re-trazar nada.`
+                : 'Cerrá un trazo de pared (volvé al punto de inicio) para que aparezca acá, con su área y perímetro ya calculados — o trazá varios cuartos compartiendo paredes y usá "Detectar ambientes automáticamente".'}
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
