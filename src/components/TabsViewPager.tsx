@@ -1,5 +1,17 @@
-import React, { useRef, useState } from "react";
-import { colores, fuentes } from "../styles/colores";
+import { useRef, useState, type TouchEvent } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import type { Panel } from "./SubTabs.tsx";
+
+interface Gesto {
+  startX: number;
+  startY: number;
+  direccion: "horizontal" | "vertical" | null;
+  delta: number;
+}
+
+interface TabsViewPagerProps {
+  paneles: Panel[];
+}
 
 // Tab layout + "ViewPager2" (pedido del usuario, 2026-11-20/2026-11-19:
 // "un menú arriba, horizontal, que se desliza de izquierda a derecha...
@@ -29,11 +41,11 @@ const UMBRAL_DECISION_PX = 10;
 const UMBRAL_CAMBIO_FRACCION = 0.22; // arrastrar > 22% del ancho del panel cambia de pestaña al soltar
 const UMBRAL_CAMBIO_PX_MIN = 50; // o al menos este tanto en píxeles (paneles muy anchos)
 
-export default function TabsViewPager({ paneles }) {
+export default function TabsViewPager({ paneles }: TabsViewPagerProps) {
   const [activo, setActivo] = useState(0);
   const [deltaArrastre, setDeltaArrastre] = useState(0);
   const [arrastrando, setArrastrando] = useState(false);
-  const contenedorRef = useRef(null);
+  const contenedorRef = useRef<HTMLDivElement>(null);
   const activoRef = useRef(activo);
   activoRef.current = activo;
   // gesto.current.delta vive en un ref (no solo en el estado) porque una
@@ -43,18 +55,18 @@ export default function TabsViewPager({ paneles }) {
   // el `deltaArrastre` del cierre de React, podía leer un valor viejo
   // (0) y nunca disparar el cambio de pestaña. El ref siempre tiene el
   // último valor real, sin depender de que React ya haya renderizado.
-  const gesto = useRef(null); // {startX, startY, direccion: null | "horizontal" | "vertical", delta: number}
+  const gesto = useRef<Gesto | null>(null);
 
-  function irA(indice) {
+  function irA(indice: number): void {
     setActivo(Math.max(0, Math.min(paneles.length - 1, indice)));
   }
 
-  function alTocarInicio(e) {
+  function alTocarInicio(e: TouchEvent<HTMLDivElement>): void {
     const t = e.touches[0];
     gesto.current = { startX: t.clientX, startY: t.clientY, direccion: null, delta: 0 };
   }
 
-  function alTocarMover(e) {
+  function alTocarMover(e: TouchEvent<HTMLDivElement>): void {
     if (!gesto.current) return;
     const t = e.touches[0];
     const dx = t.clientX - gesto.current.startX;
@@ -75,7 +87,7 @@ export default function TabsViewPager({ paneles }) {
     setDeltaArrastre(valor);
   }
 
-  function alTocarFin() {
+  function alTocarFin(): void {
     if (gesto.current?.direccion === "horizontal") {
       const delta = gesto.current.delta;
       const anchoPanel = contenedorRef.current?.offsetWidth || 1;

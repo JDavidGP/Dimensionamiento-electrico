@@ -1,8 +1,16 @@
-import React from "react";
-import Campo, { inputStyle } from "./Campo";
-import { colores, fuentes } from "../styles/colores";
+import type { ReactNode } from "react";
+import Campo, { inputStyle } from "./Campo.tsx";
+import { colores, fuentes } from "../styles/colores.ts";
+import type { FormularioEquipo as FormularioEquipoTipo } from "../modules/validacion/formularios.ts";
+import type { Circuito } from "../modules/validacion/tipos.ts";
 
-function BotonPill({ activo, onClick, children }) {
+interface BotonPillProps {
+  activo: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}
+
+function BotonPill({ activo, onClick, children }: BotonPillProps) {
   return (
     <button
       onClick={onClick}
@@ -26,7 +34,17 @@ function BotonPill({ activo, onClick, children }) {
 // Un Equipo vive DENTRO de un circuito ya creado. Ya no tiene voltaje,
 // fases, material ni distancia — esos son del circuito. Solo lo que le
 // es propio: nombre, cantidad, consumo, y su propio cos φ.
-export default function FormularioEquipo({ form, setForm, onGuardar, onCancelar, error, editando, circuitoActivo }) {
+interface FormularioEquipoProps {
+  form: FormularioEquipoTipo;
+  setForm: (form: FormularioEquipoTipo) => void;
+  onGuardar: () => void;
+  onCancelar: () => void;
+  error: string;
+  editando: string | null;
+  circuitoActivo: Circuito | null;
+}
+
+export default function FormularioEquipo({ form, setForm, onGuardar, onCancelar, error, editando, circuitoActivo }: FormularioEquipoProps) {
   if (!circuitoActivo) {
     return (
       <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 18, color: colores.textDim, fontSize: 13 }}>
@@ -67,10 +85,12 @@ export default function FormularioEquipo({ form, setForm, onGuardar, onCancelar,
 
       <Campo label="Dato disponible en ficha técnica">
         <div style={{ display: "flex", gap: 8 }}>
-          {[
-            { valor: "potencia", label: "Potencia (W)" },
-            { valor: "corriente", label: "Corriente (A)" },
-          ].map((op) => (
+          {(
+            [
+              { valor: "potencia", label: "Potencia (W)" },
+              { valor: "corriente", label: "Corriente (A)" },
+            ] as const
+          ).map((op) => (
             <BotonPill key={op.valor} activo={form.modoEntrada === op.valor} onClick={() => setForm({ ...form, modoEntrada: op.valor })}>
               {op.label}
             </BotonPill>
@@ -103,7 +123,7 @@ export default function FormularioEquipo({ form, setForm, onGuardar, onCancelar,
             type="number"
             step="0.05"
             min="0"
-            value={form.alturaInstalacionM}
+            value={form.alturaInstalacionM ?? ""}
             onChange={(e) => setForm({ ...form, alturaInstalacionM: e.target.value })}
             placeholder="Ej: 0.4"
           />

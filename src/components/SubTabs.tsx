@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { colores } from "../styles/colores.ts";
 
-interface Panel {
+export interface Panel {
   id: string;
   label: ReactNode;
   contenido: ReactNode;

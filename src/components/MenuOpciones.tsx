@@ -1,22 +1,27 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
-import ToggleTema from "./ToggleTema";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import ToggleTema from "./ToggleTema.tsx";
+
+interface MenuOpcionesProps {
+  umbralDesbalanceFasesPct: number;
+  setUmbralDesbalanceFasesPct: (valor: number | string) => void;
+}
 
 /**
  * Menú de 3 puntos (⋮) en la esquina superior: Ajustes, Ayuda, y acceso
  * directo al aviso de responsabilidad / privacidad (contenido ya en
  * PiePagina, no se duplica aquí).
  */
-export default function MenuOpciones({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }) {
+export default function MenuOpciones({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }: MenuOpcionesProps) {
   const [abierto, setAbierto] = useState(false);
-  const [panel, setPanel] = useState(null); // null | "ajustes" | "ayuda"
+  const [panel, setPanel] = useState<"ajustes" | "ayuda" | null>(null);
 
   function irAPiePagina() {
     setAbierto(false);
     document.getElementById("pie-pagina")?.scrollIntoView({ behavior: "smooth" });
   }
 
-  const botonMenu = {
+  const botonMenu: CSSProperties = {
     width: 32,
     height: 32,
     borderRadius: 6,
@@ -28,7 +33,7 @@ export default function MenuOpciones({ umbralDesbalanceFasesPct, setUmbralDesbal
     cursor: "pointer",
   };
 
-  const itemMenu = {
+  const itemMenu: CSSProperties = {
     display: "block",
     width: "100%",
     textAlign: "left",
@@ -97,7 +102,13 @@ export default function MenuOpciones({ umbralDesbalanceFasesPct, setUmbralDesbal
   );
 }
 
-function PanelModal({ titulo, children, onCerrar }) {
+interface PanelModalProps {
+  titulo: string;
+  children: ReactNode;
+  onCerrar: () => void;
+}
+
+function PanelModal({ titulo, children, onCerrar }: PanelModalProps) {
   return (
     <div
       role="presentation"
@@ -144,8 +155,8 @@ function PanelModal({ titulo, children, onCerrar }) {
   );
 }
 
-function PanelAjustes({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }) {
-  const parrafo = { color: colores.textDim, fontSize: 12.5, lineHeight: 1.5, margin: "0 0 12px 0" };
+function PanelAjustes({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }: MenuOpcionesProps) {
+  const parrafo: CSSProperties = { color: colores.textDim, fontSize: 12.5, lineHeight: 1.5, margin: "0 0 12px 0" };
   return (
     <div>
       <ToggleTema />
@@ -185,8 +196,8 @@ function PanelAjustes({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct })
 }
 
 function PanelAyuda() {
-  const parrafo = { color: colores.textDim, fontSize: 12.5, lineHeight: 1.5, margin: "0 0 10px 0" };
-  const titulo = { fontFamily: fuentes.condensada, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.04em", color: colores.copper, margin: "14px 0 6px 0" };
+  const parrafo: CSSProperties = { color: colores.textDim, fontSize: 12.5, lineHeight: 1.5, margin: "0 0 10px 0" };
+  const titulo: CSSProperties = { fontFamily: fuentes.condensada, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.04em", color: colores.copper, margin: "14px 0 6px 0" };
   return (
     <div>
       <p style={parrafo}>Flujo básico de uso:</p>
