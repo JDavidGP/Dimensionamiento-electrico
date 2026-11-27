@@ -1,29 +1,33 @@
-import React, { useState } from "react";
-import Header from "./components/Header";
-import BarraProyecto from "./components/BarraProyecto";
-import FormularioCircuito from "./components/FormularioCircuito";
-import FormularioEquipo from "./components/FormularioEquipo";
-import ImportarEquiposTexto from "./components/ImportarEquiposTexto";
-import CalcularIluminacionGeneral from "./components/CalcularIluminacionGeneral";
-import ImportarProyectoPDF from "./components/ImportarProyectoPDF";
-import Metrica from "./components/Metrica";
-import TablaResultados from "./components/TablaResultados";
-import PanelBreakers from "./components/PanelBreakers";
-import PanelTableros from "./components/PanelTableros";
-import PanelFuentesEnergia from "./components/PanelFuentesEnergia";
-import PanelTransformadores from "./components/PanelTransformadores";
-import PanelDiferenciales from "./components/PanelDiferenciales";
-import SelectorNormativa from "./components/SelectorNormativa";
-import DiagramaUnifilar from "./components/DiagramaUnifilar";
-import InformeTecnico from "./components/InformeTecnico";
-import PanelDirectorio from "./components/PanelDirectorio";
-import PlanoInteligente from "./components/PlanoInteligente";
-import VistaCombinadaEsquemas from "./components/VistaCombinadaEsquemas";
-import TabsViewPager from "./components/TabsViewPager";
-import SubTabs from "./components/SubTabs";
-import PiePagina from "./components/PiePagina";
-import { useCircuitos } from "./hooks/useCircuitos";
-import { colores, fuentes } from "./styles/colores";
+import { useState, type ComponentType } from "react";
+import Header from "./components/Header.tsx";
+import BarraProyecto from "./components/BarraProyecto.tsx";
+import FormularioCircuito from "./components/FormularioCircuito.tsx";
+import FormularioEquipo from "./components/FormularioEquipo.tsx";
+import ImportarEquiposTexto from "./components/ImportarEquiposTexto.tsx";
+import CalcularIluminacionGeneral from "./components/CalcularIluminacionGeneral.tsx";
+import ImportarProyectoPDF from "./components/ImportarProyectoPDF.tsx";
+import Metrica from "./components/Metrica.tsx";
+import TablaResultados from "./components/TablaResultados.tsx";
+import PanelBreakers from "./components/PanelBreakers.tsx";
+import PanelTableros from "./components/PanelTableros.tsx";
+import PanelFuentesEnergia from "./components/PanelFuentesEnergia.tsx";
+import PanelTransformadores from "./components/PanelTransformadores.tsx";
+import PanelDiferenciales from "./components/PanelDiferenciales.tsx";
+import SelectorNormativa from "./components/SelectorNormativa.tsx";
+import DiagramaUnifilar from "./components/DiagramaUnifilar.tsx";
+import InformeTecnico from "./components/InformeTecnico.tsx";
+import PanelDirectorio from "./components/PanelDirectorio.tsx";
+import PlanoInteligenteSinTipar from "./components/PlanoInteligente.jsx";
+// TODO(fase 5): quitar este cast cuando PlanoInteligente.jsx se migre a .tsx
+// (mismo patrón temporal ya usado y luego retirado para PlanoCanvas en
+// VistaCombinadaEsquemas.tsx).
+const PlanoInteligente = PlanoInteligenteSinTipar as unknown as ComponentType<Record<string, unknown>>;
+import VistaCombinadaEsquemas from "./components/VistaCombinadaEsquemas.tsx";
+import TabsViewPager from "./components/TabsViewPager.tsx";
+import SubTabs from "./components/SubTabs.tsx";
+import PiePagina from "./components/PiePagina.tsx";
+import { useCircuitos } from "./hooks/useCircuitos.ts";
+import { colores, fuentes } from "./styles/colores.ts";
 import { OPCIONES_TIPO_INSTALACION, TIPOS_INSTALACION } from "./shared/constants/constantes.ts";
 
 // Tab layout + ViewPager2 (pedido del usuario, retomado 2026-11-19):
@@ -171,6 +175,7 @@ export default function App() {
   } = useCircuitos();
 
   const circuitoActivo = circuitos.find((c) => c.id === circuitoActivoId) ?? null;
+  const opcionTipoInstalacionActiva = OPCIONES_TIPO_INSTALACION.find((o) => o.valor === tipoInstalacion) ?? null;
 
   // Sub-pestaña activa dentro de "Esquemas" (Diagrama unifilar / Plano)
   // — agrupados bajo un mismo apartado a pedido del usuario (2026-11-20),
@@ -367,17 +372,10 @@ export default function App() {
                     onGuardar={guardarCircuito}
                     onCancelar={cancelarEdicionCircuito}
                     error={errorCircuito}
-                    editando={!!editandoCircuitoId}
+                    editando={editandoCircuitoId}
                     normativaActiva={normativaActiva}
                     tipoInstalacion={tipoInstalacion}
                     onCambiarFases={cambiarFasesCircuito}
-                    cantidadEquiposCircuito={
-                      editandoCircuitoId
-                        ? equiposDe(editandoCircuitoId).length
-                        : circuitoActivo
-                          ? equiposDe(circuitoActivo.id).length
-                          : 0
-                    }
                   />
 
                   <FormularioEquipo
@@ -386,7 +384,7 @@ export default function App() {
                     onGuardar={guardarEquipo}
                     onCancelar={cancelarEdicionEquipo}
                     error={errorEquipo}
-                    editando={!!editandoEquipoId}
+                    editando={editandoEquipoId}
                     circuitoActivo={circuitoActivo}
                   />
 
@@ -565,8 +563,8 @@ export default function App() {
                 <InformeTecnico
                   proyecto={proyecto}
                   normativaActiva={normativaActiva}
-                  tipoInstalacion={OPCIONES_TIPO_INSTALACION.find((o) => o.valor === tipoInstalacion)
-                    ? { id: tipoInstalacion, label: OPCIONES_TIPO_INSTALACION.find((o) => o.valor === tipoInstalacion).label }
+                  tipoInstalacion={opcionTipoInstalacionActiva
+                    ? { id: tipoInstalacion, label: opcionTipoInstalacionActiva.label }
                     : null}
                   circuitos={circuitos}
                   equipos={equipos}

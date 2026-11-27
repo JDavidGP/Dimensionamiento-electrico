@@ -1087,7 +1087,7 @@ export function useCircuitos() {
     setConexionesDiagrama(conexionesDiagrama.map((c) => (c.id === id ? actualizada : c)));
   }
 
-  function eliminarConexionDiagrama(id: string): void {
+  function eliminarConexionDiagrama(id: string | undefined): void {
     setConexionesDiagrama(conexionesDiagrama.filter((c) => c.id !== id));
   }
 
