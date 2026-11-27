@@ -23,11 +23,25 @@
  * derivados por mí, nunca inventados a partir de normativa ni nada
  * medible, así que no hace falta cita: son elección visual.
  *
- * Nota pendiente de resolver si surge feedback real (ya señalada
- * antes de implementar, el usuario vio la vista previa y aprobó igual):
- * el acento `#6c4b6c` es débil como color de TEXTO chico, sobre todo
- * en "musgo" (acento apagado sobre fondo apagado) — anotado en el
- * README, no se le tocó el valor sin que el usuario lo pida.
+ * Nota resuelta (usuario, 2026-11-27, "los colores de las letras y
+ * los símbolos sobre todo en el tema oscuro se vean bien" — retomando
+ * la nota pendiente de más arriba): `--copper`/`--copper-dim` en
+ * "musgo" se aclararon (mismo tono violeta, más luminosos) SOLO en
+ * este tema — "claro" no tenía el problema, se deja igual. Medido con
+ * la fórmula de luminancia relativa WCAG:
+ *   - `--copper` sobre `--bg`: 1,95:1 → 2,88:1 (antes #6c4b6c, ahora
+ *     #8c628c). Sigue sin llegar a AA (4.5:1) para texto chico, pero
+ *     ya cruza el mínimo de 3:1 de componentes de UI (bordes, íconos,
+ *     que es la mayoría de sus usos) — no se pudo subir más sin
+ *     romper el otro uso de la misma variable: fondo lleno de botones
+ *     con `colores.textSobreAcento` (blanco) encima, que necesita
+ *     mantenerse en ≥4.5:1 (quedó en 4,95:1, antes 7,34:1).
+ *   - `--copper-dim` sobre `--bg`: 1,36:1 → 2,08:1 (antes #4a3a4d,
+ *     ahora #6a526c) — mismo criterio, se usa solo como color de
+ *     símbolo/ícono (categoría "control" del plano/diagrama), nunca
+ *     como fondo de botón.
+ *   - `--copper-a14` regenerado con el nuevo hex de `--copper` (mismo
+ *     sufijo de alpha de siempre).
  */
 
 /* Sombreado por ambiente (usuario, 2026-11-27, "concepto abierto...
@@ -45,14 +59,14 @@
   --bg: #222a3f;
   --panel: #2d3741;
   --border: #46515c;
-  --copper: #6c4b6c;
-  --copper-dim: #4a3a4d;
+  --copper: #8c628c;
+  --copper-dim: #6a526c;
   --text-main: #eff6f2;
   --text-dim: #bfc7c3;
   --ok: #5bba2c;
   --warn: #ba572c;
   --error: #b5303b;
-  --copper-a14: #6c4b6c24;
+  --copper-a14: #8c628c24;
   --error-a14: #b5303b24;
   --error-a44: #b5303b70;
   --ok-a14: #5bba2c24;

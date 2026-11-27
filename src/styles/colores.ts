@@ -30,13 +30,12 @@ export const colores: Record<string, string> = {
   // Texto sobre un fondo lleno de copper/warn (botones primarios,
   // tabs activas) — antes hardcodeado "#171512" en ~30 lugares,
   // porque coincidía con el bg oscuro de siempre y daba buen
-  // contraste contra el copper VIEJO (#C9793D, 5,45:1). El nuevo
-  // acento (#6c4b6c, de la paleta que pidió el usuario) es mucho más
-  // oscuro: "#171512" cae a 2,48:1 contra él (no pasa WCAG AA ni para
-  // texto grande) — texto blanco da 7,34:1. Mismo blanco funciona
-  // bien contra warn (4,68:1) en los 2 casos que lo usan. NO usar
-  // contra `colores.ok` (un blanco ahí da solo 2,47:1 — ese caso
-  // puntual sigue con texto oscuro, ok es claro en ambos temas).
+  // contraste contra el copper VIEJO (#C9793D, 5,45:1). Texto blanco
+  // funciona contra el copper del tema "musgo" (4,95:1 contra
+  // #8c628c, el valor aclarado en 2026-11-27 — ver temas.css) y
+  // contra warn (4,68:1) en los 2 casos que lo usan. NO usar contra
+  // `colores.ok` (un blanco ahí da solo 2,47:1 — ese caso puntual
+  // sigue con texto oscuro, ok es claro en ambos temas).
   textSobreAcento: "#fff",
 };
 
