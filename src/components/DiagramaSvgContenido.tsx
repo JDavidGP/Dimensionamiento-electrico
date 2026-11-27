@@ -1,7 +1,9 @@
-import React from "react";
-import { colores, fuentes } from "../styles/colores";
+import type { MouseEvent, ReactNode } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
-import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
+import { SimboloDiagrama } from "./simbolosDiagrama.tsx";
+import type { NodoDiagrama, ConexionDiagrama } from "../modules/diagrama/tipos.ts";
+import type { Punto } from "../modules/geometria/index.ts";
 
 // Contenido SVG puro del diagrama unifilar (defs + conexiones + nodos)
 // — extraído de DiagramaUnifilar.jsx (usuario, 2026-11-20, al pedir que
@@ -16,7 +18,7 @@ export const ANCHO_NODO = 120;
 export const ALTO_NODO = 68;
 export const TAMANO_SIMBOLO = 30;
 
-const COLOR_POR_CATEGORIA = {
+const COLOR_POR_CATEGORIA: Record<string, string> = {
   fuente: colores.ok,
   medicion_proteccion: colores.warn,
   distribucion: colores.copper,
@@ -24,9 +26,9 @@ const COLOR_POR_CATEGORIA = {
   carga: colores.textDim,
 };
 
-export function colorDeNodo(tipo) {
+export function colorDeNodo(tipo: string): string {
   const comp = App.diagrama.obtenerComponente(tipo);
-  return COLOR_POR_CATEGORIA[comp?.categoria] ?? colores.border;
+  return (comp && COLOR_POR_CATEGORIA[comp.categoria]) ?? colores.border;
 }
 
 // Paleta de colores ESTRUCTURALES (fondo/borde/texto — no los de
@@ -52,7 +54,7 @@ export const PALETA_IMPRESION = {
 
 /** Caja envolvente de todos los nodos (+ margen) — para que una vista
  * estática (sin scroll ni pan) sepa qué viewBox usar y nada quede cortado. */
-export function cajaEnvolvente(nodosDiagrama, margen = 20) {
+export function cajaEnvolvente(nodosDiagrama: NodoDiagrama[], margen: number = 20): { ancho: number; alto: number } {
   if (!nodosDiagrama || nodosDiagrama.length === 0) {
     return { ancho: ANCHO_NODO + margen * 2, alto: ALTO_NODO + margen * 2 };
   }
@@ -61,16 +63,28 @@ export function cajaEnvolvente(nodosDiagrama, margen = 20) {
   return { ancho: maxX + margen, alto: maxY + margen };
 }
 
-/**
- * @param {object[]} nodosDiagrama
- * @param {object[]} conexionesDiagrama
- * @param {{tableros, equipos, fuentesEnergia, transformadores}} entidadesPorRef
- * @param {(nodo) => {x:number,y:number}} [posicionDe] - por defecto, la posición guardada (el editor pasa la propia, con el arrastre en curso)
- * @param {(nodoId) => boolean} [esSeleccionado]
- * @param {(e, nodo) => void} [onMouseDownNodo] - ausente = nodos no interactivos (vista estática)
- * @param {(cx) => void} [onClickConexion]
- * @param {(nodo) => string} [cursorDeNodo]
- */
+interface PaletaDiagrama {
+  fondoNodo: string;
+  bordeDefecto: string;
+  textoPrincipal: string;
+  textoDim: string;
+  flecha: string;
+}
+
+interface ContenidoSvgDiagramaProps {
+  nodosDiagrama: NodoDiagrama[];
+  conexionesDiagrama: ConexionDiagrama[];
+  entidadesPorRef: Parameters<typeof App.diagrama.resolverEntidad>[1];
+  /** por defecto, la posición guardada (el editor pasa la propia, con el arrastre en curso) */
+  posicionDe?: (nodo: NodoDiagrama) => Punto;
+  esSeleccionado?: (nodoId: string | undefined) => boolean;
+  /** ausente = nodos no interactivos (vista estática) */
+  onMouseDownNodo?: (e: MouseEvent, nodo: NodoDiagrama) => void;
+  onClickConexion?: (cx: ConexionDiagrama) => void;
+  cursorDeNodo?: (nodo: NodoDiagrama) => string;
+  paleta?: PaletaDiagrama;
+}
+
 export function ContenidoSvgDiagrama({
   nodosDiagrama,
   conexionesDiagrama,
@@ -81,8 +95,8 @@ export function ContenidoSvgDiagrama({
   onClickConexion,
   cursorDeNodo = () => "default",
   paleta = PALETA_OSCURA,
-}) {
-  function nombreMostrado(nodo) {
+}: ContenidoSvgDiagramaProps): ReactNode {
+  function nombreMostrado(nodo: NodoDiagrama): string {
     const entidad = App.diagrama.resolverEntidad(nodo, entidadesPorRef);
     return entidad?.nombre?.trim() || nodo.nombre;
   }

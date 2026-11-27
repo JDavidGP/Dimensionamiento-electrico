@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
+import { useState } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import type { FilaImportacion } from "../core/mediators/ImportacionMediator.ts";
 
 // Importación de equipos por texto — pedido explícito del usuario
 // (2026-11-20), tras discutir (y descartar junto con él) un chatbot
@@ -22,10 +23,15 @@ const EJEMPLO_PLACEHOLDER = `TD1-C3
 TD1-C4
 1 Refrigerador 1200W`;
 
-export default function ImportarEquiposTexto({ onPrevisualizar, onConfirmar }) {
+interface ImportarEquiposTextoProps {
+  onPrevisualizar: (texto: string) => FilaImportacion[];
+  onConfirmar: (filas: FilaImportacion[]) => number;
+}
+
+export default function ImportarEquiposTexto({ onPrevisualizar, onConfirmar }: ImportarEquiposTextoProps) {
   const [abierto, setAbierto] = useState(false);
   const [texto, setTexto] = useState("");
-  const [filas, setFilas] = useState(null); // null = todavía no se previsualizó
+  const [filas, setFilas] = useState<FilaImportacion[] | null>(null); // null = todavía no se previsualizó
   const [aviso, setAviso] = useState("");
 
   const validas = filas?.filter((f) => f.ok) ?? [];
@@ -37,6 +43,7 @@ export default function ImportarEquiposTexto({ onPrevisualizar, onConfirmar }) {
   }
 
   function importar() {
+    if (!filas) return;
     const cantidad = onConfirmar(filas);
     setAviso(`${cantidad} equipo${cantidad === 1 ? "" : "s"} importado${cantidad === 1 ? "" : "s"}.`);
     setTexto("");
