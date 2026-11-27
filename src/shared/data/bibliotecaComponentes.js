@@ -186,11 +186,11 @@ export function componentesPorCategoriaDiagrama() {
 // tierra, caja de empalme, tomacorriente, puntos de luz con sus
 // interruptores — más motor/carga especial, confirmados aparte como
 // "también merecen símbolo" para instalaciones más grandes). El
-// catálogo completo (25 símbolos) sigue existiendo tal cual — solo
+// catálogo completo (33 símbolos) sigue existiendo tal cual — solo
 // pensado para el Diagrama unifilar (topología eléctrica: medidor,
 // PLC, relé, contactor, bobina, sensor, transformador, generador,
 // etc., cosas que casi nunca se ubican físicamente en un plano de
-// planta) — un selector de "Colocar equipo" con esos 25 tipos
+// planta) — un selector de "Colocar equipo" con esos 33 tipos
 // abrumaba la tarea real de ubicar un tomacorriente o una luz. Esta
 // lista es un WHITELIST explícito, no un criterio derivado (a
 // diferencia de `soloPlano`, que separa por "sirve al Diagrama o no")
