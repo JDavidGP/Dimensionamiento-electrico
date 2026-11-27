@@ -15,7 +15,7 @@ export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFa
           setUmbralDesbalanceFasesPct={setUmbralDesbalanceFasesPct}
         />
       </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", paddingRight: 44 }}>
+      <div style={{ paddingRight: 44 }}>
         <h1
           style={{
             fontFamily: fuentes.condensada,
@@ -28,7 +28,6 @@ export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFa
         >
           DEC
         </h1>
-        <span style={{ color: colores.copper, fontFamily: fuentes.mono, fontSize: 12 }}>v0.5 · factor de demanda NEC</span>
       </div>
       <p style={{ color: colores.textDim, fontSize: 13, marginTop: 6, maxWidth: 640 }}>
         Dimensionamiento sobre carga de demanda normativa (Art. 220/430). Continuidad por equipo. Simultaneidad de campo solo informativa.
