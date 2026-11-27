@@ -1,7 +1,18 @@
-import React, { useMemo, useState } from "react";
-import { colores, fuentes } from "../styles/colores";
-import { inputStyle } from "./Campo";
+import { useMemo, useState, type ReactNode } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import { inputStyle } from "./Campo.tsx";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
+import type { Tablero, FuenteEnergia, Transformador } from "../core/services/DataProvider.ts";
+import type { Circuito, Equipo } from "../modules/validacion/tipos.ts";
+import type { NodoDiagrama } from "../modules/diagrama/tipos.ts";
+import type { HabitacionPlano, RutaConductorPlano, MarcadorEquipoPlano } from "../modules/plano/tipos.ts";
+import type { DatosTablero } from "../modules/tablero/tipos.ts";
+
+function coincide(obj: unknown, campos: string[], q: string): boolean {
+  if (!q) return true;
+  const o = obj as Record<string, unknown> | null | undefined;
+  return campos.some((c) => String(o?.[c] ?? "").toLowerCase().includes(q));
+}
 
 // "Directorio" — pestaña dedicada al sistema de etiquetado. Arrancó
 // como una tabla de SOLO LECTURA (2026-11-20). Siguiente ronda, pedido
@@ -23,13 +34,17 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 // nuevo) — Directorio es otra puerta de entrada al mismo estado, no
 // una copia de la lógica.
 
-function coincide(obj, campos, q) {
-  if (!q) return true;
-  return campos.some((c) => (obj?.[c] || "").toLowerCase().includes(q));
+interface PlegableProps {
+  nivel?: number;
+  abierto: boolean;
+  onToggle: () => void;
+  header: ReactNode;
+  children?: ReactNode;
+  vacio?: ReactNode;
 }
 
 /** Fila plegable genérica: flecha + header (lo que se vea, editable o no) + contenido que se desmonta al cerrar. */
-function Plegable({ nivel = 0, abierto, onToggle, header, children, vacio }) {
+function Plegable({ nivel = 0, abierto, onToggle, header, children, vacio }: PlegableProps) {
   return (
     <div style={{ marginLeft: nivel * 14, marginBottom: nivel === 0 ? 10 : 5 }}>
       <div
@@ -58,7 +73,7 @@ function Plegable({ nivel = 0, abierto, onToggle, header, children, vacio }) {
   );
 }
 
-function campoInline(valor, onChange, placeholder, flex = 1) {
+function campoInline(valor: string, onChange: (valor: string) => void, placeholder: string, flex: number | string = 1) {
   return (
     <input
       style={{ ...inputStyle(), flex, padding: "4px 6px", fontSize: 11.5, width: "auto" }}
@@ -69,7 +84,7 @@ function campoInline(valor, onChange, placeholder, flex = 1) {
   );
 }
 
-function botonEliminar(onClick, etiquetaAria, title) {
+function botonEliminar(onClick: () => void, etiquetaAria: string, title: string) {
   return (
     <button
       type="button"
@@ -83,16 +98,42 @@ function botonEliminar(onClick, etiquetaAria, title) {
   );
 }
 
-function filaVacia(texto) {
+function filaVacia(texto: string) {
   return <div style={{ fontSize: 11.5, color: colores.textDim, padding: "4px 8px", fontStyle: "italic" }}>{texto}</div>;
 }
 
-function etiquetaSeccion(titulo, contador) {
+function etiquetaSeccion(titulo: string, contador: number) {
   return (
     <span style={{ fontSize: 12, fontWeight: 700, color: colores.textMain }}>
       {titulo} <span style={{ color: colores.textDim, fontWeight: 400 }}>({contador})</span>
     </span>
   );
+}
+
+interface PanelDirectorioProps {
+  tableros: Tablero[];
+  editarTablero: (id: string, cambios: DatosTablero) => void;
+  eliminarTablero: (id: string) => void;
+  circuitos: Circuito[];
+  editarEtiquetaFuncionCircuito: (id: string, cambios: { nombre?: string; etiqueta?: string; funcion?: string }) => void;
+  eliminarCircuito: (id: string) => void;
+  equipos: Equipo[];
+  editarEtiquetaFuncionEquipo: (id: string, cambios: { nombre?: string; etiqueta?: string; funcion?: string }) => void;
+  eliminarEquipo: (id: string) => void;
+  nodosDiagrama: NodoDiagrama[];
+  editarNodoDiagrama: (id: string, cambios: Parameters<typeof App.diagrama.editarNodo>[1]) => void;
+  eliminarNodoDiagrama: (id: string) => void;
+  habitacionesPlano: HabitacionPlano[];
+  renombrarHabitacionPlano: (id: string, nombre: string) => void;
+  eliminarHabitacionPlano: (id: string) => void;
+  rutasConductorPlano: RutaConductorPlano[];
+  renombrarRutaConductorPlano: (id: string, nombre: string) => void;
+  eliminarRutaConductorPlano: (id: string) => void;
+  marcadoresEquipoPlano: MarcadorEquipoPlano[];
+  editarMarcadorEquipoPlano: (id: string, cambios: Partial<MarcadorEquipoPlano>) => void;
+  eliminarMarcadorEquipoPlano: (id: string) => void;
+  fuentesEnergia?: FuenteEnergia[];
+  transformadores?: Transformador[];
 }
 
 export default function PanelDirectorio({
@@ -119,15 +160,15 @@ export default function PanelDirectorio({
   eliminarMarcadorEquipoPlano,
   fuentesEnergia = [],
   transformadores = [],
-}) {
+}: PanelDirectorioProps) {
   const [busqueda, setBusqueda] = useState("");
   const q = busqueda.trim().toLowerCase();
 
   // Plegado — por defecto TODO abierto (mejor ver qué hay que adivinar
   // que algo está escondido). Un Set de ids CERRADOS, así un
   // tablero/circuito nuevo nace abierto sin tener que sembrar estado.
-  const [cerrados, setCerrados] = useState(() => new Set());
-  function alternar(id) {
+  const [cerrados, setCerrados] = useState<Set<string>>(() => new Set());
+  function alternar(id: string): void {
     setCerrados((actual) => {
       const copia = new Set(actual);
       if (copia.has(id)) copia.delete(id);
@@ -138,14 +179,14 @@ export default function PanelDirectorio({
   // Con una búsqueda activa, todo se fuerza ABIERTO — si no, un
   // resultado podría quedar escondido adentro de algo plegado y
   // parecer que "no hay nada".
-  const abierto = (id) => (q ? true : !cerrados.has(id));
+  const abierto = (id: string): boolean => (q ? true : !cerrados.has(id));
 
   const circuitosSinTablero = useMemo(
     () => circuitos.filter((c) => !tableros.some((t) => t.id === c.tableroId)),
     [circuitos, tableros]
   );
 
-  function etiquetaEntidadEquipoPlano(tipoEquipo, entidad) {
+  function etiquetaEntidadEquipoPlano(tipoEquipo: string, entidad: { nombre?: string; circuitoId?: string | null }): string {
     const comp = App.plano.obtenerComponente(tipoEquipo);
     if (comp?.entidadVinculada === "equipo") {
       const circuito = circuitos.find((c) => c.id === entidad.circuitoId);
@@ -156,7 +197,7 @@ export default function PanelDirectorio({
     return entidad.nombre || "(sin nombre)";
   }
 
-  function filaEquipo(e) {
+  function filaEquipo(e: Equipo) {
     return (
       <div key={e.id} style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: 28, marginBottom: 4 }}>
         {campoInline(e.etiqueta || "", (v) => editarEtiquetaFuncionEquipo(e.id, { etiqueta: v }), "Etiqueta", "0 0 90px")}
@@ -167,7 +208,7 @@ export default function PanelDirectorio({
     );
   }
 
-  function filaCircuito(c) {
+  function filaCircuito(c: Circuito) {
     const equiposDelCircuito = equipos.filter((e) => e.circuitoId === c.id);
     const equiposVisibles = equiposDelCircuito.filter((e) => coincide(e, ["etiqueta", "nombre", "funcion"], q));
     if (q && !coincide(c, ["etiqueta", "nombre", "funcion"], q) && equiposVisibles.length === 0) return null;
@@ -187,7 +228,7 @@ export default function PanelDirectorio({
     );
   }
 
-  function filaTablero(t) {
+  function filaTablero(t: Tablero) {
     const circuitosDelTablero = circuitos.filter((c) => c.tableroId === t.id);
     const propioCoincide = coincide(t, ["etiqueta", "nombre", "funcion"], q);
     const descendienteCoincide = circuitosDelTablero.some(
@@ -209,7 +250,7 @@ export default function PanelDirectorio({
     );
   }
 
-  function filaNodoDiagrama(n) {
+  function filaNodoDiagrama(n: NodoDiagrama) {
     if (q && !coincide(n, ["nombre"], q)) return null;
     const comp = App.diagrama.obtenerComponente(n.tipo);
     const entidad = App.diagrama.resolverEntidad(n, { tableros, equipos, fuentesEnergia, transformadores });
@@ -218,16 +259,16 @@ export default function PanelDirectorio({
         <span style={{ fontSize: 10.5, color: colores.textDim, flex: "0 0 150px", fontFamily: fuentes.condensada, textTransform: "uppercase", letterSpacing: "0.03em" }}>
           {comp?.nombre ?? n.tipo}
         </span>
-        {campoInline(n.nombre || "", (v) => editarNodoDiagrama(n.id, { nombre: v }), "Nombre del nodo")}
+        {campoInline(n.nombre || "", (v) => editarNodoDiagrama(n.id!, { nombre: v }), "Nombre del nodo")}
         <span style={{ fontSize: 11, color: entidad ? colores.ok : colores.textDim, flex: "0 0 160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {entidad ? `↳ ${entidad.nombre || "(sin nombre)"}` : "sin vincular"}
         </span>
-        {botonEliminar(() => eliminarNodoDiagrama(n.id), n.nombre || "nodo", "Eliminar nodo del diagrama")}
+        {botonEliminar(() => eliminarNodoDiagrama(n.id!), n.nombre || "nodo", "Eliminar nodo del diagrama")}
       </div>
     );
   }
 
-  function filaHabitacion(h) {
+  function filaHabitacion(h: HabitacionPlano) {
     if (q && !coincide(h, ["nombre"], q)) return null;
     return (
       <div key={h.id} style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: 14, marginBottom: 4 }}>
@@ -240,7 +281,7 @@ export default function PanelDirectorio({
     );
   }
 
-  function filaRutaConductor(r) {
+  function filaRutaConductor(r: RutaConductorPlano) {
     if (q && !coincide(r, ["nombre"], q)) return null;
     return (
       <div key={r.id} style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: 14, marginBottom: 4 }}>
@@ -253,7 +294,7 @@ export default function PanelDirectorio({
     );
   }
 
-  function filaMarcadorEquipo(m) {
+  function filaMarcadorEquipo(m: MarcadorEquipoPlano) {
     if (q && !coincide(m, ["nombre"], q)) return null;
     const comp = App.plano.obtenerComponente(m.tipo);
     const entidad = App.plano.resolverEntidadEquipo(m, { tableros, equipos, fuentesEnergia, transformadores });
