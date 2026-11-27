@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
+import { useState } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
 
 const CLAVE_LOCALSTORAGE = "dec-tema";
 
@@ -8,7 +8,7 @@ const CLAVE_LOCALSTORAGE = "dec-tema";
 // su comentario para el porqué. localStorage puede fallar (modo
 // privado, storage bloqueado) — nunca debe romper el toggle, solo
 // perder la persistencia entre visitas.
-function leerTemaGuardado() {
+function leerTemaGuardado(): string | null {
   try {
     return localStorage.getItem(CLAVE_LOCALSTORAGE);
   } catch {
@@ -16,7 +16,7 @@ function leerTemaGuardado() {
   }
 }
 
-function aplicarTema(tema) {
+function aplicarTema(tema: string | null): void {
   if (tema) {
     document.documentElement.setAttribute("data-tema", tema);
   } else {
@@ -34,7 +34,7 @@ function aplicarTema(tema) {
 export default function ToggleTema() {
   const [tema, setTema] = useState(() => leerTemaGuardado());
 
-  function elegir(nuevoTema) {
+  function elegir(nuevoTema: string | null): void {
     setTema(nuevoTema);
     aplicarTema(nuevoTema);
   }

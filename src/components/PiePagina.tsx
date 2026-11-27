@@ -1,10 +1,10 @@
-import React from "react";
-import { colores, fuentes } from "../styles/colores";
+import type { CSSProperties } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
 
 // Pie de página con el aviso de responsabilidad, la nota de privacidad
 // y los datos de autoría. Se muestra siempre, en todas las vistas.
 export default function PiePagina() {
-  const titulo = {
+  const titulo: CSSProperties = {
     fontFamily: fuentes.condensada,
     fontWeight: 700,
     fontSize: 12,
@@ -13,7 +13,7 @@ export default function PiePagina() {
     color: colores.warn,
     margin: "0 0 6px 0",
   };
-  const parrafo = { color: colores.textDim, fontSize: 12.5, lineHeight: 1.55, margin: "0 0 14px 0", maxWidth: 900 };
+  const parrafo: CSSProperties = { color: colores.textDim, fontSize: 12.5, lineHeight: 1.55, margin: "0 0 14px 0", maxWidth: 900 };
 
   return (
     <footer

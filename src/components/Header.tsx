@@ -1,8 +1,12 @@
-import React from "react";
-import { colores, fuentes } from "../styles/colores";
+import { colores, fuentes } from "../styles/colores.ts";
 import MenuOpciones from "./MenuOpciones";
 
-export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }) {
+interface HeaderProps {
+  umbralDesbalanceFasesPct: number;
+  setUmbralDesbalanceFasesPct: (valor: number | string) => void;
+}
+
+export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }: HeaderProps) {
   return (
     <div style={{ position: "relative", borderBottom: `1px solid ${colores.border}`, padding: "20px 24px" }}>
       <div style={{ position: "absolute", top: 16, right: 24 }}>

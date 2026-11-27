@@ -1,9 +1,13 @@
-import React from "react";
-import { colores, fuentes } from "../styles/colores";
+import { colores, fuentes } from "../styles/colores.ts";
+import type { ResultadoCircuito } from "../modules/motor/index.ts";
+
+interface PanelBreakersProps {
+  resultados: ResultadoCircuito[];
+}
 
 // Solo dibuja los breakers como "switches" de color según estado.
 // No decide el estado — solo lo interpreta de `resultados`.
-export default function PanelBreakers({ resultados }) {
+export default function PanelBreakers({ resultados }: PanelBreakersProps) {
   return (
     <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 18 }}>
       <h2

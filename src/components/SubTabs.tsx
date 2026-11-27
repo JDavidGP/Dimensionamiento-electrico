@@ -1,5 +1,17 @@
-import React from "react";
-import { colores } from "../styles/colores";
+import type { ReactNode } from "react";
+import { colores } from "../styles/colores.ts";
+
+interface Panel {
+  id: string;
+  label: ReactNode;
+  contenido: ReactNode;
+}
+
+interface SubTabsProps {
+  paneles: Panel[];
+  activo: number;
+  onCambiar: (indice: number) => void;
+}
 
 // Sub-pestañas DENTRO de una pestaña principal — pedido explícito del
 // usuario (2026-11-20): agrupar Diagrama unifilar y Plano bajo un
@@ -17,7 +29,7 @@ import { colores } from "../styles/colores";
 // montados siempre" que TabsViewPager (nunca se desmonta Diagrama
 // mientras se mira Plano, o viceversa): el estado interno de cada uno
 // (zoom del plano, selección del diagrama) sobrevive al cambiar.
-export default function SubTabs({ paneles, activo, onCambiar }) {
+export default function SubTabs({ paneles, activo, onCambiar }: SubTabsProps) {
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>

@@ -1,11 +1,17 @@
-import React from "react";
-import { colores } from "../styles/colores";
+import type { CSSProperties, ReactNode } from "react";
+import { colores } from "../styles/colores.ts";
+import type { Entrada } from "../modules/validacion/index.ts";
+
+interface CampoProps {
+  label: string;
+  children: ReactNode;
+}
 
 // Envuelve un input/select con su etiqueta. No sabe nada de cálculos.
 // La etiqueta tiene una altura reservada fija (con nowrap + ellipsis) para
 // que un texto más largo (ej. al cambiar "Potencia" por "Corriente") no
 // haga crecer la fila y desplace verticalmente el resto del formulario.
-export default function Campo({ label, children }) {
+export default function Campo({ label, children }: CampoProps) {
   return (
     <div style={{ marginBottom: 10 }}>
       <label
@@ -30,7 +36,7 @@ export default function Campo({ label, children }) {
   );
 }
 
-export function inputStyle() {
+export function inputStyle(): CSSProperties {
   return {
     width: "100%",
     padding: "8px 10px",
@@ -47,7 +53,7 @@ export function inputStyle() {
 // (auditoría 2026-11-26: las 3 tenían la misma función copiada letra por
 // letra) — color del borde/indicador de una tarjeta de entidad según su
 // peor estado de integridad referencial (ver modules/validacion/referencial.ts).
-export function colorEstadoDe(entrada) {
+export function colorEstadoDe(entrada: Entrada | null | undefined): string {
   if (!entrada) return colores.ok;
   if (entrada.estado === "error") return colores.error;
   if (entrada.estado === "advertencia") return colores.warn;

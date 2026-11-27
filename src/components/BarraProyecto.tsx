@@ -1,8 +1,18 @@
-import React from "react";
-import { colores } from "../styles/colores";
-import { inputStyle } from "./Campo";
+import { colores } from "../styles/colores.ts";
+import { inputStyle } from "./Campo.tsx";
+import type { ProyectoMeta } from "../modules/persistencia/tipos.ts";
 
-export default function BarraProyecto({ proyecto, setProyecto, avisoArchivo, onGuardar, onGuardarJson, onAbrir, onNuevo }) {
+interface BarraProyectoProps {
+  proyecto: ProyectoMeta;
+  setProyecto: (proyecto: ProyectoMeta) => void;
+  avisoArchivo: string;
+  onGuardar: () => void;
+  onGuardarJson?: () => void;
+  onAbrir: (archivo: File) => void;
+  onNuevo: () => void;
+}
+
+export default function BarraProyecto({ proyecto, setProyecto, avisoArchivo, onGuardar, onGuardarJson, onAbrir, onNuevo }: BarraProyectoProps) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
       <input
@@ -35,7 +45,7 @@ export default function BarraProyecto({ proyecto, setProyecto, avisoArchivo, onG
           type="file"
           accept=".pdf,.json,application/pdf,application/json"
           style={{ display: "none" }}
-          onChange={(e) => e.target.files[0] && onAbrir(e.target.files[0])}
+          onChange={(e) => e.target.files?.[0] && onAbrir(e.target.files[0])}
         />
       </label>
       <button
