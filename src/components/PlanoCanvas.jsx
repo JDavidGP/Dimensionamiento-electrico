@@ -72,6 +72,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     segmentos = [],
     marcadoresEquipo = [],
     habitaciones = [],
+    habitacionResaltadaId = null,
     escalaMetrosPorPixel,
     puntosGuiaPendientes = [],
     nodoIdsTrazoActual = [],
@@ -596,18 +597,38 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                   y: puntos.reduce((acc, p) => acc + p.y, 0) / puntos.length,
                 };
                 const c = px(centroideModelo);
+                const resaltada = h.id === habitacionResaltadaId;
                 return (
-                  <text
-                    key={`medidas-${h.id}`}
-                    x={c.x}
-                    y={c.y}
-                    textAnchor="middle"
-                    fontSize={11 / transformVista.zoom}
-                    fill={colores.textDim}
-                    pointerEvents="none"
-                  >
-                    {h.areaM2.toFixed(2)}m² · {h.perimetroM.toFixed(2)}m perímetro
-                  </text>
+                  <React.Fragment key={`medidas-${h.id}`}>
+                    {/* Nombre del ambiente al tocarlo (usuario, 2026-11-27,
+                        "modo Mover vista" — un click sin arrastre ahí no
+                        hacía nada antes de esto): revelado bajo demanda,
+                        no siempre visible, para no amontonar el dibujo en
+                        un plano con muchos ambientes chicos. */}
+                    {resaltada && (
+                      <text
+                        x={c.x}
+                        y={c.y - 14 / transformVista.zoom}
+                        textAnchor="middle"
+                        fontSize={13 / transformVista.zoom}
+                        fontWeight="bold"
+                        fill={colores.copper}
+                        pointerEvents="none"
+                      >
+                        {h.nombre || "(sin nombre)"}
+                      </text>
+                    )}
+                    <text
+                      x={c.x}
+                      y={c.y}
+                      textAnchor="middle"
+                      fontSize={11 / transformVista.zoom}
+                      fill={colores.textDim}
+                      pointerEvents="none"
+                    >
+                      {h.areaM2.toFixed(2)}m² · {h.perimetroM.toFixed(2)}m perímetro
+                    </text>
+                  </React.Fragment>
                 );
               })}
 

@@ -220,6 +220,14 @@ export default function PlanoInteligente({
   // "conductor") en curso — lista ORDENADA de ids de nodo. Se resetea
   // al cambiar de modo o al cerrar/terminar el trazo.
   const [trazoActual, setTrazoActual] = useState([]);
+  // Nombre del ambiente al tocarlo (usuario, 2026-11-27, probando el
+  // .zip en su PC: "cumple un rol informativo para el instalador, así
+  // localiza y realiza los cambios que quiera más fácil"). Vive en modo
+  // "Mover vista" a propósito — un click ahí, sin arrastre, no hacía
+  // absolutamente nada hasta ahora (el modo neutro/de revisión, nunca
+  // dispara ninguna creación/edición de dato), así que agregar esto acá
+  // no le quita ningún comportamiento a nada que ya existiera.
+  const [habitacionResaltadaId, setHabitacionResaltadaId] = useState(null);
 
   // Modo "equipo" — tipo/nombre/entidad elegidos ANTES de hacer click
   // en el plano (el click solo define la UBICACIÓN); mismo catálogo
@@ -459,6 +467,15 @@ export default function PlanoInteligente({
   }, [nodosPlano, segmentosPlano, habitacionesPlano]);
 
   function alClickImagen(puntoImagen) {
+    if (modo === "mover") {
+      const escala = planoCalibracion?.escalaMetrosPorPixel;
+      if (!escala) return;
+      const puntoModelo = App.plano.imagenAModelo(puntoImagen, escala);
+      const habitacion = App.plano.habitacionQueContiene(puntoModelo, habitacionesPlano, nodosPlano);
+      setHabitacionResaltadaId((actual) => (habitacion && habitacion.id !== actual ? habitacion.id : null));
+      return;
+    }
+
     if (modo === "perspectiva") {
       if (puntosPerspectiva.length < 4) {
         setPuntosPerspectiva([...puntosPerspectiva, puntoImagen]);
@@ -1406,6 +1423,7 @@ export default function PlanoInteligente({
           segmentos={segmentosPlano.filter((s) => capasVisibles[s.tipo])}
           marcadoresEquipo={capasVisibles.equipos ? marcadoresEquipoPlano : []}
           habitaciones={habitacionesPlano}
+          habitacionResaltadaId={habitacionResaltadaId}
           escalaMetrosPorPixel={planoCalibracion?.escalaMetrosPorPixel ?? null}
           puntosGuiaPendientes={
             modo === "perspectiva"
