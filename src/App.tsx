@@ -23,6 +23,7 @@ import TabsViewPager from "./components/TabsViewPager.tsx";
 import SubTabs from "./components/SubTabs.tsx";
 import PiePagina from "./components/PiePagina.tsx";
 import { useCircuitos } from "./hooks/useCircuitos.ts";
+import { useCuenta } from "./hooks/useCuenta.ts";
 import { colores, fuentes } from "./styles/colores.ts";
 import { OPCIONES_TIPO_INSTALACION, TIPOS_INSTALACION } from "./shared/constants/constantes.ts";
 
@@ -44,7 +45,9 @@ export default function App() {
     avisoArchivo,
     guardarProyecto,
     guardarProyectoComoJson,
+    armarDatosProyecto,
     abrirProyecto,
+    aplicarProyectoCargado,
     nuevoProyecto,
     circuitos,
     equipos,
@@ -170,8 +173,47 @@ export default function App() {
     advertenciasDiferencialREBT,
   } = useCircuitos();
 
+  const {
+    baseUrl: baseUrlCuenta,
+    setBaseUrl: setBaseUrlCuenta,
+    token: tokenCuenta,
+    usuario: usuarioCuenta,
+    cargando: cargandoCuenta,
+    error: errorCuenta,
+    proyectosRemotos,
+    proyectoRemotoVinculadoId,
+    registrarCuenta,
+    iniciarSesionCuenta,
+    cerrarSesion: cerrarSesionCuenta,
+    desvincularProyectoRemoto,
+    refrescarProyectosRemotos,
+    guardarProyectoEnNube,
+    abrirProyectoDesdeNube,
+    borrarProyectoEnNube,
+  } = useCuenta();
+
   const circuitoActivo = circuitos.find((c) => c.id === circuitoActivoId) ?? null;
   const opcionTipoInstalacionActiva = OPCIONES_TIPO_INSTALACION.find((o) => o.valor === tipoInstalacion) ?? null;
+
+  // Abrir un archivo local o empezar de cero desvincula el proyecto que
+  // estuviera sincronizado con la nube (ver useCuenta.ts) — si no,
+  // "Guardar en la nube" después sobreescribiría el proyecto remoto
+  // anterior con datos de un proyecto completamente distinto.
+  function abrirProyectoLocal(archivo: File) {
+    desvincularProyectoRemoto();
+    abrirProyecto(archivo);
+  }
+
+  function empezarProyectoNuevo() {
+    desvincularProyectoRemoto();
+    nuevoProyecto();
+  }
+
+  function abrirDesdeNube(id: string) {
+    abrirProyectoDesdeNube(id).then((cargado) => {
+      if (cargado) aplicarProyectoCargado(cargado);
+    });
+  }
 
   // Sub-pestaña activa dentro de "Esquemas" (Diagrama unifilar / Plano)
   // — agrupados bajo un mismo apartado a pedido del usuario (2026-11-20),
@@ -252,6 +294,22 @@ export default function App() {
       <Header
         umbralDesbalanceFasesPct={umbralDesbalanceFasesPct}
         setUmbralDesbalanceFasesPct={setUmbralDesbalanceFasesPct}
+        baseUrl={baseUrlCuenta}
+        setBaseUrl={setBaseUrlCuenta}
+        token={tokenCuenta}
+        usuario={usuarioCuenta}
+        cargando={cargandoCuenta}
+        error={errorCuenta}
+        proyectosRemotos={proyectosRemotos}
+        proyectoRemotoVinculadoId={proyectoRemotoVinculadoId}
+        registrarCuenta={registrarCuenta}
+        iniciarSesionCuenta={iniciarSesionCuenta}
+        cerrarSesion={cerrarSesionCuenta}
+        refrescarProyectosRemotos={refrescarProyectosRemotos}
+        borrarProyectoEnNube={borrarProyectoEnNube}
+        nombreProyectoActual={proyecto.nombre ?? "Proyecto sin nombre"}
+        onGuardarEnNube={(nombre) => guardarProyectoEnNube(nombre, armarDatosProyecto())}
+        onAbrirDesdeNube={abrirDesdeNube}
       />
       <div style={{ padding: "0 24px 20px 24px", borderBottom: `1px solid ${colores.border}` }}>
         <BarraProyecto
@@ -260,8 +318,8 @@ export default function App() {
           avisoArchivo={avisoArchivo}
           onGuardar={guardarProyecto}
           onGuardarJson={guardarProyectoComoJson}
-          onAbrir={abrirProyecto}
-          onNuevo={nuevoProyecto}
+          onAbrir={abrirProyectoLocal}
+          onNuevo={empezarProyectoNuevo}
         />
       </div>
 

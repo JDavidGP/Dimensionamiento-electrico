@@ -1,20 +1,45 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { colores, fuentes } from "../styles/colores.ts";
 import ToggleTema from "./ToggleTema.tsx";
+import PanelCuenta from "./PanelCuenta.tsx";
+import type { useCuenta } from "../hooks/useCuenta.ts";
 
-interface MenuOpcionesProps {
+type RetornoCuenta = ReturnType<typeof useCuenta>;
+
+export type PropsCuenta = Pick<
+  RetornoCuenta,
+  | "baseUrl"
+  | "setBaseUrl"
+  | "token"
+  | "usuario"
+  | "cargando"
+  | "error"
+  | "proyectosRemotos"
+  | "proyectoRemotoVinculadoId"
+  | "registrarCuenta"
+  | "iniciarSesionCuenta"
+  | "cerrarSesion"
+  | "refrescarProyectosRemotos"
+  | "borrarProyectoEnNube"
+> & {
+  nombreProyectoActual: string;
+  onGuardarEnNube: (nombre: string) => void;
+  onAbrirDesdeNube: (id: string) => void;
+};
+
+interface MenuOpcionesProps extends PropsCuenta {
   umbralDesbalanceFasesPct: number;
   setUmbralDesbalanceFasesPct: (valor: number | string) => void;
 }
 
 /**
- * Menú de 3 puntos (⋮) en la esquina superior: Ajustes, Ayuda, y acceso
- * directo al aviso de responsabilidad / privacidad (contenido ya en
- * PiePagina, no se duplica aquí).
+ * Menú de 3 puntos (⋮) en la esquina superior: Ajustes, Cuenta, Ayuda,
+ * y acceso directo al aviso de responsabilidad / privacidad (contenido
+ * ya en PiePagina, no se duplica aquí).
  */
-export default function MenuOpciones({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }: MenuOpcionesProps) {
+export default function MenuOpciones({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct, ...propsCuenta }: MenuOpcionesProps) {
   const [abierto, setAbierto] = useState(false);
-  const [panel, setPanel] = useState<"ajustes" | "ayuda" | null>(null);
+  const [panel, setPanel] = useState<"ajustes" | "cuenta" | "ayuda" | null>(null);
 
   function irAPiePagina() {
     setAbierto(false);
@@ -77,6 +102,9 @@ export default function MenuOpciones({ umbralDesbalanceFasesPct, setUmbralDesbal
           <button type="button" style={itemMenu} onClick={() => { setPanel("ajustes"); setAbierto(false); }}>
             Ajustes
           </button>
+          <button type="button" style={itemMenu} onClick={() => { setPanel("cuenta"); setAbierto(false); }}>
+            Cuenta {propsCuenta.usuario ? "●" : ""}
+          </button>
           <button type="button" style={itemMenu} onClick={() => { setPanel("ayuda"); setAbierto(false); }}>
             Ayuda
           </button>
@@ -87,12 +115,14 @@ export default function MenuOpciones({ umbralDesbalanceFasesPct, setUmbralDesbal
       )}
 
       {panel && (
-        <PanelModal titulo={panel === "ajustes" ? "Ajustes" : "Ayuda"} onCerrar={() => setPanel(null)}>
+        <PanelModal titulo={panel === "ajustes" ? "Ajustes" : panel === "cuenta" ? "Cuenta" : "Ayuda"} onCerrar={() => setPanel(null)}>
           {panel === "ajustes" ? (
             <PanelAjustes
               umbralDesbalanceFasesPct={umbralDesbalanceFasesPct}
               setUmbralDesbalanceFasesPct={setUmbralDesbalanceFasesPct}
             />
+          ) : panel === "cuenta" ? (
+            <PanelCuenta {...propsCuenta} />
           ) : (
             <PanelAyuda />
           )}
@@ -155,7 +185,7 @@ function PanelModal({ titulo, children, onCerrar }: PanelModalProps) {
   );
 }
 
-function PanelAjustes({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }: MenuOpcionesProps) {
+function PanelAjustes({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }: Pick<MenuOpcionesProps, "umbralDesbalanceFasesPct" | "setUmbralDesbalanceFasesPct">) {
   const parrafo: CSSProperties = { color: colores.textDim, fontSize: 12.5, lineHeight: 1.5, margin: "0 0 12px 0" };
   return (
     <div>

@@ -1,18 +1,19 @@
 import { colores, fuentes } from "../styles/colores.ts";
-import MenuOpciones from "./MenuOpciones";
+import MenuOpciones, { type PropsCuenta } from "./MenuOpciones.tsx";
 
-interface HeaderProps {
+interface HeaderProps extends PropsCuenta {
   umbralDesbalanceFasesPct: number;
   setUmbralDesbalanceFasesPct: (valor: number | string) => void;
 }
 
-export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct }: HeaderProps) {
+export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPct, ...propsCuenta }: HeaderProps) {
   return (
     <div style={{ position: "relative", borderBottom: `1px solid ${colores.border}`, padding: "20px 24px" }}>
       <div style={{ position: "absolute", top: 16, right: 24 }}>
         <MenuOpciones
           umbralDesbalanceFasesPct={umbralDesbalanceFasesPct}
           setUmbralDesbalanceFasesPct={setUmbralDesbalanceFasesPct}
+          {...propsCuenta}
         />
       </div>
       <div style={{ paddingRight: 44 }}>

@@ -11,7 +11,7 @@ import { rectificarImagen } from "../shared/utils/rectificarImagen.ts";
 import type { Circuito, Equipo } from "../modules/validacion/tipos.ts";
 import type { Tablero, FuenteEnergia, Transformador } from "../core/services/DataProvider.ts";
 import type { Diferencial } from "../modules/diferencial/tipos.ts";
-import type { ProyectoMeta } from "../modules/persistencia/tipos.ts";
+import type { ProyectoMeta, DatosSerializarProyecto, ProyectoSerializado } from "../modules/persistencia/tipos.ts";
 import type { NodoDiagrama, ConexionDiagrama } from "../modules/diagrama/tipos.ts";
 import type {
   NodoPlano,
@@ -1939,12 +1939,12 @@ export function useCircuitos() {
   }
 
   // --- PROYECTO ---
-  // Guarda como .pdf (usuario, 2026-11-22: "quiero que el empaquetado...
-  // guarde en PDF en vez de json") — App.guardarProyecto ahora arma el
-  // PDF (ficha legible + datos completos incrustados, ver
-  // modules/persistencia/pdf.ts), por eso esta función es async.
-  async function guardarProyecto() {
-    const datosProyecto = {
+  // Mismo objeto que necesitan guardarProyecto/guardarProyectoComoJson/
+  // guardarProyectoEnNube — extraído a una función compartida al
+  // agregar la 3ra copia (guarda en la nube, ver useCuenta.ts) en vez
+  // de duplicarlo otra vez.
+  function armarDatosProyecto(): DatosSerializarProyecto {
+    return {
       proyecto,
       normativaActiva,
       tipoInstalacion,
@@ -1967,8 +1967,15 @@ export function useCircuitos() {
         marcadoresEquipo: marcadoresEquipoPlano,
       },
     };
+  }
+
+  // Guarda como .pdf (usuario, 2026-11-22: "quiero que el empaquetado...
+  // guarde en PDF en vez de json") — App.guardarProyecto ahora arma el
+  // PDF (ficha legible + datos completos incrustados, ver
+  // modules/persistencia/pdf.ts), por eso esta función es async.
+  async function guardarProyecto() {
     try {
-      const nombre = await App.guardarProyecto(datosProyecto);
+      const nombre = await App.guardarProyecto(armarDatosProyecto());
       setAvisoArchivo(`Guardado como ${nombre}`);
     } catch (err) {
       setAvisoArchivo(`No se pudo guardar: ${err instanceof Error ? err.message : String(err)}`);
@@ -1979,67 +1986,50 @@ export function useCircuitos() {
   // Guardar como .json sigue disponible (botón secundario en
   // BarraProyecto) para quien prefiera el formato de siempre.
   function guardarProyectoComoJson() {
-    const nombre = App.guardarProyectoComoJson({
-      proyecto,
-      normativaActiva,
-      tipoInstalacion,
-      circuitos,
-      equipos,
-      tableros,
-      fuentesEnergia,
-      transformadores,
-      diferenciales,
-      nodosDiagrama,
-      conexionesDiagrama,
-      plano: {
-        imagen: planoImagen,
-        calibracion: planoCalibracion,
-        alturaTechoM: alturaTechoPlanoM,
-        nodos: nodosPlano,
-        segmentos: segmentosPlano,
-        habitaciones: habitacionesPlano,
-        rutasConductor: rutasConductorPlano,
-        marcadoresEquipo: marcadoresEquipoPlano,
-      },
-    });
+    const nombre = App.guardarProyectoComoJson(armarDatosProyecto());
     setAvisoArchivo(`Guardado como ${nombre}`);
     setTimeout(() => setAvisoArchivo(""), 4000);
   }
 
+  // Vuelca un proyecto ya deserializado (de un archivo local O del
+  // backend, ver useCuenta.ts) sobre el estado de la app — extraído de
+  // abrirProyecto para no duplicarlo al agregar "abrir desde la nube".
+  function aplicarProyectoCargado(cargado: ProyectoSerializado): void {
+    setProyecto(cargado.proyecto);
+    setNormativaActivaBase(cargado.normativaActiva);
+    setTipoInstalacion(cargado.tipoInstalacion ?? TIPO_INSTALACION_POR_DEFECTO);
+    setCircuitos(cargado.circuitos);
+    setEquipos(cargado.equipos);
+    // modules/persistencia/tipos.ts tipa Tablero/FuenteEnergia/
+    // Transformador/Diferencial con los stubs MÍNIMOS de
+    // modules/validacion/tipos.ts (solo lo que persistencia
+    // necesita para empaquetar/desempaquetar, ver su nota de
+    // cabecera) — en runtime, un proyecto ya guardado SÍ trae la
+    // entidad completa (la misma forma que crearTablero/etc.
+    // producen). Mismo cruce de límite que ya resuelven los
+    // mediators con un cast justificado (ARCHITECTURE.md §11).
+    setTableros((cargado.tableros ?? []) as unknown as Tablero[]);
+    setFuentesEnergia((cargado.fuentesEnergia ?? []) as unknown as FuenteEnergia[]);
+    setTransformadores((cargado.transformadores ?? []) as unknown as Transformador[]);
+    setDiferenciales((cargado.diferenciales ?? []) as unknown as Diferencial[]);
+    setNodosDiagrama((cargado.nodosDiagrama ?? []) as NodoDiagrama[]);
+    setConexionesDiagrama((cargado.conexionesDiagrama ?? []) as ConexionDiagrama[]);
+    setPlanoImagen((cargado.plano?.imagen ?? null) as ImagenPlano | null);
+    setPlanoCalibracion((cargado.plano?.calibracion ?? null) as CalibracionPlano | null);
+    setAlturaTechoPlanoM(cargado.plano?.alturaTechoM ?? null);
+    setNodosPlano((cargado.plano?.nodos ?? []) as NodoPlano[]);
+    setSegmentosPlano((cargado.plano?.segmentos ?? []) as SegmentoPlano[]);
+    setHabitacionesPlano((cargado.plano?.habitaciones ?? []) as HabitacionPlano[]);
+    setRutasConductorPlano((cargado.plano?.rutasConductor ?? []) as RutaConductorPlano[]);
+    setMarcadoresEquipoPlano((cargado.plano?.marcadoresEquipo ?? []) as MarcadorEquipoPlano[]);
+    setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
+    setAvisoArchivo(`Proyecto "${cargado.proyecto.nombre}" cargado.`);
+    setTimeout(() => setAvisoArchivo(""), 5000);
+  }
+
   function abrirProyecto(archivo: File): void {
     App.abrirProyecto(archivo)
-      .then((cargado) => {
-        setProyecto(cargado.proyecto);
-        setNormativaActivaBase(cargado.normativaActiva);
-        setTipoInstalacion(cargado.tipoInstalacion ?? TIPO_INSTALACION_POR_DEFECTO);
-        setCircuitos(cargado.circuitos);
-        setEquipos(cargado.equipos);
-        // modules/persistencia/tipos.ts tipa Tablero/FuenteEnergia/
-        // Transformador/Diferencial con los stubs MÍNIMOS de
-        // modules/validacion/tipos.ts (solo lo que persistencia
-        // necesita para empaquetar/desempaquetar, ver su nota de
-        // cabecera) — en runtime, un proyecto ya guardado SÍ trae la
-        // entidad completa (la misma forma que crearTablero/etc.
-        // producen). Mismo cruce de límite que ya resuelven los
-        // mediators con un cast justificado (ARCHITECTURE.md §11).
-        setTableros((cargado.tableros ?? []) as unknown as Tablero[]);
-        setFuentesEnergia((cargado.fuentesEnergia ?? []) as unknown as FuenteEnergia[]);
-        setTransformadores((cargado.transformadores ?? []) as unknown as Transformador[]);
-        setDiferenciales((cargado.diferenciales ?? []) as unknown as Diferencial[]);
-        setNodosDiagrama((cargado.nodosDiagrama ?? []) as NodoDiagrama[]);
-        setConexionesDiagrama((cargado.conexionesDiagrama ?? []) as ConexionDiagrama[]);
-        setPlanoImagen((cargado.plano?.imagen ?? null) as ImagenPlano | null);
-        setPlanoCalibracion((cargado.plano?.calibracion ?? null) as CalibracionPlano | null);
-        setAlturaTechoPlanoM(cargado.plano?.alturaTechoM ?? null);
-        setNodosPlano((cargado.plano?.nodos ?? []) as NodoPlano[]);
-        setSegmentosPlano((cargado.plano?.segmentos ?? []) as SegmentoPlano[]);
-        setHabitacionesPlano((cargado.plano?.habitaciones ?? []) as HabitacionPlano[]);
-        setRutasConductorPlano((cargado.plano?.rutasConductor ?? []) as RutaConductorPlano[]);
-        setMarcadoresEquipoPlano((cargado.plano?.marcadoresEquipo ?? []) as MarcadorEquipoPlano[]);
-        setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
-        setAvisoArchivo(`Proyecto "${cargado.proyecto.nombre}" cargado.`);
-        setTimeout(() => setAvisoArchivo(""), 5000);
-      })
+      .then(aplicarProyectoCargado)
       .catch((err: Error) => {
         setAvisoArchivo(`No se pudo abrir el archivo: ${err.message}`);
         setTimeout(() => setAvisoArchivo(""), 5000);
@@ -2081,7 +2071,9 @@ export function useCircuitos() {
     avisoArchivo,
     guardarProyecto,
     guardarProyectoComoJson,
+    armarDatosProyecto,
     abrirProyecto,
+    aplicarProyectoCargado,
     nuevoProyecto,
     circuitos,
     equipos,
