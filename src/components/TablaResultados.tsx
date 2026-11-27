@@ -1,18 +1,26 @@
-import React from "react";
-import { colores, fuentes } from "../styles/colores";
-import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
+import { colores, fuentes } from "../styles/colores.ts";
+import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas, type Linea } from "../shared/utils/lineasFases.ts";
+import type { Circuito, Equipo } from "../modules/validacion/tipos.ts";
+import type { ResultadoCircuito } from "../modules/motor/index.ts";
+import type { Tablero } from "../core/services/DataProvider.ts";
+import type { Diferencial } from "../modules/diferencial/tipos.ts";
+import type { Entrada } from "../modules/validacion/index.ts";
+import type { Fases } from "../modules/normativa/tipos.ts";
+import type { useCircuitos } from "../hooks/useCircuitos.ts";
 
-function redondearMostrar(valor) {
+type RetornoHook = ReturnType<typeof useCircuitos>;
+
+function redondearMostrar(valor: number): number {
   return Math.round(valor * 10) / 10;
 }
 
 // Combina severidad eléctrica ("ok"/error de r) con severidad de
 // integridad referencial (entrada de listaIntegridad para este
 // circuito) — el peor de los dos gana el color del punto.
-function estadoCombinado(r, entradaIntegridad) {
+function estadoCombinado(r: ResultadoCircuito | undefined, entradaIntegridad: Entrada | undefined): "ok" | "warn" | "error" {
   const rango = { ok: 0, warn: 1, error: 2 };
-  const elEctrico = !r?.ok ? "error" : r?.advertencias?.length ? "warn" : "ok";
-  const integridad = entradaIntegridad
+  const elEctrico: "ok" | "warn" | "error" = !r?.ok ? "error" : r?.advertencias?.length ? "warn" : "ok";
+  const integridad: "ok" | "warn" | "error" = entradaIntegridad
     ? entradaIntegridad.estado === "error"
       ? "error"
       : entradaIntegridad.estado === "advertencia"
@@ -27,10 +35,16 @@ function estadoCombinado(r, entradaIntegridad) {
 // Solo tiene sentido si el tablero tiene más de una línea (bi/tri); un
 // tablero mono no tiene nada que elegir, así que el llamador ni
 // renderiza esto en ese caso.
-function SelectorLineasCircuito({ circuito, tablero, onAsignarLineas }) {
-  const disponibles = lineasDisponiblesDeTablero(tablero.fases);
-  const requeridas = lineasRequeridas(circuito.fases, disponibles);
-  const actuales = circuito.lineas ?? [];
+interface SelectorLineasCircuitoProps {
+  circuito: Circuito;
+  tablero: Tablero;
+  onAsignarLineas: (circuitoId: string, lineas: unknown) => void;
+}
+
+function SelectorLineasCircuito({ circuito, tablero, onAsignarLineas }: SelectorLineasCircuitoProps) {
+  const disponibles = lineasDisponiblesDeTablero(tablero.fases as Fases);
+  const requeridas = lineasRequeridas(circuito.fases as Fases, disponibles);
+  const actuales = (circuito.lineas ?? []) as Linea[];
   const completo = actuales.length === requeridas;
 
   if (circuito.fases === "tri" && requeridas === disponibles.length) {
@@ -90,6 +104,29 @@ function SelectorLineasCircuito({ circuito, tablero, onAsignarLineas }) {
   );
 }
 
+interface TablaResultadosProps {
+  circuitos: Circuito[];
+  resultados: ResultadoCircuito[];
+  equiposDe: (circuitoId: string) => Equipo[];
+  circuitoActivoId: string | null;
+  onSeleccionarCircuito: (id: string | null) => void;
+  onEditarCircuito: (id: string) => void;
+  onEliminarCircuito: (id: string) => void;
+  onEditarEquipo: (id: string) => void;
+  onEliminarEquipo: (id: string) => void;
+  tableros?: Tablero[];
+  onAsignarTablero?: (circuitoId: string, tableroId: string | null) => void;
+  onAsignarLineas?: (circuitoId: string, lineas: unknown) => void;
+  diferenciales?: Diferencial[];
+  onAsignarDiferencial?: (circuitoId: string, diferencialId: string | null) => void;
+  listaIntegridad?: Entrada[];
+  desincronizacionRutas?: RetornoHook["desincronizacionRutas"];
+  advertenciasGFCI?: RetornoHook["advertenciasGFCI"];
+  advertenciasAFCI?: RetornoHook["advertenciasAFCI"];
+  advertenciasVolumenBano?: RetornoHook["advertenciasVolumenBano"];
+  advertenciasDiferencialREBT?: RetornoHook["advertenciasDiferencialREBT"];
+}
+
 export default function TablaResultados({
   circuitos,
   resultados,
@@ -111,7 +148,7 @@ export default function TablaResultados({
   advertenciasAFCI = [],
   advertenciasVolumenBano = [],
   advertenciasDiferencialREBT = [],
-}) {
+}: TablaResultadosProps) {
   if (circuitos.length === 0) {
     return (
       <div style={{ background: colores.panel, border: `1px solid ${colores.border}`, borderRadius: 4, padding: 24, textAlign: "center", color: colores.textDim, fontSize: 13 }}>
@@ -259,9 +296,9 @@ export default function TablaResultados({
                   );
                 })()}
 
-                {(r?.advertencias?.length > 0 || entradaIntegridad?.problemas?.length > 0 || desincronizacion || faltaAFCI || faltaDiferencial) && (
+                {((r?.ok && r.advertencias.length > 0) || (entradaIntegridad && entradaIntegridad.problemas.length > 0) || desincronizacion || faltaAFCI || faltaDiferencial) && (
                   <div style={{ padding: "0 14px 10px 14px" }}>
-                    {r?.advertencias?.map((a, i) => (
+                    {r?.ok && r.advertencias.map((a: string, i: number) => (
                       <div key={`e${i}`} style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }}>
                         <span>⚠</span> <span>{a}</span>
                       </div>
@@ -288,13 +325,13 @@ export default function TablaResultados({
                       </div>
                     )}
                     {faltaAFCI && (
-                      <div style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaAFCI.motivo}>
+                      <div style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaAFCI.motivo ?? undefined}>
                         <span>⚡</span>{" "}
                         <span>Requiere protección AFCI ({faltaAFCI.motivo}) y no está marcada — ver "Protegido por AFCI" al editar el circuito.</span>
                       </div>
                     )}
                     {faltaDiferencial && (
-                      <div style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaDiferencial.motivo}>
+                      <div style={{ color: colores.warn, fontSize: 11.5, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaDiferencial.motivo ?? undefined}>
                         <span>⚡</span>{" "}
                         <span>{faltaDiferencial.motivo} — asignale un Diferencial con el selector de abajo.</span>
                       </div>
@@ -324,14 +361,14 @@ export default function TablaResultados({
                             ×
                           </button>
                           {faltaGFCI && (
-                            <div style={{ width: "100%", color: colores.warn, fontSize: 11, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaGFCI.motivo}>
+                            <div style={{ width: "100%", color: colores.warn, fontSize: 11, display: "flex", gap: 6, alignItems: "flex-start" }} title={faltaGFCI.motivo ?? undefined}>
                               <span>⚡</span> <span>Requiere protección GFCI ({faltaGFCI.motivo}) y no está marcada — ver "Protegido por GFCI" al editar el equipo.</span>
                             </div>
                           )}
                           {volumenBano && (
                             <div
                               style={{ width: "100%", color: volumenBano.nivel === "error" ? colores.error : colores.warn, fontSize: 11, display: "flex", gap: 6, alignItems: "flex-start" }}
-                              title={volumenBano.motivo}
+                              title={volumenBano.motivo ?? undefined}
                             >
                               <span>🛁</span>{" "}
                               <span>
