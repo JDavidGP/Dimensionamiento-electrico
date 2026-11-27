@@ -71,6 +71,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     nodos = [],
     segmentos = [],
     marcadoresEquipo = [],
+    etiquetaCircuitoPorMarcadorId = {},
     habitaciones = [],
     habitacionResaltadaId = null,
     escalaMetrosPorPixel,
@@ -736,6 +737,38 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                     <circle cx={tamano / 2} cy={tamano / 2} r={tamano / 2 + 3 / transformVista.zoom} fill={colores.panel} opacity={0.85} />
                     <SimboloDiagrama tipo={marcador.tipo} x={0} y={0} size={tamano} color={colorDeEquipo(marcador.tipo)} />
                   </g>
+                );
+              })}
+
+              {/* ID del circuito junto a cada equipo real (usuario,
+                  2026-11-27: "en el plano solo se observará
+                  tomacorrientes, puntos de luces con sus interruptores
+                  y motores... el ID señala qué equipo o circuito se
+                  encuentra vinculado") — ya resuelto en
+                  PlanoInteligente.jsx (etiquetaCircuitoPorMarcadorId);
+                  este componente solo lo dibuja, nunca resuelve nada de
+                  circuitos/equipos por su cuenta (sigue sin conocer esos
+                  dominios, mismo criterio de siempre). Capa aparte (no
+                  dentro del <g> del marcador) para que quede SIEMPRE
+                  legible encima del símbolo, sin heredar su transform. */}
+              {marcadoresEquipo.map((marcador) => {
+                const etiqueta = etiquetaCircuitoPorMarcadorId[marcador.id];
+                if (!etiqueta) return null;
+                const p = px(marcador.punto);
+                const tamano = tamanoMarcadorPx(escalaMetrosPorPixel, transformVista.zoom);
+                return (
+                  <text
+                    key={`circuito-${marcador.id}`}
+                    x={p.x}
+                    y={p.y + tamano / 2 + 11 / transformVista.zoom}
+                    textAnchor="middle"
+                    fontSize={9.5 / transformVista.zoom}
+                    fontWeight="bold"
+                    fill={colores.copper}
+                    pointerEvents="none"
+                  >
+                    {etiqueta}
+                  </text>
                 );
               })}
 

@@ -229,6 +229,45 @@ export default function PlanoInteligente({
   // no le quita ningún comportamiento a nada que ya existiera.
   const [habitacionResaltadaId, setHabitacionResaltadaId] = useState(null);
 
+  // ID del circuito junto a cada equipo real (usuario, 2026-11-27,
+  // cerrando la discusión sobre qué símbolos merece ver un electricista
+  // en el plano: "en el plano solo se observará tomacorrientes, puntos
+  // de luces con sus interruptores y motores... el ID señala qué
+  // equipo o circuito se encuentra vinculado"). Puramente derivado —
+  // NO reemplaza ni borra el marcador "Circuito (PIA)" existente (sigue
+  // existiendo para quien ya lo colocó, "Generar circuito" lo sigue
+  // generando) — esto es información ADICIONAL sobre el marcador del
+  // equipo real, nunca un dato nuevo guardado. Solo markers cuyo tipo
+  // tiene entidadVinculada "equipo" (contacto/luminaria/motor, nunca
+  // "interruptor" suelto: no tiene forma de saber a qué circuito
+  // pertenece) + "interruptor_conmutado" (vía controlaMarcadorId, la
+  // luminaria que controla) — "puntos de luces CON SUS interruptores"
+  // explícitamente pedido así.
+  const etiquetaCircuitoPorMarcadorId = useMemo(() => {
+    function etiquetaDelEquipo(equipoId) {
+      const equipo = equipos.find((e) => e.id === equipoId);
+      const circuito = equipo?.circuitoId ? circuitos.find((c) => c.id === equipo.circuitoId) : null;
+      return circuito ? circuito.etiqueta || circuito.nombre || null : null;
+    }
+    const resultado = {};
+    for (const m of marcadoresEquipoPlano) {
+      const comp = App.plano.obtenerComponente(m.tipo);
+      if (comp?.entidadVinculada === "equipo" && m.entidadId) {
+        const etiqueta = etiquetaDelEquipo(m.entidadId);
+        if (etiqueta) resultado[m.id] = etiqueta;
+        continue;
+      }
+      if (m.tipo === "interruptor_conmutado" && m.controlaMarcadorId) {
+        const luminaria = marcadoresEquipoPlano.find((otro) => otro.id === m.controlaMarcadorId);
+        if (luminaria?.entidadId) {
+          const etiqueta = etiquetaDelEquipo(luminaria.entidadId);
+          if (etiqueta) resultado[m.id] = etiqueta;
+        }
+      }
+    }
+    return resultado;
+  }, [marcadoresEquipoPlano, equipos, circuitos]);
+
   // Modo "equipo" — tipo/nombre/entidad elegidos ANTES de hacer click
   // en el plano (el click solo define la UBICACIÓN); mismo catálogo
   // que el diagrama unifilar (ver PlanoMediator.componentesPorCategoria).
@@ -1424,6 +1463,7 @@ export default function PlanoInteligente({
           marcadoresEquipo={capasVisibles.equipos ? marcadoresEquipoPlano : []}
           habitaciones={habitacionesPlano}
           habitacionResaltadaId={habitacionResaltadaId}
+          etiquetaCircuitoPorMarcadorId={etiquetaCircuitoPorMarcadorId}
           escalaMetrosPorPixel={planoCalibracion?.escalaMetrosPorPixel ?? null}
           puntosGuiaPendientes={
             modo === "perspectiva"
