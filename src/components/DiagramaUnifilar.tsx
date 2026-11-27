@@ -1,7 +1,12 @@
-import React, { useState, useRef } from "react";
-import { colores } from "../styles/colores";
+import { useState, useRef, type CSSProperties, type MouseEvent as ReactMouseEvent, type WheelEvent } from "react";
+import { colores } from "../styles/colores.ts";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
-import { ContenidoSvgDiagrama } from "./DiagramaSvgContenido.jsx";
+import { ContenidoSvgDiagrama } from "./DiagramaSvgContenido.tsx";
+import type { NodoDiagrama, ConexionDiagrama } from "../modules/diagrama/tipos.ts";
+import type { Tablero, FuenteEnergia, Transformador } from "../core/services/DataProvider.ts";
+import type { Circuito, Equipo } from "../modules/validacion/tipos.ts";
+import type { TransformVista } from "../modules/geometria/vistaZoomPan.ts";
+import type { Punto } from "../modules/geometria/index.ts";
 
 // Editor mínimo del diagrama unifilar — Fase 3 de la spec del usuario
 // (2026-11-20, segunda ronda: "primero lo mínimo"). Símbolos dibujados
@@ -45,6 +50,28 @@ import { ContenidoSvgDiagrama } from "./DiagramaSvgContenido.jsx";
 // la topología antes de tener todos los datos reales cargados, mismo
 // criterio ya usado en fuentesEnergia/conmutación).
 
+interface DiagramaUnifilarProps {
+  nodosDiagrama: NodoDiagrama[];
+  crearNodoDiagrama: (datos: Parameters<typeof App.diagrama.crearNodo>[0]) => NodoDiagrama;
+  editarNodoDiagrama: (id: string, cambios: Parameters<typeof App.diagrama.editarNodo>[1]) => void;
+  eliminarNodoDiagrama: (id: string) => void;
+  autoorganizarDiagrama?: () => void;
+  conexionesDiagrama: ConexionDiagrama[];
+  crearConexionDiagrama: (datos: Parameters<typeof App.diagrama.crearConexionValidada>[0]) => { ok: boolean; motivo?: string; conexion?: ConexionDiagrama };
+  eliminarConexionDiagrama: (id: string | undefined) => void;
+  tableros?: Tablero[];
+  equipos?: Equipo[];
+  circuitos?: Circuito[];
+  fuentesEnergia?: FuenteEnergia[];
+  transformadores?: Transformador[];
+}
+
+interface Arrastre {
+  nodoId: string;
+  offsetX: number;
+  offsetY: number;
+}
+
 export default function DiagramaUnifilar({
   nodosDiagrama,
   crearNodoDiagrama,
@@ -59,32 +86,32 @@ export default function DiagramaUnifilar({
   circuitos = [],
   fuentesEnergia = [],
   transformadores = [],
-}) {
-  const svgRef = useRef(null);
+}: DiagramaUnifilarProps) {
+  const svgRef = useRef<SVGSVGElement>(null);
   const categorias = App.diagrama.componentesPorCategoria();
   const primeraCategoria = Object.keys(categorias)[0];
   const [tipoSeleccionado, setTipoSeleccionado] = useState(categorias[primeraCategoria]?.[0]?.id ?? "");
   const [nombreNuevoNodo, setNombreNuevoNodo] = useState("");
   const [entidadNuevoNodo, setEntidadNuevoNodo] = useState(""); // id de tablero/equipo/fuenteEnergia a vincular, o "" = sin vincular
-  const [modo, setModo] = useState("mover"); // "mover" | "conectar" | "eliminar" | "vincular"
-  const [origenPendiente, setOrigenPendiente] = useState(null);
-  const [arrastre, setArrastre] = useState(null); // {nodoId, offsetX, offsetY}
-  const [posicionesArrastre, setPosicionesArrastre] = useState({}); // nodoId -> {x,y} mientras se arrastra
+  const [modo, setModo] = useState<"mover" | "conectar" | "eliminar" | "vincular">("mover");
+  const [origenPendiente, setOrigenPendiente] = useState<string | null>(null);
+  const [arrastre, setArrastre] = useState<Arrastre | null>(null);
+  const [posicionesArrastre, setPosicionesArrastre] = useState<Record<string, Punto>>({}); // nodoId -> {x,y} mientras se arrastra
   const [aviso, setAviso] = useState("");
-  const [nodoVinculando, setNodoVinculando] = useState(null); // id del nodo cuyo vínculo se está editando
+  const [nodoVinculando, setNodoVinculando] = useState<string | null>(null); // id del nodo cuyo vínculo se está editando
   const [entidadEdicion, setEntidadEdicion] = useState("");
-  const [transformVista, setTransformVista] = useState(() => App.diagrama.transformVistaInicial());
-  const arrastreVistaRef = useRef(null); // {x,y} último punto de PANTALLA mientras se arrastra la VISTA (pan) — null = no se está arrastrando
+  const [transformVista, setTransformVista] = useState<TransformVista>(() => App.diagrama.transformVistaInicial());
+  const arrastreVistaRef = useRef<Punto | null>(null); // último punto de PANTALLA mientras se arrastra la VISTA (pan) — null = no se está arrastrando
 
   const entidadesPorRef = { tableros, equipos, fuentesEnergia, transformadores };
 
-  function mostrarAviso(texto) {
+  function mostrarAviso(texto: string): void {
     setAviso(texto);
     setTimeout(() => setAviso(""), 5000);
   }
 
   /** Nombre/contexto legible de una entidad candidata, para las listas de vínculo. */
-  function etiquetaEntidad(tipoNodo, entidad) {
+  function etiquetaEntidad(tipoNodo: string, entidad: { nombre?: string; circuitoId?: string | null }): string {
     const comp = App.diagrama.obtenerComponente(tipoNodo);
     if (comp?.entidadVinculada === "equipo") {
       const circuito = circuitos.find((c) => c.id === entidad.circuitoId);
@@ -95,12 +122,12 @@ export default function DiagramaUnifilar({
     return entidad.nombre || "(sin nombre)";
   }
 
-  function posicionPorDefecto() {
+  function posicionPorDefecto(): Punto {
     const n = nodosDiagrama.length;
     return { x: 40 + (n % 6) * 150, y: 20 + Math.floor(n / 6) * 125 };
   }
 
-  function agregarNodo() {
+  function agregarNodo(): void {
     const comp = App.diagrama.obtenerComponente(tipoSeleccionado);
     if (!comp) return;
     crearNodoDiagrama({
@@ -113,47 +140,47 @@ export default function DiagramaUnifilar({
     setEntidadNuevoNodo("");
   }
 
-  function puntoPantalla(e) {
-    const rect = svgRef.current.getBoundingClientRect();
+  function puntoPantalla(e: { clientX: number; clientY: number }): Punto {
+    const rect = svgRef.current!.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
   /** Punto del evento, YA convertido de pantalla a espacio MODELO (donde viven nodo.posicion) — divide/resta el zoom/pan actual. */
-  function coordenadasSvg(e) {
+  function coordenadasSvg(e: { clientX: number; clientY: number }): Punto {
     return App.diagrama.aModelo(puntoPantalla(e), transformVista);
   }
 
-  function posicionDe(nodo) {
-    return posicionesArrastre[nodo.id] ?? nodo.posicion;
+  function posicionDe(nodo: NodoDiagrama): Punto {
+    return (nodo.id ? posicionesArrastre[nodo.id] : undefined) ?? nodo.posicion;
   }
 
   /** Click en el LIENZO (no en un nodo — el mousedown de un nodo hace stopPropagation antes de llegar acá) — en modo "Mover", arranca el pan de la vista. */
-  function alMouseDownSvg(e) {
+  function alMouseDownSvg(e: ReactMouseEvent<SVGSVGElement>): void {
     if (modo === "mover") {
       arrastreVistaRef.current = { x: e.clientX, y: e.clientY };
     }
   }
 
-  function alWheelSvg(e) {
+  function alWheelSvg(e: WheelEvent<SVGSVGElement>): void {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
     setTransformVista((actual) => App.diagrama.aplicarZoom(actual, factor, puntoPantalla(e)));
   }
 
-  function zoomBoton(factor) {
+  function zoomBoton(factor: number): void {
     const rect = svgRef.current?.getBoundingClientRect();
     const centro = rect ? { x: rect.width / 2, y: rect.height / 2 } : { x: 0, y: 0 };
     setTransformVista((actual) => App.diagrama.aplicarZoom(actual, factor, centro));
   }
 
-  function restablecerVista() {
+  function restablecerVista(): void {
     setTransformVista(App.diagrama.transformVistaInicial());
   }
 
-  function alMouseDownNodo(e, nodo) {
+  function alMouseDownNodo(e: ReactMouseEvent, nodo: NodoDiagrama): void {
     e.stopPropagation();
     if (modo === "eliminar") {
-      eliminarNodoDiagrama(nodo.id);
+      eliminarNodoDiagrama(nodo.id!);
       if (origenPendiente === nodo.id) setOrigenPendiente(null);
       return;
     }
@@ -163,27 +190,27 @@ export default function DiagramaUnifilar({
         mostrarAviso(`"${comp?.nombre ?? nodo.tipo}" no se vincula a datos del proyecto — es un nodo puramente de diagrama.`);
         return;
       }
-      setNodoVinculando(nodo.id);
+      setNodoVinculando(nodo.id ?? null);
       setEntidadEdicion(nodo.entidadId ?? "");
       return;
     }
     if (modo === "conectar") {
       if (!origenPendiente) {
-        setOrigenPendiente(nodo.id);
+        setOrigenPendiente(nodo.id ?? null);
       } else if (origenPendiente === nodo.id) {
         setOrigenPendiente(null);
       } else {
-        const resultado = crearConexionDiagrama({ nodoOrigenId: origenPendiente, nodoDestinoId: nodo.id });
-        if (!resultado.ok) mostrarAviso(resultado.motivo);
+        const resultado = crearConexionDiagrama({ nodoOrigenId: origenPendiente, nodoDestinoId: nodo.id! });
+        if (!resultado.ok) mostrarAviso(resultado.motivo ?? "No se pudo crear la conexión.");
         setOrigenPendiente(null);
       }
       return;
     }
     const pos = coordenadasSvg(e);
-    setArrastre({ nodoId: nodo.id, offsetX: pos.x - nodo.posicion.x, offsetY: pos.y - nodo.posicion.y });
+    setArrastre({ nodoId: nodo.id!, offsetX: pos.x - nodo.posicion.x, offsetY: pos.y - nodo.posicion.y });
   }
 
-  function alMouseMoveSvg(e) {
+  function alMouseMoveSvg(e: ReactMouseEvent<SVGSVGElement>): void {
     if (arrastreVistaRef.current) {
       const dx = e.clientX - arrastreVistaRef.current.x;
       const dy = e.clientY - arrastreVistaRef.current.y;
@@ -199,7 +226,7 @@ export default function DiagramaUnifilar({
     }));
   }
 
-  function alMouseUpSvg() {
+  function alMouseUpSvg(): void {
     arrastreVistaRef.current = null;
     if (arrastre) {
       const posicionFinal = posicionesArrastre[arrastre.nodoId];
@@ -208,7 +235,7 @@ export default function DiagramaUnifilar({
     }
   }
 
-  const botonModo = (valor, label) => (
+  const botonModo = (valor: "mover" | "conectar" | "eliminar" | "vincular", label: string) => (
     <button
       type="button"
       onClick={() => {
@@ -367,7 +394,7 @@ export default function DiagramaUnifilar({
               <button
                 type="button"
                 onClick={() => {
-                  editarNodoDiagrama(nodo.id, { entidadId: entidadEdicion || null });
+                  editarNodoDiagrama(nodo.id!, { entidadId: entidadEdicion || null });
                   setNodoVinculando(null);
                 }}
                 style={{ padding: "5px 10px", borderRadius: 3, border: "none", background: colores.copper, color: colores.textSobreAcento, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
@@ -437,7 +464,7 @@ export default function DiagramaUnifilar({
   );
 }
 
-const botonZoomEstilo = {
+const botonZoomEstilo: CSSProperties = {
   width: 30,
   height: 30,
   borderRadius: 3,
