@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
+import { useState } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
 import { esArchivoPDF } from "../shared/utils/pdfARaster.ts";
 import { extraerTextoPDF } from "../shared/utils/pdfATexto.ts";
 import { extraerDeTexto, CONFIG_IA_LOCAL_DEFECTO, ErrorIALocal } from "../modules/iaLocal/ollamaClient.ts";
 import { validarExtraccion } from "../modules/iaLocal/esquema.ts";
-import { adaptarParaImportar } from "../modules/iaLocal/adaptador.ts";
+import { adaptarParaImportar, type TableroParaImportar } from "../modules/iaLocal/adaptador.ts";
 
 // Importar un proyecto real (memoria técnica / cálculo eléctrico en
 // PDF, no generado por DEC) usando una IA corriendo LOCAL en la propia
@@ -27,7 +27,7 @@ import { adaptarParaImportar } from "../modules/iaLocal/adaptador.ts";
 const CLAVE_URL = "dec-ia-local-url";
 const CLAVE_MODELO = "dec-ia-local-modelo";
 
-function leerGuardado(clave, porDefecto) {
+function leerGuardado(clave: string, porDefecto: string): string {
   try {
     return localStorage.getItem(clave) || porDefecto;
   } catch {
@@ -35,7 +35,7 @@ function leerGuardado(clave, porDefecto) {
   }
 }
 
-function guardarEnLocalStorage(clave, valor) {
+function guardarEnLocalStorage(clave: string, valor: string): void {
   try {
     localStorage.setItem(clave, valor);
   } catch {
@@ -43,30 +43,35 @@ function guardarEnLocalStorage(clave, valor) {
   }
 }
 
-export default function ImportarProyectoPDF({ onConfirmar, normativaActiva }) {
+interface ImportarProyectoPDFProps {
+  onConfirmar: (resultado: TableroParaImportar[]) => { tableros: number; circuitos: number; equipos: number };
+  normativaActiva: string;
+}
+
+export default function ImportarProyectoPDF({ onConfirmar, normativaActiva }: ImportarProyectoPDFProps) {
   const [abierto, setAbierto] = useState(false);
-  const [archivo, setArchivo] = useState(null);
+  const [archivo, setArchivo] = useState<File | null>(null);
   const [baseUrl, setBaseUrl] = useState(() => leerGuardado(CLAVE_URL, CONFIG_IA_LOCAL_DEFECTO.baseUrl));
   const [modelo, setModelo] = useState(() => leerGuardado(CLAVE_MODELO, CONFIG_IA_LOCAL_DEFECTO.modelo));
   const [cargando, setCargando] = useState(false);
   const [mensajeCargando, setMensajeCargando] = useState("");
   const [error, setError] = useState("");
-  const [avisos, setAvisos] = useState([]);
+  const [avisos, setAvisos] = useState<string[]>([]);
   const [truncado, setTruncado] = useState(false);
-  const [resultado, setResultado] = useState(null); // TableroParaImportar[] | null
+  const [resultado, setResultado] = useState<TableroParaImportar[] | null>(null);
   const [avisoFinal, setAvisoFinal] = useState("");
 
-  function actualizarUrl(valor) {
+  function actualizarUrl(valor: string): void {
     setBaseUrl(valor);
     guardarEnLocalStorage(CLAVE_URL, valor);
   }
 
-  function actualizarModelo(valor) {
+  function actualizarModelo(valor: string): void {
     setModelo(valor);
     guardarEnLocalStorage(CLAVE_MODELO, valor);
   }
 
-  async function analizar() {
+  async function analizar(): Promise<void> {
     if (!archivo) return;
     setError("");
     setResultado(null);
@@ -101,7 +106,7 @@ export default function ImportarProyectoPDF({ onConfirmar, normativaActiva }) {
       if (e instanceof ErrorIALocal) {
         setError(e.message);
       } else {
-        setError(`Error inesperado: ${e.message || e}`);
+        setError(`Error inesperado: ${e instanceof Error ? e.message : String(e)}`);
       }
     } finally {
       setCargando(false);
@@ -109,9 +114,9 @@ export default function ImportarProyectoPDF({ onConfirmar, normativaActiva }) {
     }
   }
 
-  function alternarCircuito(indiceTablero, indiceCircuito) {
+  function alternarCircuito(indiceTablero: number, indiceCircuito: number): void {
     setResultado((prev) =>
-      prev.map((t, i) =>
+      (prev ?? []).map((t, i) =>
         i !== indiceTablero
           ? t
           : {
@@ -122,7 +127,8 @@ export default function ImportarProyectoPDF({ onConfirmar, normativaActiva }) {
     );
   }
 
-  function confirmar() {
+  function confirmar(): void {
+    if (!resultado) return;
     const totalCircuitos = resultado.reduce((acc, t) => acc + t.circuitos.filter((c) => c.incluir && c.valido).length, 0);
     const conteo = onConfirmar(resultado);
     setAvisoFinal(`Importado${conteo.tableros === 1 ? "" : "s"}: ${conteo.tableros} tablero${conteo.tableros === 1 ? "" : "s"}, ${conteo.circuitos} circuito${conteo.circuitos === 1 ? "" : "s"}.`);
