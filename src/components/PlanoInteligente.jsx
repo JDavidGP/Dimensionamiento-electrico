@@ -271,7 +271,7 @@ export default function PlanoInteligente({
   // Modo "equipo" — tipo/nombre/entidad elegidos ANTES de hacer click
   // en el plano (el click solo define la UBICACIÓN); mismo catálogo
   // que el diagrama unifilar (ver PlanoMediator.componentesPorCategoria).
-  const categoriasEquipo = App.plano.componentesPorCategoria();
+  const categoriasEquipo = App.plano.componentesPorCategoriaPlano();
   const primeraCategoriaEquipo = Object.keys(categoriasEquipo)[0];
   const [tipoEquipoSeleccionado, setTipoEquipoSeleccionado] = useState(categoriasEquipo[primeraCategoriaEquipo]?.[0]?.id ?? "");
   const [nombreEquipoNuevo, setNombreEquipoNuevo] = useState("");

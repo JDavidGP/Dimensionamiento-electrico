@@ -57,12 +57,27 @@ await page.waitForTimeout(200);
 
 await page.getByRole("button", { name: "Colocar equipo", exact: true }).click();
 await page.waitForTimeout(150);
+// Tipo explícito (usuario, 2026-11-27, "Colocar equipo" filtrado a los
+// tipos que un electricista ubica en un plano real — ver
+// componentesPorCategoriaPlano, bibliotecaComponentes.js): el tipo
+// DEFAULT de la primera categoría cambió con ese filtro (antes
+// "Acometida", de la categoría "fuente", ya excluida del Plano) —
+// elegirlo a mano en vez de confiar en cuál sea el default es lo
+// robusto de acá en adelante, sin importar cómo cambie el orden del
+// catálogo después.
+const toolbarEquipo = page.locator("select", { hasText: "¿Equipo ya ingresado?" }).locator("xpath=..");
+await toolbarEquipo.locator("select").nth(1).selectOption("contacto");
 p = await puntoPantallaDesdeImagen({ x: 300, y: 300 });
 await page.mouse.click(p.x, p.y);
 await page.waitForTimeout(300);
 
 // --- 3. El símbolo escala con el zoom (0.3m de presentación / 0.0125 m/px = 24px al zoom inicial) ---
-const circuloMarcador = page.locator("svg circle").last();
+// El PRIMER <circle> (no el último): PlanoCanvas.jsx dibuja el círculo
+// de fondo del marcador ANTES que su símbolo (SimboloDiagrama) dentro
+// del mismo <g> — algunos símbolos (ej. "Contacto") traen sus PROPIOS
+// círculos internos, que quedarían DESPUÉS en el documento y por eso
+// "último" dejó de ser confiable al cambiar de tipo de marcador.
+const circuloMarcador = page.locator("svg circle").first();
 const boxInicial = await circuloMarcador.boundingBox();
 assert(boxInicial.width > 14 && boxInicial.width < 48, `El tamaño cae en el rango de presentación esperado (real: ${boxInicial.width.toFixed(1)}px)`);
 

@@ -87,6 +87,15 @@ export const CATALOGO_COMPONENTES = [
   // usuario y el concepto no aporta nada a la topología eléctrica que
   // ese diagrama representa.
   { id: "caja_empalme", nombre: "Caja de empalme", categoria: "distribucion", puntosConexion: { entradas: Infinity, salidas: Infinity }, entidadVinculada: null, soloPlano: true },
+  // Puesta a tierra — usuario, 2026-11-27, cerrando la lista de lo
+  // esencial que un electricista necesita ver en el Plano ("tablero o
+  // tableros eléctricos, puesta a tierra que se me olvidó, caja de
+  // empalme, toma corriente y los puntos de luz con sus interruptores").
+  // Igual criterio que "Caja de empalme"/"Fuente de agua": puramente
+  // físico (sin carga, sin breaker), nunca se vincula a ninguna
+  // entidad — `soloPlano` a propósito, no aporta nada a la topología
+  // eléctrica del Diagrama unifilar.
+  { id: "puesta_tierra", nombre: "Puesta a tierra", categoria: "distribucion", puntosConexion: { entradas: 1, salidas: 0 }, entidadVinculada: null, soloPlano: true },
   // Fuente de agua (bañera/ducha) — usuario, 2026-11-26, continuando
   // REBT ITC-BT-27 (volúmenes de seguridad del baño): referencia
   // puramente física (sin carga, sin breaker, nunca se vincula a una
@@ -165,6 +174,55 @@ export function componentesPorCategoriaDiagrama() {
   const mapa = {};
   for (const c of CATALOGO_COMPONENTES) {
     if (c.soloPlano) continue;
+    (mapa[c.categoria] ??= []).push(c);
+  }
+  return mapa;
+}
+
+// "Colocar equipo" en el Plano (usuario, 2026-11-27, cerrando la
+// discusión sobre qué símbolos merece ver un electricista: "en el
+// plano solo se observará tomacorrientes, puntos de luces con sus
+// interruptores y motores" + la lista final — tablero, puesta a
+// tierra, caja de empalme, tomacorriente, puntos de luz con sus
+// interruptores — más motor/carga especial, confirmados aparte como
+// "también merecen símbolo" para instalaciones más grandes). El
+// catálogo completo (25 símbolos) sigue existiendo tal cual — solo
+// pensado para el Diagrama unifilar (topología eléctrica: medidor,
+// PLC, relé, contactor, bobina, sensor, transformador, generador,
+// etc., cosas que casi nunca se ubican físicamente en un plano de
+// planta) — un selector de "Colocar equipo" con esos 25 tipos
+// abrumaba la tarea real de ubicar un tomacorriente o una luz. Esta
+// lista es un WHITELIST explícito, no un criterio derivado (a
+// diferencia de `soloPlano`, que separa por "sirve al Diagrama o no")
+// — incluye los `soloPlano` YA existentes (caja_empalme, fuente_agua,
+// circuito, diferencial) que siguen siendo relevantes acá, más los
+// tipos de carga/distribución físicos que un electricista sí ubica a
+// mano. NO borra ni deja de reconocer ningún tipo del catálogo — un
+// marcador YA colocado de un tipo fuera de esta lista (de una ronda
+// anterior) sigue dibujándose normal, esto solo filtra qué se OFRECE
+// al colocar uno nuevo.
+const IDS_PLANO_EQUIPO = new Set([
+  "tablero_electrico",
+  "puesta_tierra",
+  "caja_empalme",
+  "fuente_agua",
+  "circuito",
+  "diferencial",
+  "contacto",
+  "interruptor",
+  "interruptor_conmutado",
+  "luminaria",
+  "luminaria_conmutada",
+  "luminaria_cascada",
+  "motor",
+  "carga_especial",
+]);
+
+/** Igual que componentesPorCategoria(), pero acotado a los tipos que un electricista de verdad ubica en un plano de planta — ver IDS_PLANO_EQUIPO arriba. Para "Colocar equipo" del Plano; el Diagrama unifilar sigue usando componentesPorCategoriaDiagrama (el catálogo completo, sin los `soloPlano`). */
+export function componentesPorCategoriaPlano() {
+  const mapa = {};
+  for (const c of CATALOGO_COMPONENTES) {
+    if (!IDS_PLANO_EQUIPO.has(c.id)) continue;
     (mapa[c.categoria] ??= []).push(c);
   }
   return mapa;

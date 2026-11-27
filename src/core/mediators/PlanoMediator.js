@@ -88,7 +88,7 @@ import {
   puntoConAnguloSnapeado,
   SNAP_ANGULO_TOLERANCIA_GRADOS,
 } from "../../modules/geometria/index.ts";
-import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria } from "../../shared/data/bibliotecaComponentes.js";
+import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria, componentesPorCategoriaPlano } from "../../shared/data/bibliotecaComponentes.js";
 import { OrigenMediator } from "./OrigenMediator.js";
 
 export const PlanoMediator = {
@@ -230,6 +230,7 @@ export const PlanoMediator = {
   CATEGORIAS_COMPONENTE,
   obtenerComponente,
   componentesPorCategoria,
+  componentesPorCategoriaPlano,
 
   crearMarcadorEquipo,
   editarMarcadorEquipo,
