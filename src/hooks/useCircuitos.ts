@@ -8,24 +8,69 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../shared/constants/constantes.ts";
 import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.ts";
 import { rectificarImagen } from "../shared/utils/rectificarImagen.ts";
+import type { Circuito, Equipo } from "../modules/validacion/tipos.ts";
+import type { Tablero, FuenteEnergia, Transformador } from "../core/services/DataProvider.ts";
+import type { Diferencial } from "../modules/diferencial/tipos.ts";
+import type { ProyectoMeta } from "../modules/persistencia/tipos.ts";
+import type { NodoDiagrama, ConexionDiagrama } from "../modules/diagrama/tipos.ts";
+import type {
+  NodoPlano,
+  SegmentoPlano,
+  TipoSegmento,
+  HabitacionPlano,
+  RutaConductorPlano,
+  EntidadVinculadaRuta,
+  MarcadorEquipoPlano,
+  CalibracionPlano,
+  Punto,
+} from "../modules/plano/tipos.ts";
+import type { CajaAABB } from "../modules/plano/enganchePuzzle.ts";
+import type { TipoAmbiente } from "../modules/plano/tipoAmbiente.ts";
+import type { FormularioCircuito, FormularioEquipo } from "../modules/validacion/formularios.ts";
+import type { Fases } from "../modules/normativa/tipos.ts";
+import type { FilaImportacion } from "../core/mediators/ImportacionMediator.ts";
+import type { TableroParaImportar } from "../modules/iaLocal/adaptador.ts";
+import type { DatosTablero } from "../modules/tablero/tipos.ts";
+import type { DatosFuenteEnergia } from "../modules/origen/tipos.ts";
+import type { DatosDiferencial } from "../modules/diferencial/tipos.ts";
+import type { ContextoInstalacionCircuito } from "../modules/motor/index.ts";
+import type { NodoConId } from "../modules/diagrama/index.ts";
 
-const { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } = App.data.tablas.plantillas();
+const { CIRCUITO_VACIO, EQUIPO_VACIO } = App.data.tablas.plantillas();
+
+/** Imagen cargada del Plano (foto/PDF rasterizado/sintética) — ver cargarImagenPlano/crearPlanoSinImagen. */
+export interface ImagenPlano {
+  dataUrl: string;
+  anchoPx: number;
+  altoPx: number;
+  nombreArchivo: string;
+  paginasTotal?: number;
+}
+
+/** Un punto de la pila de deshacer del Plano — snapshot de las 5 piezas de estado que "Deshacer" puede revertir. Ver guardarPuntoDeshacerPlano. */
+interface PuntoDeshacerPlano {
+  nodosPlano: NodoPlano[];
+  segmentosPlano: SegmentoPlano[];
+  habitacionesPlano: HabitacionPlano[];
+  rutasConductorPlano: RutaConductorPlano[];
+  marcadoresEquipoPlano: MarcadorEquipoPlano[];
+}
 
 export function useCircuitos() {
-  const [proyecto, setProyecto] = useState(() => App.nuevoProyecto());
+  const [proyecto, setProyecto] = useState<ProyectoMeta>(() => App.nuevoProyecto());
   const [avisoArchivo, setAvisoArchivo] = useState("");
-  const [circuitos, setCircuitos] = useState([]);
-  const [equipos, setEquipos] = useState([]);
-  const [tableros, setTableros] = useState([]);
-  const [fuentesEnergia, setFuentesEnergia] = useState([]);
-  const [transformadores, setTransformadores] = useState([]);
+  const [circuitos, setCircuitos] = useState<Circuito[]>([]);
+  const [equipos, setEquipos] = useState<Equipo[]>([]);
+  const [tableros, setTableros] = useState<Tablero[]>([]);
+  const [fuentesEnergia, setFuentesEnergia] = useState<FuenteEnergia[]>([]);
+  const [transformadores, setTransformadores] = useState<Transformador[]>([]);
   // Diferencial (ID) — REBT ITC-BT-25, agrupa hasta MAX_CIRCUITOS_POR_DIFERENCIAL
   // circuitos (ver modules/diferencial/index.ts). Mismo patrón exacto
   // que transformadores/fuentesEnergia: array plano propio, el circuito
   // guarda `diferencialId` (FK opcional).
-  const [diferenciales, setDiferenciales] = useState([]);
-  const [nodosDiagrama, setNodosDiagrama] = useState([]);
-  const [conexionesDiagrama, setConexionesDiagrama] = useState([]);
+  const [diferenciales, setDiferenciales] = useState<Diferencial[]>([]);
+  const [nodosDiagrama, setNodosDiagrama] = useState<NodoDiagrama[]>([]);
+  const [conexionesDiagrama, setConexionesDiagrama] = useState<ConexionDiagrama[]>([]);
   // --- Plano inteligente (Fase 1, 2026-11-20) — ver
   // PLANO_INTELIGENTE_DISENO.md. `planoImagen`/`planoCalibracion` son
   // metadatos del archivo cargado y del escalar metros/píxel;
@@ -35,8 +80,8 @@ export function useCircuitos() {
   // a mano). El `transformVista` (zoom/pan) NO vive acá — es estado
   // efímero de PlanoInteligente.jsx, nunca se persiste como parte del
   // cálculo (ver el diseño, §1 y §4).
-  const [planoImagen, setPlanoImagen] = useState(null);
-  const [planoCalibracion, setPlanoCalibracion] = useState(null);
+  const [planoImagen, setPlanoImagen] = useState<ImagenPlano | null>(null);
+  const [planoCalibracion, setPlanoCalibracion] = useState<CalibracionPlano | null>(null);
   // Altura de techo general del plano (piso a viga corona/encofrado),
   // en metros — usuario, 2026-11-25: dato real distinto del ancho/largo
   // en planta, útil para el tramo vertical del conductor hacia tomas e
@@ -44,10 +89,10 @@ export function useCircuitos() {
   // captura del dato). null = no capturada todavía. Cada ambiente puede
   // override-ar esto con su propio HabitacionPlano.alturaM si necesita
   // una altura distinta (ver editarAlturaHabitacionPlano).
-  const [alturaTechoPlanoM, setAlturaTechoPlanoM] = useState(null);
-  const [nodosPlano, setNodosPlano] = useState([]);
-  const [segmentosPlano, setSegmentosPlano] = useState([]);
-  const [habitacionesPlano, setHabitacionesPlano] = useState([]);
+  const [alturaTechoPlanoM, setAlturaTechoPlanoM] = useState<number | null>(null);
+  const [nodosPlano, setNodosPlano] = useState<NodoPlano[]>([]);
+  const [segmentosPlano, setSegmentosPlano] = useState<SegmentoPlano[]>([]);
+  const [habitacionesPlano, setHabitacionesPlano] = useState<HabitacionPlano[]>([]);
   // --- Rutas de conductor + equipos en el plano (2026-11-20) — ver nota
   // de arquitectura en modules/plano/index.js. `rutasConductorPlano`
   // reusa el MISMO grafo nodosPlano/segmentosPlano (los tramos de ruta
@@ -56,25 +101,25 @@ export function useCircuitos() {
   // `marcadoresEquipoPlano` son puntos independientes del grafo (no son
   // nodos ni paredes) — mismo catálogo de tipos que el diagrama
   // unifilar (ver PlanoMediator.CATALOGO_COMPONENTES).
-  const [rutasConductorPlano, setRutasConductorPlano] = useState([]);
-  const [marcadoresEquipoPlano, setMarcadoresEquipoPlano] = useState([]);
-  const [normativaActiva, setNormativaActivaBase] = useState(
+  const [rutasConductorPlano, setRutasConductorPlano] = useState<RutaConductorPlano[]>([]);
+  const [marcadoresEquipoPlano, setMarcadoresEquipoPlano] = useState<MarcadorEquipoPlano[]>([]);
+  const [normativaActiva, setNormativaActivaBase] = useState<string>(
     App.config.normativaPorDefecto
   );
   // Tipo de instalación (domiciliaria/industrial) — elegido junto con
   // la normativa (ver SelectorNormativa.jsx). Por ahora es puramente
   // informativo: no filtra ni agrega equipos/tablas todavía — ver la
   // nota de investigación NEC/REBT en shared/constants/constantes.ts.
-  const [tipoInstalacion, setTipoInstalacion] = useState(TIPO_INSTALACION_POR_DEFECTO);
+  const [tipoInstalacion, setTipoInstalacion] = useState<string>(TIPO_INSTALACION_POR_DEFECTO);
 
   // Umbral de desbalance de fases — vive como estado de React (no solo
   // en Config) para que cambiarlo desde Ajustes dispare un re-render.
   // Arranca igual al default de Config; al cambiarlo, también se
   // actualiza Config.limites para quien lo lea fuera de este hook.
-  const [umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPctBase] = useState(
+  const [umbralDesbalanceFasesPct, setUmbralDesbalanceFasesPctBase] = useState<number>(
     App.config.limites.desbalanceFasesPct
   );
-  function setUmbralDesbalanceFasesPct(valor) {
+  function setUmbralDesbalanceFasesPct(valor: number | string): void {
     const num = Number(valor);
     if (!(num > 0)) return; // ignora valores inválidos, no rompe el estado
     setUmbralDesbalanceFasesPctBase(num);
@@ -87,14 +132,14 @@ export function useCircuitos() {
   // que la primera sugerencia siempre es "C1"/"E1" — correcto, pero
   // calculado vía el mediador (no hardcodeado) para no duplicar la
   // lógica de modules/etiquetado/index.js.
-  const [formCircuito, setFormCircuito] = useState(() => ({ ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, []) }));
+  const [formCircuito, setFormCircuito] = useState<FormularioCircuito>(() => ({ ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, []) }));
   const [errorCircuito, setErrorCircuito] = useState("");
-  const [editandoCircuitoId, setEditandoCircuitoId] = useState(null);
-  const [circuitoActivoId, setCircuitoActivoId] = useState(null);
+  const [editandoCircuitoId, setEditandoCircuitoId] = useState<string | null>(null);
+  const [circuitoActivoId, setCircuitoActivoId] = useState<string | null>(null);
 
-  const [formEquipo, setFormEquipo] = useState(() => ({ ...EQUIPO_VACIO, etiqueta: App.etiquetado.sugerirEquipo(null, []) }));
+  const [formEquipo, setFormEquipo] = useState<FormularioEquipo>(() => ({ ...EQUIPO_VACIO, etiqueta: App.etiquetado.sugerirEquipo(null, []) }));
   const [errorEquipo, setErrorEquipo] = useState("");
-  const [editandoEquipoId, setEditandoEquipoId] = useState(null);
+  const [editandoEquipoId, setEditandoEquipoId] = useState<string | null>(null);
 
   // Usuario, 2026-11-21 (REBT ITC-BT-19 §2.2.2): contexto de
   // instalación por circuito — tipoInstalacion + si la cadena de
@@ -103,7 +148,7 @@ export function useCircuitos() {
   // el límite de caída de tensión; NEC/CIEN lo ignoran por su cuenta
   // (ver Normativa.limiteCaidaTensionTramoPct, undefined para ellas).
   const contextoPorCircuitoId = useMemo(() => {
-    const mapa = {};
+    const mapa: Record<string, ContextoInstalacionCircuito> = {};
     circuitos.forEach((c) => {
       mapa[c.id] = {
         tipoInstalacion,
@@ -163,7 +208,7 @@ export function useCircuitos() {
   // para siempre y su calibre/breaker nunca se veía — no dispara el
   // motor en cadena: usa los `resultados` de circuitos ya calculados.
   const alimentadores = useMemo(() => {
-    const mapa = {};
+    const mapa: Record<string, ReturnType<typeof App.tablero.calcularAlimentadorAgregado>> = {};
     tableros.forEach((t) => {
       mapa[t.id] = App.tablero.calcularAlimentadorAgregado(t.id, {
         tableros,
@@ -211,27 +256,36 @@ export function useCircuitos() {
         tipoInstalacion,
       });
 
-      if (!acumulada.aplica || acumulada.noDeterminado) return r;
+      if (!acumulada.aplica || acumulada.ok) {
+        if (acumulada.aplica && acumulada.ok && acumulada.excede) {
+          return {
+            ...r,
+            advertencias: [
+              ...r.advertencias,
+              `Caída de tensión ACUMULADA ${acumulada.totalPct.toFixed(2)}% supera el ${acumulada.limitePct}% provisional, calculada sobre ${acumulada.cantidadTramos} tramos (circuito + ${acumulada.cantidadTableros} tablero${acumulada.cantidadTableros !== 1 ? "s" : ""}).`,
+            ],
+          };
+        }
+        return r;
+      }
 
-      if (acumulada.ciclo || acumulada.tramoFallido) {
+      // acumulada.ok === false acá: 3 variantes (ciclo/noDeterminado/
+      // tramoFallido), cada una con su propia bandera — no un
+      // discriminante compartido, se distingue con "in" (ver nota de
+      // TableroMediator.caidaAcumuladaDesdeCircuito sobre el contrato de retorno).
+      if ("noDeterminado" in acumulada) return r;
+
+      if ("ciclo" in acumulada || "tramoFallido" in acumulada) {
         return {
           ...r,
           advertencias: [
             ...r.advertencias,
-            `Caída de tensión acumulada NO se pudo determinar: ${acumulada.error ?? acumulada.motivo}`,
+            `Caída de tensión acumulada NO se pudo determinar: ${"ciclo" in acumulada ? acumulada.error : acumulada.motivo}`,
           ],
         };
       }
 
-      if (!acumulada.excede) return r;
-
-      return {
-        ...r,
-        advertencias: [
-          ...r.advertencias,
-          `Caída de tensión ACUMULADA ${acumulada.totalPct.toFixed(2)}% supera el ${acumulada.limitePct}% provisional, calculada sobre ${acumulada.cantidadTramos} tramos (circuito + ${acumulada.cantidadTableros} tablero${acumulada.cantidadTableros !== 1 ? "s" : ""}).`,
-        ],
-      };
+      return r;
     });
   }, [resultados, circuitos, tableros, normativaActiva, equipos, fuentesEnergia, transformadores, tipoInstalacion]);
 
@@ -262,14 +316,24 @@ export function useCircuitos() {
   // cabecera) — mismo criterio que alimentadores/balancesFases arriba.
   const desincronizacionRutas = useMemo(() => {
     const segmentosPared = segmentosPlano.filter((s) => s.tipo === "pared");
-    const resultado = [];
+    const resultado: { entidadId: string; entidadTipo: EntidadVinculadaRuta; rutaNombre: string; valorActual: number; valorEsperado: number }[] = [];
     for (const ruta of rutasConductorPlano) {
       if (!ruta.entidadId || !ruta.entidadTipo) continue;
-      const entidad =
-        ruta.entidadTipo === "circuito" ? circuitos.find((c) => c.id === ruta.entidadId) : tableros.find((t) => t.id === ruta.entidadId);
-      if (!entidad) continue;
-      const valorActual = ruta.entidadTipo === "circuito" ? entidad.distancia : entidad.longitudAlimentador;
-      if (valorActual == null || valorActual === "") continue;
+      // Union Circuito|Tablero sin discriminante compartido — se
+      // resuelve el valor acá mismo, por rama, en vez de guardar un
+      // `entidad` combinado que TS no puede volver a angostar con un
+      // segundo ternario sobre la misma condición.
+      let valorActual: number | undefined;
+      if (ruta.entidadTipo === "circuito") {
+        const circuito = circuitos.find((c) => c.id === ruta.entidadId);
+        if (!circuito) continue;
+        valorActual = circuito.distancia;
+      } else {
+        const tablero = tableros.find((t) => t.id === ruta.entidadId);
+        if (!tablero) continue;
+        valorActual = tablero.longitudAlimentador;
+      }
+      if (valorActual == null) continue;
       const { longitudTotalConAlturaM } = App.plano.calcularLongitudEsperadaRuta(
         ruta,
         nodosPlano,
@@ -420,28 +484,28 @@ export function useCircuitos() {
   }, [normativaActiva, circuitos]);
 
   const detalleElectrico = useCallback(
-    (id) =>
+    (id: string) =>
       App.validacion.detalleElectrico(id, {
         proyecto,
         circuitos,
         equipos,
         normativaId: normativaActiva,
-        resultadoCalculo: resultados.find((r) => r.id === id) || null,
+        resultadoCalculo: resultados.find((r) => r.id === id) || undefined,
       }),
     [proyecto, circuitos, equipos, resultados, normativaActiva]
   );
 
-  function setNormativaActiva(id) {
+  function setNormativaActiva(id: string): void {
     setNormativaActivaBase(id);
     if (!formCircuito.voltajeManual) {
-      const voltajes = App.normativa.voltajesPorFase(id, formCircuito.fases);
+      const voltajes = App.normativa.voltajesPorFase(id, formCircuito.fases as Fases);
       if (voltajes[0] !== undefined) {
         setFormCircuito((f) => ({ ...f, voltaje: String(voltajes[0]) }));
       }
     }
   }
 
-  function cambiarFasesCircuito(nuevaFase) {
+  function cambiarFasesCircuito(nuevaFase: Fases): void {
     const voltajes = App.normativa.voltajesPorFase(normativaActiva, nuevaFase);
     setFormCircuito({
       ...formCircuito,
@@ -465,16 +529,19 @@ export function useCircuitos() {
     return { ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, circuitos) };
   }
 
-  function guardarCircuito() {
+  function guardarCircuito(): void {
     const error = App.validacion.validarFormularioCircuito(formCircuito);
-    if (error) return setErrorCircuito(error);
+    if (error) {
+      setErrorCircuito(error);
+      return;
+    }
     setErrorCircuito("");
     const circuito = App.validacion.formularioACircuito(
       formCircuito,
       editandoCircuitoId
     );
 
-    let circuitosActualizados;
+    let circuitosActualizados: Circuito[];
     if (editandoCircuitoId) {
       circuitosActualizados = circuitos.map((c) => (c.id === editandoCircuitoId ? circuito : c));
       setCircuitos(circuitosActualizados);
@@ -496,7 +563,7 @@ export function useCircuitos() {
     setFormCircuito({ ...CIRCUITO_VACIO, etiqueta: App.etiquetado.sugerirCircuito(null, circuitosActualizados) });
   }
 
-  function iniciarEdicionCircuito(id) {
+  function iniciarEdicionCircuito(id: string): void {
     const circuito = circuitos.find((c) => c.id === id);
     if (!circuito) return;
     setFormCircuito(App.validacion.circuitoAFormulario(circuito));
@@ -510,7 +577,7 @@ export function useCircuitos() {
     setErrorCircuito("");
   }
 
-  function eliminarCircuito(id) {
+  function eliminarCircuito(id: string): void {
     // Los equipos de este circuito se eliminan en cascada — y con ellos,
     // los nodos del diagrama que los representaban quedan desvinculados
     // (mismo criterio que eliminarEquipo, no queda ningún entidadId muerto).
@@ -549,7 +616,7 @@ export function useCircuitos() {
   // los campos eléctricos). Pensada para Directorio.jsx (árbol plegable
   // editable, pedido explícito del usuario 2026-11-20) — misma idea que
   // editarTablero, que ya patcheaba directo.
-  function editarEtiquetaFuncionCircuito(id, { nombre, etiqueta, funcion } = {}) {
+  function editarEtiquetaFuncionCircuito(id: string, { nombre, etiqueta, funcion }: { nombre?: string; etiqueta?: string; funcion?: string } = {}): void {
     setCircuitos(
       circuitos.map((c) =>
         c.id === id ? { ...c, nombre: nombre ?? c.nombre, etiqueta: etiqueta ?? c.etiqueta, funcion: funcion ?? c.funcion } : c
@@ -570,18 +637,22 @@ export function useCircuitos() {
   // refleja en este mismo closure (React no actualiza el estado hasta
   // el próximo render), así que sin este parámetro la sugerencia del
   // equipo se calcularía contra el circuito activo VIEJO.
-  function formEquipoVacioConSugerencia(equiposActuales, circuitoIdActual = circuitoActivoId, circuitosActuales = circuitos) {
+  function formEquipoVacioConSugerencia(equiposActuales: Equipo[], circuitoIdActual: string | null = circuitoActivoId, circuitosActuales: Circuito[] = circuitos): FormularioEquipo {
     const circuito = circuitosActuales.find((c) => c.id === circuitoIdActual);
     const equiposDelCircuito = equiposActuales.filter((e) => e.circuitoId === circuitoIdActual);
     return { ...EQUIPO_VACIO, etiqueta: App.etiquetado.sugerirEquipo(circuito?.etiqueta, equiposDelCircuito) };
   }
 
-  function guardarEquipo() {
+  function guardarEquipo(): void {
     if (!circuitoActivoId) {
-      return setErrorEquipo("Primero crea o selecciona un circuito.");
+      setErrorEquipo("Primero crea o selecciona un circuito.");
+      return;
     }
     const error = App.validacion.validarFormularioEquipo(formEquipo);
-    if (error) return setErrorEquipo(error);
+    if (error) {
+      setErrorEquipo(error);
+      return;
+    }
     setErrorEquipo("");
     const equipo = App.validacion.formularioAEquipo(
       formEquipo,
@@ -589,7 +660,7 @@ export function useCircuitos() {
       editandoEquipoId
     );
 
-    let equiposActualizados;
+    let equiposActualizados: Equipo[];
     if (editandoEquipoId) {
       equiposActualizados = equipos.map((e) => (e.id === editandoEquipoId ? equipo : e));
       setEquipos(equiposActualizados);
@@ -601,22 +672,22 @@ export function useCircuitos() {
     setFormEquipo(formEquipoVacioConSugerencia(equiposActualizados));
   }
 
-  function iniciarEdicionEquipo(id) {
+  function iniciarEdicionEquipo(id: string): void {
     const equipo = equipos.find((e) => e.id === id);
     if (!equipo) return;
     setFormEquipo(App.validacion.equipoAFormulario(equipo));
     setEditandoEquipoId(id);
-    setCircuitoActivoId(equipo.circuitoId);
+    setCircuitoActivoId(equipo.circuitoId ?? null);
     setErrorEquipo("");
   }
 
-  function cancelarEdicionEquipo() {
+  function cancelarEdicionEquipo(): void {
     setFormEquipo(formEquipoVacioConSugerencia(equipos));
     setEditandoEquipoId(null);
     setErrorEquipo("");
   }
 
-  function eliminarEquipo(id) {
+  function eliminarEquipo(id: string): void {
     // Desvincula (no borra) los nodos del diagrama que representaban este equipo.
     setNodosDiagrama(App.diagrama.liberarNodosDeEntidad(id, nodosDiagrama));
     // Idem para su marcador del plano — ver nota en eliminarCircuito.
@@ -626,7 +697,7 @@ export function useCircuitos() {
   }
 
   // Mismo criterio que editarEtiquetaFuncionCircuito — ver esa nota.
-  function editarEtiquetaFuncionEquipo(id, { nombre, etiqueta, funcion } = {}) {
+  function editarEtiquetaFuncionEquipo(id: string, { nombre, etiqueta, funcion }: { nombre?: string; etiqueta?: string; funcion?: string } = {}): void {
     setEquipos(
       equipos.map((e) =>
         e.id === id ? { ...e, nombre: nombre ?? e.nombre, etiqueta: etiqueta ?? e.etiqueta, funcion: funcion ?? e.funcion } : e
@@ -647,7 +718,7 @@ export function useCircuitos() {
   // circuito, no es un camino de cálculo aparte) — igual que un
   // circuito tipeado a mano, sin tablero asignado todavía (el usuario
   // lo asigna después, como cualquier circuito nuevo).
-  function crearCircuitoIluminacionGeneral(areaM2, normativaActiva) {
+  function crearCircuitoIluminacionGeneral(areaM2: number, normativaActiva: string) {
     const normativa = App.normativa.obtener(normativaActiva);
     const vaPorM2 = normativa.cargaIluminacionGeneralVaPorM2;
     if (!vaPorM2 || !(areaM2 > 0)) return null;
@@ -670,7 +741,7 @@ export function useCircuitos() {
       nombre: "Carga general de iluminación (NEC 220.12)",
       funcion: `Área construida: ${areaM2} m² × ${vaPorM2} VA/m²`,
       cantidad: "1",
-      modoEntrada: "potencia",
+      modoEntrada: "potencia" as const,
       valor: String(va),
       tipoEquipoNEC: "ILUMINACION_GENERAL",
     };
@@ -688,7 +759,7 @@ export function useCircuitos() {
   // (ver ImportacionMediator para el porqué completo). No es un
   // camino de cálculo nuevo: reusa la misma validación/fábrica que el
   // formulario manual, línea por línea.
-  function previsualizarImportacionEquipos(texto) {
+  function previsualizarImportacionEquipos(texto: string) {
     return App.importacion.previsualizar(texto, circuitos);
   }
 
@@ -706,19 +777,19 @@ export function useCircuitos() {
   // armó a mano. Sin tablero asignado, el equipo queda sin nodo (no
   // hay de dónde colgarlo) — la advertencia de integridad existente ya
   // avisa de eso, no hace falta inventar nada acá.
-  function confirmarImportacionEquipos(filasPrevisualizadas) {
+  function confirmarImportacionEquipos(filasPrevisualizadas: FilaImportacion[]): number {
     const nuevos = filasPrevisualizadas.filter((f) => f.ok).map((f) => f.equipo);
     if (nuevos.length === 0) return 0;
 
-    const nodosAcumulados = [...nodosDiagrama];
-    const conexionesAcumuladas = [...conexionesDiagrama];
+    const nodosAcumulados: NodoDiagrama[] = [...nodosDiagrama];
+    const conexionesAcumuladas: ConexionDiagrama[] = [...conexionesDiagrama];
 
-    function conectar(origenId, destinoId) {
+    function conectar(origenId: string, destinoId: string): void {
       const resultado = App.diagrama.crearConexionValidada({ nodoOrigenId: origenId, nodoDestinoId: destinoId }, nodosAcumulados, conexionesAcumuladas);
       if (resultado.ok) conexionesAcumuladas.push(resultado.conexion);
     }
 
-    function nodoDeTablero(tableroId) {
+    function nodoDeTablero(tableroId: string): NodoDiagrama | null {
       const existente = nodosAcumulados.find((n) => n.tipo === "tablero_electrico" && n.entidadId === tableroId);
       if (existente) return existente;
       const tablero = tableros.find((t) => t.id === tableroId);
@@ -727,7 +798,10 @@ export function useCircuitos() {
       nodosAcumulados.push(nodo);
       const nodoAcometida = App.diagrama.crearNodo({ tipo: "acometida", nombre: "Red eléctrica local" });
       nodosAcumulados.push(nodoAcometida);
-      conectar(nodoAcometida.id, nodo.id);
+      // `.id` no-null: NodoDiagrama.id es opcional en el tipo (también describe
+      // datos PRE-creación, ver modules/diagrama/tipos.ts) pero crearNodo() lo
+      // asigna siempre vía generarId() — estos dos nodos recién creados sí lo tienen.
+      conectar(nodoAcometida.id!, nodo.id!);
       return nodo;
     }
 
@@ -738,19 +812,22 @@ export function useCircuitos() {
       if (!nodoTablero) return;
       const nodoEquipo = App.diagrama.crearNodo({ tipo: App.diagrama.elegirSimboloEquipo(equipo), nombre: equipo.nombre, entidadId: equipo.id });
       nodosAcumulados.push(nodoEquipo);
-      conectar(nodoTablero.id, nodoEquipo.id);
+      conectar(nodoTablero.id!, nodoEquipo.id!);
     });
 
     setEquipos([...equipos, ...nuevos]);
     if (nodosAcumulados.length > nodosDiagrama.length) {
-      const posiciones = App.diagrama.autoorganizar(nodosAcumulados, conexionesAcumuladas);
-      setNodosDiagrama(nodosAcumulados.map((n) => (posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
+      // .id siempre presente en la práctica (crearNodo() lo asigna
+      // siempre) — el tipo lo deja opcional porque también describe
+      // datos PRE-creación (ver modules/diagrama/tipos.ts).
+      const posiciones = App.diagrama.autoorganizar(nodosAcumulados as unknown as NodoConId[], conexionesAcumuladas);
+      setNodosDiagrama(nodosAcumulados.map((n) => (n.id && posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
       setConexionesDiagrama(conexionesAcumuladas);
     }
     return nuevos.length;
   }
 
-  function equiposDe(circuitoId) {
+  function equiposDe(circuitoId: string): Equipo[] {
     return equipos.filter((e) => e.circuitoId === circuitoId);
   }
 
@@ -779,31 +856,36 @@ export function useCircuitos() {
   // cardinalidad que si lo armaras a mano arrastrando símbolos — por
   // eso el nombre del nodo vinculado queda "vivo" (sigue el de la
   // entidad real) sin código extra.
-  function confirmarImportacionProyectoPDF(tablerosParaImportar) {
-    const nuevosTableros = [];
-    const nuevosCircuitos = [];
-    const nuevosEquipos = [];
-    const nodosAcumulados = [...nodosDiagrama];
-    const conexionesAcumuladas = [...conexionesDiagrama];
+  function confirmarImportacionProyectoPDF(tablerosParaImportar: TableroParaImportar[]) {
+    const nuevosTableros: Tablero[] = [];
+    const nuevosCircuitos: Circuito[] = [];
+    const nuevosEquipos: Equipo[] = [];
+    const nodosAcumulados: NodoDiagrama[] = [...nodosDiagrama];
+    const conexionesAcumuladas: ConexionDiagrama[] = [...conexionesDiagrama];
 
-    function agregarNodo(datos) {
+    function agregarNodo(datos: Parameters<typeof App.diagrama.crearNodo>[0]): NodoDiagrama {
       const nodo = App.diagrama.crearNodo(datos);
       nodosAcumulados.push(nodo);
       return nodo;
     }
 
-    function conectar(origenId, destinoId) {
+    function conectar(origenId: string, destinoId: string): void {
       const resultado = App.diagrama.crearConexionValidada({ nodoOrigenId: origenId, nodoDestinoId: destinoId }, nodosAcumulados, conexionesAcumuladas);
       if (resultado.ok) conexionesAcumuladas.push(resultado.conexion);
     }
 
     tablerosParaImportar.forEach((t) => {
-      const tablero = App.tablero.crear(t.datos);
+      // t.datos tiene forma de FORMULARIO (todo texto, ver TableroParaImportar
+      // en modules/iaLocal/adaptador.ts) — crearTablero (modules/tablero/
+      // index.ts, función `normalizar`) ya tolera strings en estos campos
+      // en runtime (Number(...) || 0, .toLowerCase()), el cast solo declara
+      // esa tolerancia que el tipo DatosTablero no refleja.
+      const tablero = App.tablero.crear(t.datos as unknown as DatosTablero) as Tablero;
       nuevosTableros.push(tablero);
 
       const nodoAcometida = agregarNodo({ tipo: "acometida", nombre: "Red eléctrica local" });
       const nodoTablero = agregarNodo({ tipo: "tablero_electrico", nombre: tablero.nombre, entidadId: tablero.id });
-      conectar(nodoAcometida.id, nodoTablero.id);
+      conectar(nodoAcometida.id!, nodoTablero.id!);
 
       t.circuitos
         .filter((c) => c.incluir && c.valido)
@@ -814,7 +896,7 @@ export function useCircuitos() {
             const equipo = App.validacion.formularioAEquipo(c.equipoForm, circuito.id, null);
             nuevosEquipos.push(equipo);
             const nodoEquipo = agregarNodo({ tipo: App.diagrama.elegirSimboloEquipo(equipo), nombre: equipo.nombre, entidadId: equipo.id });
-            conectar(nodoTablero.id, nodoEquipo.id);
+            conectar(nodoTablero.id!, nodoEquipo.id!);
           }
         });
     });
@@ -822,8 +904,8 @@ export function useCircuitos() {
     if (nuevosTableros.length > 0) setTableros([...tableros, ...nuevosTableros]);
     if (nuevosCircuitos.length > 0) setCircuitos([...circuitos, ...nuevosCircuitos]);
     if (nodosAcumulados.length > nodosDiagrama.length) {
-      const posiciones = App.diagrama.autoorganizar(nodosAcumulados, conexionesAcumuladas);
-      setNodosDiagrama(nodosAcumulados.map((n) => (posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
+      const posiciones = App.diagrama.autoorganizar(nodosAcumulados as unknown as NodoConId[], conexionesAcumuladas);
+      setNodosDiagrama(nodosAcumulados.map((n) => (n.id && posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
       setConexionesDiagrama(conexionesAcumuladas);
     }
     if (nuevosEquipos.length > 0) setEquipos([...equipos, ...nuevosEquipos]);
@@ -832,20 +914,25 @@ export function useCircuitos() {
   }
 
   // --- TABLERO (Fase 3 dato relacional + Fase 4 alimentador) ---
-  function crearTablero(datos) {
-    const tablero = App.tablero.crear(datos);
+  // Cast justificado: modules/tablero/index.ts declara su Tablero con
+  // `id?: string` (también describe datos PRE-creación), pero crear()/
+  // editar() siempre devuelven uno YA creado (id asignado por
+  // generarId()) — el Tablero canónico de DataProvider.ts (id
+  // obligatorio) es el que usa el resto del hook/UI, ver ConIdObligatorio.
+  function crearTablero(datos: DatosTablero): Tablero {
+    const tablero = App.tablero.crear(datos) as Tablero;
     setTableros([...tableros, tablero]);
     return tablero;
   }
 
-  function editarTablero(id, cambios) {
+  function editarTablero(id: string, cambios: DatosTablero): void {
     const tablero = tableros.find((t) => t.id === id);
     if (!tablero) return;
-    const actualizado = App.tablero.editar(tablero, cambios);
+    const actualizado = App.tablero.editar(tablero, cambios) as Tablero;
     setTableros(tableros.map((t) => (t.id === id ? actualizado : t)));
   }
 
-  function eliminarTablero(id) {
+  function eliminarTablero(id: string): void {
     // Libera los circuitos que le pertenecían (no los borra, no quedan
     // apuntando a un ID muerto) y los nodos del diagrama que lo
     // representaban (idem, desvinculados, no borrados) y recién
@@ -865,26 +952,26 @@ export function useCircuitos() {
   // de la instalación, no por fuente aislada: tras crear/editar, se
   // limpia de cualquier otra fuente que lo tuviera, para que nunca haya
   // dos con el mismo rol (ver limpiarRolDuplicado en fuentesEnergia.js).
-  function crearFuenteEnergia(datos) {
-    const fuente = App.origen.crearFuente(datos);
-    const lista = App.origen.limpiarRolDuplicado([...fuentesEnergia, fuente], fuente.id, fuente.rol);
-    setFuentesEnergia(lista);
+  function crearFuenteEnergia(datos: DatosFuenteEnergia): FuenteEnergia {
+    const fuente = App.origen.crearFuente(datos) as FuenteEnergia;
+    const lista = App.origen.limpiarRolDuplicado([...fuentesEnergia, fuente], fuente.id!, fuente.rol);
+    setFuentesEnergia(lista as FuenteEnergia[]);
     return fuente;
   }
 
-  function editarFuenteEnergia(id, cambios) {
+  function editarFuenteEnergia(id: string, cambios: DatosFuenteEnergia): void {
     const fuente = fuentesEnergia.find((f) => f.id === id);
     if (!fuente) return;
-    const actualizada = App.origen.editarFuente(fuente, cambios);
+    const actualizada = App.origen.editarFuente(fuente, cambios) as FuenteEnergia;
     const lista = App.origen.limpiarRolDuplicado(
       fuentesEnergia.map((f) => (f.id === id ? actualizada : f)),
       id,
       actualizada.rol
     );
-    setFuentesEnergia(lista);
+    setFuentesEnergia(lista as FuenteEnergia[]);
   }
 
-  function eliminarFuenteEnergia(id) {
+  function eliminarFuenteEnergia(id: string): void {
     // Libera (no rompe) los tableros que la tenían como origen y los
     // nodos del diagrama que la representaban.
     setTableros(App.origen.liberarTableros(id, tableros));
@@ -896,8 +983,8 @@ export function useCircuitos() {
 
   // --- TRANSFORMADOR (origen alternativo de un tablero, solo instalaciones
   // industriales — ver tipoInstalacion arriba) ---
-  function crearTransformador(datos) {
-    const transformador = App.origen.crearTransformador(datos);
+  function crearTransformador(datos: Partial<Transformador>): Transformador {
+    const transformador = App.origen.crearTransformador(datos) as Transformador;
     setTransformadores([...transformadores, transformador]);
     return transformador;
   }
@@ -908,14 +995,14 @@ export function useCircuitos() {
   // modules/motor/transformador.js, expuesta en OrigenMediator), solo
   // faltaba conectarla al hook y a una UI con lista propia
   // (PanelTransformadores.jsx).
-  function editarTransformador(id, cambios) {
+  function editarTransformador(id: string, cambios: Partial<Transformador>): void {
     const transformador = transformadores.find((t) => t.id === id);
     if (!transformador) return;
-    const actualizado = App.origen.editarTransformador(transformador, cambios);
+    const actualizado = App.origen.editarTransformador(transformador, cambios) as Transformador;
     setTransformadores(transformadores.map((t) => (t.id === id ? actualizado : t)));
   }
 
-  function eliminarTransformador(id) {
+  function eliminarTransformador(id: string): void {
     // Libera (no rompe) los tableros que lo tenían como origen y los
     // nodos del diagrama que lo representaban — igual criterio que
     // eliminarFuenteEnergia.
@@ -927,20 +1014,20 @@ export function useCircuitos() {
   }
 
   // --- DIFERENCIAL (ID, REBT ITC-BT-25 — agrupa hasta 5 circuitos) ---
-  function crearDiferencial(datos) {
+  function crearDiferencial(datos: DatosDiferencial): Diferencial {
     const diferencial = App.diferencial.crear(datos);
     setDiferenciales([...diferenciales, diferencial]);
     return diferencial;
   }
 
-  function editarDiferencial(id, cambios) {
+  function editarDiferencial(id: string, cambios: DatosDiferencial): void {
     const diferencial = diferenciales.find((d) => d.id === id);
     if (!diferencial) return;
     const actualizado = App.diferencial.editar(diferencial, cambios);
     setDiferenciales(diferenciales.map((d) => (d.id === id ? actualizado : d)));
   }
 
-  function eliminarDiferencial(id) {
+  function eliminarDiferencial(id: string): void {
     // Libera (no rompe) los circuitos que agrupaba — mismo criterio que
     // eliminarTablero/eliminarFuenteEnergia/eliminarTransformador. Un
     // diferencial no tiene nodo propio en el diagrama (soloPlano, ver
@@ -950,7 +1037,7 @@ export function useCircuitos() {
     setDiferenciales(diferenciales.filter((d) => d.id !== id));
   }
 
-  function asignarCircuitoADiferencial(circuitoId, diferencialId) {
+  function asignarCircuitoADiferencial(circuitoId: string, diferencialId: string | null): void {
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return;
     const actualizado = App.diferencial.asignar(circuito, diferencialId);
@@ -958,64 +1045,64 @@ export function useCircuitos() {
   }
 
   // --- DIAGRAMA UNIFILAR (Fase 1: modelo de datos — nodos y conexiones) ---
-  function crearNodoDiagrama(datos) {
+  function crearNodoDiagrama(datos: Parameters<typeof App.diagrama.crearNodo>[0]): NodoDiagrama {
     const nodo = App.diagrama.crearNodo(datos);
     setNodosDiagrama([...nodosDiagrama, nodo]);
     return nodo;
   }
 
-  function editarNodoDiagrama(id, cambios) {
+  function editarNodoDiagrama(id: string, cambios: Parameters<typeof App.diagrama.editarNodo>[1]): void {
     const nodo = nodosDiagrama.find((n) => n.id === id);
     if (!nodo) return;
     const actualizado = App.diagrama.editarNodo(nodo, cambios);
     setNodosDiagrama(nodosDiagrama.map((n) => (n.id === id ? actualizado : n)));
   }
 
-  function eliminarNodoDiagrama(id) {
+  function eliminarNodoDiagrama(id: string): void {
     // Sus conexiones se eliminan con él (no quedan apuntando a un nodo muerto).
     setConexionesDiagrama(App.diagrama.conexionesTrasEliminarNodo(id, conexionesDiagrama));
     setNodosDiagrama(nodosDiagrama.filter((n) => n.id !== id));
   }
 
   /** Reacomoda TODOS los nodos en capas según el sentido de las conexiones (usuario, 2026-11-20) — un solo update de estado, no uno por nodo. */
-  function autoorganizarDiagrama() {
-    const posiciones = App.diagrama.autoorganizar(nodosDiagrama, conexionesDiagrama);
-    setNodosDiagrama(nodosDiagrama.map((n) => (posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
+  function autoorganizarDiagrama(): void {
+    const posiciones = App.diagrama.autoorganizar(nodosDiagrama as unknown as NodoConId[], conexionesDiagrama);
+    setNodosDiagrama(nodosDiagrama.map((n) => (n.id && posiciones[n.id] ? { ...n, posicion: posiciones[n.id] } : n)));
   }
 
   // Validada contra cardinalidad (ver DiagramaMediator.crearConexionValidada)
   // antes de crearla — devuelve {ok:false, motivo} sin tocar el estado si
   // la conexión propuesta no es válida, en vez de crearla igual.
-  function crearConexionDiagrama(datos) {
+  function crearConexionDiagrama(datos: Parameters<typeof App.diagrama.crearConexionValidada>[0]) {
     const resultado = App.diagrama.crearConexionValidada(datos, nodosDiagrama, conexionesDiagrama);
     if (!resultado.ok) return resultado;
     setConexionesDiagrama([...conexionesDiagrama, resultado.conexion]);
     return resultado;
   }
 
-  function editarConexionDiagrama(id, cambios) {
+  function editarConexionDiagrama(id: string, cambios: Parameters<typeof App.diagrama.editarConexion>[1]): void {
     const conexion = conexionesDiagrama.find((c) => c.id === id);
     if (!conexion) return;
     const actualizada = App.diagrama.editarConexion(conexion, cambios);
     setConexionesDiagrama(conexionesDiagrama.map((c) => (c.id === id ? actualizada : c)));
   }
 
-  function eliminarConexionDiagrama(id) {
+  function eliminarConexionDiagrama(id: string): void {
     setConexionesDiagrama(conexionesDiagrama.filter((c) => c.id !== id));
   }
 
-  function asignarCircuitoATablero(circuitoId, tableroId) {
+  function asignarCircuitoATablero(circuitoId: string, tableroId: string | null): void {
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return;
     const actualizado = App.tablero.asignar(circuito, tableroId);
     setCircuitos(circuitos.map((c) => (c.id === circuitoId ? actualizado : c)));
   }
 
-  function circuitosDeTablero(tableroId) {
+  function circuitosDeTablero(tableroId: string): Circuito[] {
     return App.tablero.circuitosDe(tableroId, circuitos);
   }
 
-  function asignarLineasCircuito(circuitoId, lineas) {
+  function asignarLineasCircuito(circuitoId: string, lineas: unknown): void {
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return;
     const actualizado = App.tablero.asignarLineas(circuito, lineas);
@@ -1029,7 +1116,7 @@ export function useCircuitos() {
   // cambia tableros/circuitos/resultados — sin esto, useMemo no se
   // volvería a ejecutar y el umbral nuevo no se vería reflejado acá.
   const balancesFases = useMemo(() => {
-    const mapa = {};
+    const mapa: Record<string, ReturnType<typeof App.tablero.balanceFasesDeTablero>> = {};
     tableros.forEach((t) => {
       mapa[t.id] = App.tablero.balanceFasesDeTablero(t.id, {
         tableros,
@@ -1058,7 +1145,7 @@ export function useCircuitos() {
   // nodos/segmentos/habitaciones no tendrían sentido sobre un fondo
   // distinto) — mismo criterio que nuevoProyecto() limpiando el resto
   // del estado.
-  function cargarImagenPlano(archivo) {
+  function cargarImagenPlano(archivo: File): Promise<void> {
     if (esArchivoPDF(archivo)) {
       return renderizarPrimeraPaginaPDF(archivo).then((raster) => {
         setPlanoImagen({ dataUrl: raster.dataUrl, anchoPx: raster.anchoPx, altoPx: raster.altoPx, nombreArchivo: archivo.name, paginasTotal: raster.paginasTotal });
@@ -1071,12 +1158,12 @@ export function useCircuitos() {
         setMarcadoresEquipoPlano([]);
       });
     }
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const lector = new FileReader();
       lector.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          setPlanoImagen({ dataUrl: e.target.result, anchoPx: img.naturalWidth, altoPx: img.naturalHeight, nombreArchivo: archivo.name });
+          setPlanoImagen({ dataUrl: e.target!.result as string, anchoPx: img.naturalWidth, altoPx: img.naturalHeight, nombreArchivo: archivo.name });
           setPlanoCalibracion(null);
           setAlturaTechoPlanoM(null);
           setNodosPlano([]);
@@ -1087,14 +1174,14 @@ export function useCircuitos() {
           resolve();
         };
         img.onerror = () => reject(new Error("El archivo no es una imagen válida."));
-        img.src = e.target.result;
+        img.src = e.target!.result as string;
       };
       lector.onerror = () => reject(new Error("No se pudo leer el archivo."));
       lector.readAsDataURL(archivo);
     });
   }
 
-  function calibrarPlano(puntoImagenA, puntoImagenB, distanciaRealM) {
+  function calibrarPlano(puntoImagenA: Punto, puntoImagenB: Punto, distanciaRealM: number) {
     const resultado = App.plano.calcularEscala(puntoImagenA, puntoImagenB, distanciaRealM);
     if (!resultado.ok) return resultado;
     setPlanoCalibracion(resultado.calibracion);
@@ -1102,7 +1189,7 @@ export function useCircuitos() {
   }
 
   /** Calibración alternativa por perímetro total (usuario, 2026-11-20) — mismo patrón que calibrarPlano, otra fuente del escalar. */
-  function calibrarPlanoPorPerimetro(puntosImagenContorno, perimetroRealM) {
+  function calibrarPlanoPorPerimetro(puntosImagenContorno: Punto[], perimetroRealM: number) {
     const resultado = App.plano.calcularEscalaPorPerimetro(puntosImagenContorno, perimetroRealM);
     if (!resultado.ok) return resultado;
     setPlanoCalibracion(resultado.calibracion);
@@ -1162,7 +1249,7 @@ export function useCircuitos() {
   // deshacer, así que esa UNA acción visible puede necesitar deshacer
   // dos veces para revertirse del todo. Aceptable: nunca se pierde
   // nada ni se corrompe el historial, solo un click de más ocasional.
-  const historialPlanoRef = useRef([]);
+  const historialPlanoRef = useRef<PuntoDeshacerPlano[]>([]);
   const LIMITE_HISTORIAL_PLANO = 50;
   const [puedeDeshacerPlano, setPuedeDeshacerPlano] = useState(false);
 
@@ -1224,7 +1311,7 @@ export function useCircuitos() {
   // referencia) — acá no hace falta mezclarlos, un marcador nunca
   // reemplaza a un nodo real (la ruta sigue guardando `nodoIds`, no
   // `marcadorId`), solo presta su punto exacto para el nodo nuevo.
-  function agregarNodoPlano(puntoImagen, pegarAEquipo = false) {
+  function agregarNodoPlano(puntoImagen: Punto, pegarAEquipo: boolean = false): NodoPlano | null {
     if (!planoCalibracion) return null;
     const puntoModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
     const existente = App.plano.nodoCercano(puntoModelo, nodosPlanoRef.current);
@@ -1237,7 +1324,7 @@ export function useCircuitos() {
     return nodo;
   }
 
-  function agregarSegmentoPlano(nodoAId, nodoBId, tipo = "pared") {
+  function agregarSegmentoPlano(nodoAId: string, nodoBId: string, tipo: TipoSegmento = "pared"): void {
     if (nodoAId === nodoBId) return;
     const yaExiste = segmentosPlano.some(
       (s) => (s.nodoAId === nodoAId && s.nodoBId === nodoBId) || (s.nodoAId === nodoBId && s.nodoBId === nodoAId)
@@ -1247,7 +1334,7 @@ export function useCircuitos() {
     setSegmentosPlano([...segmentosPlano, App.plano.crearSegmento(nodoAId, nodoBId, tipo)]);
   }
 
-  function eliminarNodoPlano(nodoId) {
+  function eliminarNodoPlano(nodoId: string): void {
     guardarPuntoDeshacerPlano();
     const resultado = App.plano.eliminarNodo(nodoId, nodosPlano, segmentosPlano, habitacionesPlano, rutasConductorPlano);
     setNodosPlano(resultado.nodos);
@@ -1256,12 +1343,12 @@ export function useCircuitos() {
     setRutasConductorPlano(resultado.rutasConductor);
   }
 
-  function eliminarSegmentoPlano(segmentoId) {
+  function eliminarSegmentoPlano(segmentoId: string): void {
     guardarPuntoDeshacerPlano();
     setSegmentosPlano(App.plano.eliminarSegmento(segmentoId, segmentosPlano));
   }
 
-  function editarSegmentoPlano(segmentoId, cambios) {
+  function editarSegmentoPlano(segmentoId: string, cambios: Partial<SegmentoPlano>): void {
     const segmento = segmentosPlano.find((s) => s.id === segmentoId);
     if (!segmento) return;
     guardarPuntoDeshacerPlano();
@@ -1272,7 +1359,7 @@ export function useCircuitos() {
   // (el trazo volvió a su propio nodo de inicio) — ver la nota de Fase
   // 1 en modules/plano/index.js sobre por qué no es detección
   // arbitraria de ciclos.
-  function cerrarHabitacionPlano(nodoIds, nombre = "") {
+  function cerrarHabitacionPlano(nodoIds: string[], nombre: string = ""): HabitacionPlano | null {
     const habitacion = App.plano.crearHabitacion(nodoIds, nodosPlano, nombre);
     if (!habitacion) return null;
     guardarPuntoDeshacerPlano();
@@ -1293,11 +1380,11 @@ export function useCircuitos() {
   // de nodos (sin importar el orden/sentido del recorrido) — nunca
   // crea un duplicado de un ambiente que el usuario ya cerró a mano o
   // ya detectó antes. Devuelve cuántos ambientes NUEVOS se agregaron.
-  function detectarAmbientesPlano() {
+  function detectarAmbientesPlano(): number {
     const caras = App.plano.detectarCaras(nodosPlano, segmentosPlano);
-    const clave = (nodoIds) => [...nodoIds].sort().join(",");
+    const clave = (nodoIds: string[]) => [...nodoIds].sort().join(",");
     const existentes = new Set(habitacionesPlano.map((h) => clave(h.nodoIds)));
-    const nuevas = [];
+    const nuevas: HabitacionPlano[] = [];
     for (const cara of caras) {
       const k = clave(cara.nodoIds);
       if (existentes.has(k)) continue;
@@ -1311,12 +1398,12 @@ export function useCircuitos() {
     return nuevas.length;
   }
 
-  function eliminarHabitacionPlano(habitacionId) {
+  function eliminarHabitacionPlano(habitacionId: string): void {
     guardarPuntoDeshacerPlano();
     setHabitacionesPlano(habitacionesPlano.filter((h) => h.id !== habitacionId));
   }
 
-  function renombrarHabitacionPlano(habitacionId, nombre) {
+  function renombrarHabitacionPlano(habitacionId: string, nombre: string): void {
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, nombre: nombre.trim() || "Ambiente sin nombre" } : h)));
   }
 
@@ -1324,7 +1411,7 @@ export function useCircuitos() {
   // El guard es `>= 0` (no `> 0`) a propósito: un 0 de paso mientras se
   // tipea un decimal (ej. "0" antes de "0.5") no debe rechazarse, nada
   // calcula todavía con este valor así que no hay riesgo real.
-  function editarAlturaHabitacionPlano(habitacionId, alturaTexto) {
+  function editarAlturaHabitacionPlano(habitacionId: string, alturaTexto: string | number): void {
     const texto = String(alturaTexto).trim();
     if (texto === "") {
       setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, alturaM: null } : h)));
@@ -1339,7 +1426,7 @@ export function useCircuitos() {
   // jerarquía nueva de terreno/edificación (ver la nota en tipos.ts).
   // Un equipo colocado adentro hereda la condición al leerla (ver
   // habitacionQueContiene), no se copia a cada marcador.
-  function editarExteriorHabitacionPlano(habitacionId, exterior) {
+  function editarExteriorHabitacionPlano(habitacionId: string, exterior: boolean): void {
     guardarPuntoDeshacerPlano();
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, exterior: Boolean(exterior) } : h)));
   }
@@ -1347,12 +1434,12 @@ export function useCircuitos() {
   // Tipo de ambiente (baño/cocina/garaje/...) — usuario, 2026-11-25/26,
   // para saber dónde exige GFCI el NEC (ver modules/plano/proteccionGFCI.ts
   // y advertenciasGFCI más abajo). Mismo criterio que editarExteriorHabitacionPlano.
-  function editarTipoAmbienteHabitacionPlano(habitacionId, tipoAmbiente) {
+  function editarTipoAmbienteHabitacionPlano(habitacionId: string, tipoAmbiente: TipoAmbiente): void {
     guardarPuntoDeshacerPlano();
     setHabitacionesPlano(habitacionesPlano.map((h) => (h.id === habitacionId ? { ...h, tipoAmbiente } : h)));
   }
 
-  function establecerAlturaTechoPlano(alturaTexto) {
+  function establecerAlturaTechoPlano(alturaTexto: string | number): void {
     const texto = String(alturaTexto).trim();
     if (texto === "") {
       setAlturaTechoPlanoM(null);
@@ -1370,11 +1457,11 @@ export function useCircuitos() {
   // larga en modules/plano/index.js). `puntoImagen` sigue el mismo
   // contrato que agregarNodoPlano: ya viene en espacio imagen, se
   // convierte acá con la calibración vigente.
-  function generarHabitacionPlano(puntoImagen, nombre, anchoM, altoM) {
+  function generarHabitacionPlano(puntoImagen: Punto, nombre: string, anchoM: number, altoM: number): HabitacionPlano | null {
     if (!planoCalibracion) return null;
     const centroModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
     const resultado = App.plano.crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre);
-    if (!resultado) return null;
+    if (!resultado || !resultado.habitacion) return null;
     guardarPuntoDeshacerPlano();
     setNodosPlano([...nodosPlano, ...resultado.nodos]);
     setSegmentosPlano([...segmentosPlano, ...resultado.segmentos]);
@@ -1393,7 +1480,7 @@ export function useCircuitos() {
   // acá y se arma el rectángulo con la MISMA fábrica que la versión
   // por medida conocida (crearHabitacionRectangular), nunca una
   // geometría paralela.
-  function generarHabitacionPorArrastre(puntoImagenA, puntoImagenB, nombre) {
+  function generarHabitacionPorArrastre(puntoImagenA: Punto, puntoImagenB: Punto, nombre: string): HabitacionPlano | null {
     if (!planoCalibracion) return null;
     const a = App.plano.imagenAModelo(puntoImagenA, planoCalibracion.escalaMetrosPorPixel);
     const b = App.plano.imagenAModelo(puntoImagenB, planoCalibracion.escalaMetrosPorPixel);
@@ -1404,7 +1491,7 @@ export function useCircuitos() {
     if (!(anchoM > 0.05) || !(altoM > 0.05)) return null;
     const centroModelo = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const resultado = App.plano.crearHabitacionRectangular(centroModelo, anchoM, altoM, nombre);
-    if (!resultado) return null;
+    if (!resultado || !resultado.habitacion) return null;
     guardarPuntoDeshacerPlano();
     setNodosPlano([...nodosPlano, ...resultado.nodos]);
     setSegmentosPlano([...segmentosPlano, ...resultado.segmentos]);
@@ -1425,7 +1512,7 @@ export function useCircuitos() {
   // instalador puede apagarlo (checkbox en PlanoInteligente.jsx) si
   // molesta sobre un plano con ambientes irregulares (el enganche usa
   // la CAJA envolvente de cada ambiente, no su forma exacta).
-  function moverHabitacionPlano(habitacionId, deltaM, conEnganche = true) {
+  function moverHabitacionPlano(habitacionId: string, deltaM: Punto, conEnganche: boolean = true): void {
     const habitacion = habitacionesPlano.find((h) => h.id === habitacionId);
     if (!habitacion) return;
     if (!conEnganche) {
@@ -1442,7 +1529,7 @@ export function useCircuitos() {
     const cajasReferencia = habitacionesPlano
       .filter((h) => h.id !== habitacionId)
       .map((h) => App.plano.cajaDeHabitacion(h, nodosPlano))
-      .filter(Boolean);
+      .filter((c): c is CajaAABB => c !== null);
 
     if (planoImagen && planoCalibracion) {
       cajasReferencia.push({
@@ -1461,7 +1548,7 @@ export function useCircuitos() {
   // trazada como segmentos tipo "conductor" (mismo mecanismo de
   // trazado/pegado que las paredes — ver agregarSegmentoPlano con
   // tipo="conductor"). No se cierra en lazo: es punto a punto.
-  function cerrarRutaConductorPlano(nodoIds, nombre = "") {
+  function cerrarRutaConductorPlano(nodoIds: string[], nombre: string = ""): RutaConductorPlano | null {
     const ruta = App.plano.crearRutaConductor(nodoIds, nodosPlano, nombre);
     if (!ruta) return null;
     guardarPuntoDeshacerPlano();
@@ -1469,12 +1556,12 @@ export function useCircuitos() {
     return ruta;
   }
 
-  function eliminarRutaConductorPlano(rutaId) {
+  function eliminarRutaConductorPlano(rutaId: string): void {
     guardarPuntoDeshacerPlano();
     setRutasConductorPlano(App.plano.eliminarRutaConductor(rutaId, rutasConductorPlano));
   }
 
-  function renombrarRutaConductorPlano(rutaId, nombre) {
+  function renombrarRutaConductorPlano(rutaId: string, nombre: string): void {
     setRutasConductorPlano(rutasConductorPlano.map((r) => (r.id === rutaId ? { ...r, nombre: nombre.trim() || "Ruta sin nombre" } : r)));
   }
 
@@ -1484,7 +1571,7 @@ export function useCircuitos() {
   // longitud al campo real — UNA sola vez por click, no un sincronizado
   // permanente (el campo sigue siendo la fuente editable de siempre,
   // igual que antes de vincular nada).
-  function vincularRutaConductorPlano(rutaId, entidadId, entidadTipo) {
+  function vincularRutaConductorPlano(rutaId: string, entidadId: string | null, entidadTipo: EntidadVinculadaRuta | null): void {
     guardarPuntoDeshacerPlano();
     setRutasConductorPlano(
       rutasConductorPlano.map((r) => (r.id === rutaId ? App.plano.vincularRutaConductor(r, entidadId, entidadTipo) : r))
@@ -1521,13 +1608,13 @@ export function useCircuitos() {
   // como punto de partida del camino más corto. Sin este parámetro
   // (default null), el comportamiento es EXACTAMENTE el de siempre:
   // arranca del marcador del tablero del circuito.
-  function generarRutasAutomaticasCircuito(circuitoId, origenMarcadorId = null) {
+  function generarRutasAutomaticasCircuito(circuitoId: string, origenMarcadorId: string | null = null) {
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return null;
 
-    const nodoCercaDe = (punto) => App.plano.nodoCercano(punto, nodosPlano, App.plano.RADIO_SNAP_METROS);
+    const nodoCercaDe = (punto: Punto) => App.plano.nodoCercano(punto, nodosPlano, App.plano.RADIO_SNAP_METROS);
 
-    let marcadorOrigen;
+    let marcadorOrigen: MarcadorEquipoPlano | null | undefined;
     if (origenMarcadorId) {
       marcadorOrigen = marcadoresEquipoPlano.find((m) => m.id === origenMarcadorId && m.tipo === "caja_empalme");
       if (!marcadorOrigen) return { generadas: [], sinTablero: false, sinOrigen: true, sinCamino: [] };
@@ -1538,12 +1625,12 @@ export function useCircuitos() {
 
     const nodoOrigen = nodoCercaDe(marcadorOrigen.punto);
     const nombreOrigen = marcadorOrigen.nombre || (origenMarcadorId ? "Caja de empalme" : "Tablero");
-    const clave = (nodoIds) => [...nodoIds].sort().join(",");
+    const clave = (nodoIds: string[]) => [...nodoIds].sort().join(",");
     const existentes = new Set(rutasConductorPlano.map((r) => clave(r.nodoIds)));
 
     const equiposDelCircuito = equipos.filter((e) => e.circuitoId === circuitoId);
-    const sinCamino = [];
-    const nuevasRutas = [];
+    const sinCamino: string[] = [];
+    const nuevasRutas: RutaConductorPlano[] = [];
 
     for (const equipo of equiposDelCircuito) {
       const marcadorEquipo = marcadoresEquipoPlano.find((m) => m.entidadId === equipo.id);
@@ -1565,7 +1652,7 @@ export function useCircuitos() {
     return { generadas: nuevasRutas, sinTablero: false, sinCamino };
   }
 
-  function actualizarDistanciaCircuito(id, distanciaM) {
+  function actualizarDistanciaCircuito(id: string, distanciaM: number): void {
     setCircuitos(circuitos.map((c) => (c.id === id ? { ...c, distancia: distanciaM } : c)));
   }
 
@@ -1576,7 +1663,7 @@ export function useCircuitos() {
    * campo real del circuito/tablero que señala. No hace nada si la
    * ruta no está vinculada.
    */
-  function aplicarLongitudRutaPlano(rutaId) {
+  function aplicarLongitudRutaPlano(rutaId: string): void {
     const ruta = rutasConductorPlano.find((r) => r.id === rutaId);
     if (!ruta?.entidadId) return;
     const segmentosPared = segmentosPlano.filter((s) => s.tipo === "pared");
@@ -1603,7 +1690,7 @@ export function useCircuitos() {
 
   // Marcadores de equipo — puntos independientes del grafo de
   // nodos/segmentos (ver nota de arquitectura en modules/plano/index.js).
-  function agregarMarcadorEquipoPlano(puntoImagen, tipo, entidadId = null, nombre = "") {
+  function agregarMarcadorEquipoPlano(puntoImagen: Punto, tipo: string, entidadId: string | null = null, nombre: string = ""): MarcadorEquipoPlano | null {
     if (!planoCalibracion) return null;
     const puntoModelo = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
     const marcador = App.plano.crearMarcadorEquipo(puntoModelo, tipo, entidadId, nombre);
@@ -1612,7 +1699,7 @@ export function useCircuitos() {
     return marcador;
   }
 
-  function editarMarcadorEquipoPlano(marcadorId, cambios) {
+  function editarMarcadorEquipoPlano(marcadorId: string, cambios: Partial<MarcadorEquipoPlano>): void {
     setMarcadoresEquipoPlano(
       marcadoresEquipoPlano.map((m) => (m.id === marcadorId ? App.plano.editarMarcadorEquipo(m, cambios) : m))
     );
@@ -1623,7 +1710,7 @@ export function useCircuitos() {
   // para reubicarlo (ver "Mover ambiente", que sí existía para
   // habitaciones pero no para equipos). deltaM ya viene en METROS
   // (espacio modelo) — mismo contrato que moverHabitacionPlano.
-  function moverMarcadorEquipoPlano(marcadorId, deltaM) {
+  function moverMarcadorEquipoPlano(marcadorId: string, deltaM: Punto): void {
     const marcador = marcadoresEquipoPlano.find((m) => m.id === marcadorId);
     if (!marcador) return;
     const puntoNuevo = { x: marcador.punto.x + deltaM.x, y: marcador.punto.y + deltaM.y };
@@ -1644,12 +1731,12 @@ export function useCircuitos() {
   // entrada; renombrables igual que cualquier marcador ya existente.
   const SEPARACION_GRUPO_PX = 18;
   const CANTIDAD_MAXIMA_GRUPO = 50;
-  function generarGrupoMarcadoresEquipoPlano(puntoImagen, tipo, cantidad, nombreBase = "") {
+  function generarGrupoMarcadoresEquipoPlano(puntoImagen: Punto, tipo: string, cantidad: number, nombreBase: string = ""): MarcadorEquipoPlano[] | null {
     if (!planoCalibracion) return null;
     if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > CANTIDAD_MAXIMA_GRUPO) return null;
     const comp = App.plano.obtenerComponente(tipo);
     const base = nombreBase.trim() || comp?.nombre || "Equipo";
-    const nuevos = [];
+    const nuevos: MarcadorEquipoPlano[] = [];
     for (let i = 1; i <= cantidad; i++) {
       const puntoImagenI = { x: puntoImagen.x + i * SEPARACION_GRUPO_PX, y: puntoImagen.y + i * SEPARACION_GRUPO_PX };
       const puntoModelo = App.plano.imagenAModelo(puntoImagenI, planoCalibracion.escalaMetrosPorPixel);
@@ -1674,7 +1761,7 @@ export function useCircuitos() {
   // vincular nada a mano. Un equipo del circuito que YA tenga marcador
   // en el plano (de una ronda anterior) se salta, nunca se duplica —
   // mismo criterio de exclusión que "¿Equipo ya ingresado?".
-  function generarCircuitoMarcadoresEquipoPlano(puntoImagen, circuitoId) {
+  function generarCircuitoMarcadoresEquipoPlano(puntoImagen: Punto, circuitoId: string) {
     if (!planoCalibracion) return null;
     const circuito = circuitos.find((c) => c.id === circuitoId);
     if (!circuito) return { nuevos: [], total: 0 };
@@ -1692,9 +1779,9 @@ export function useCircuitos() {
       return { nuevos: [], circuitoGenerado: false, total: equiposDelCircuito.length };
     }
 
-    const nuevosEquipos = [];
+    const nuevosEquipos: MarcadorEquipoPlano[] = [];
     let circuitoGenerado = false;
-    const nuevos = [];
+    const nuevos: MarcadorEquipoPlano[] = [];
     if (!circuitoYaTieneMarcador) {
       const puntoModeloCircuito = App.plano.imagenAModelo(puntoImagen, planoCalibracion.escalaMetrosPorPixel);
       nuevos.push(App.plano.crearMarcadorEquipo(puntoModeloCircuito, "circuito", circuito.id, circuito.nombre || ""));
@@ -1713,7 +1800,7 @@ export function useCircuitos() {
     return { nuevos: nuevosEquipos, circuitoGenerado, total: equiposDelCircuito.length };
   }
 
-  function eliminarMarcadorEquipoPlano(marcadorId) {
+  function eliminarMarcadorEquipoPlano(marcadorId: string): void {
     guardarPuntoDeshacerPlano();
     setMarcadoresEquipoPlano(App.plano.eliminarMarcadorEquipo(marcadorId, marcadoresEquipoPlano));
   }
@@ -1758,7 +1845,7 @@ export function useCircuitos() {
   // todavía (confirmado con el usuario: v1 es arrastre libre, igual
   // que ya funciona; el motor de alineación para que no queden huecos
   // es una mejora aparte, a propósito no construida acá).
-  function crearPlanoSinImagen(anchoM, altoM, nombre = "", alturaTechoM = null) {
+  function crearPlanoSinImagen(anchoM: number, altoM: number, nombre: string = "", alturaTechoM: number | null = null) {
     if (!(anchoM > 0) || !(altoM > 0)) return null;
     const anchoPx = Math.round(anchoM * PX_POR_METRO_RECTIFICADO);
     const altoPx = Math.round(altoM * PX_POR_METRO_RECTIFICADO);
@@ -1770,21 +1857,22 @@ export function useCircuitos() {
       nombreArchivo: nombre.trim() || `Plano sin imagen (${anchoM}m × ${altoM}m)`,
     });
     setPlanoCalibracion({
+      metodo: "dos_puntos",
       puntoA: { x: 0, y: 0 },
       puntoB: { x: anchoPx, y: 0 },
       distanciaRealM: anchoM,
       escalaMetrosPorPixel: 1 / PX_POR_METRO_RECTIFICADO,
     });
-    setAlturaTechoPlanoM(alturaTechoM > 0 ? alturaTechoM : null);
+    setAlturaTechoPlanoM(alturaTechoM != null && alturaTechoM > 0 ? alturaTechoM : null);
     setNodosPlano([]);
     setSegmentosPlano([]);
     setHabitacionesPlano([]);
     setRutasConductorPlano([]);
     setMarcadoresEquipoPlano([]);
-    return { anchoM, altoM, alturaTechoM: alturaTechoM > 0 ? alturaTechoM : null };
+    return { anchoM, altoM, alturaTechoM: alturaTechoM != null && alturaTechoM > 0 ? alturaTechoM : null };
   }
 
-  function corregirPerspectivaPlano(puntosImagenOrigen, anchoRealM, altoRealM) {
+  function corregirPerspectivaPlano(puntosImagenOrigen: Punto[], anchoRealM: number, altoRealM: number): Promise<{ ok: boolean; motivo?: string }> {
     if (!(anchoRealM > 0) || !(altoRealM > 0)) {
       return Promise.resolve({ ok: false, motivo: "El ancho y el alto reales deben ser mayores a 0." });
     }
@@ -1804,15 +1892,19 @@ export function useCircuitos() {
     if (!homografiaInversa) {
       return Promise.resolve({ ok: false, motivo: "No se pudo invertir la transformación — probá con otros puntos." });
     }
-    return rectificarImagen(planoImagen.dataUrl, homografiaInversa, anchoDestinoPx, altoDestinoPx)
+    // Sólo se invoca desde la UI con una imagen de plano ya cargada
+    // (el botón "Corregir perspectiva" no existe sin ella) — igual
+    // invariante que el resto de las funciones de Plano con `!planoCalibracion`.
+    return rectificarImagen(planoImagen!.dataUrl, homografiaInversa, anchoDestinoPx, altoDestinoPx)
       .then((resultado) => {
         setPlanoImagen({
           dataUrl: resultado.dataUrl,
           anchoPx: resultado.anchoPx,
           altoPx: resultado.altoPx,
-          nombreArchivo: `${planoImagen.nombreArchivo} (perspectiva corregida)`,
+          nombreArchivo: `${planoImagen!.nombreArchivo} (perspectiva corregida)`,
         });
         setPlanoCalibracion({
+          metodo: "dos_puntos",
           puntoA: { x: 0, y: 0 },
           puntoB: { x: anchoDestinoPx, y: 0 },
           distanciaRealM: anchoRealM,
@@ -1825,7 +1917,7 @@ export function useCircuitos() {
         setMarcadoresEquipoPlano([]);
         return { ok: true };
       })
-      .catch((err) => ({ ok: false, motivo: err.message }));
+      .catch((err: Error) => ({ ok: false, motivo: err.message }));
   }
 
   // Exportación CAD (Fase 2, 2do pedido) — descarga el grafo de
@@ -1836,7 +1928,7 @@ export function useCircuitos() {
     // Bytes de Windows-1252, NUNCA el string directo (UTF-8 por
     // defecto en un Blob) — ver la nota larga en exportarDXF.js sobre
     // por qué, si no, los acentos salen corruptos al abrir el DXF.
-    const blob = new Blob([App.plano.codificarDXFComoBytes(contenido)], { type: "application/dxf" });
+    const blob = new Blob([new Uint8Array(App.plano.codificarDXFComoBytes(contenido))], { type: "application/dxf" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -1879,7 +1971,7 @@ export function useCircuitos() {
       const nombre = await App.guardarProyecto(datosProyecto);
       setAvisoArchivo(`Guardado como ${nombre}`);
     } catch (err) {
-      setAvisoArchivo(`No se pudo guardar: ${err.message}`);
+      setAvisoArchivo(`No se pudo guardar: ${err instanceof Error ? err.message : String(err)}`);
     }
     setTimeout(() => setAvisoArchivo(""), 4000);
   }
@@ -1914,7 +2006,7 @@ export function useCircuitos() {
     setTimeout(() => setAvisoArchivo(""), 4000);
   }
 
-  function abrirProyecto(archivo) {
+  function abrirProyecto(archivo: File): void {
     App.abrirProyecto(archivo)
       .then((cargado) => {
         setProyecto(cargado.proyecto);
@@ -1922,25 +2014,33 @@ export function useCircuitos() {
         setTipoInstalacion(cargado.tipoInstalacion ?? TIPO_INSTALACION_POR_DEFECTO);
         setCircuitos(cargado.circuitos);
         setEquipos(cargado.equipos);
-        setTableros(cargado.tableros ?? []);
-        setFuentesEnergia(cargado.fuentesEnergia ?? []);
-        setTransformadores(cargado.transformadores ?? []);
-        setDiferenciales(cargado.diferenciales ?? []);
-        setNodosDiagrama(cargado.nodosDiagrama ?? []);
-        setConexionesDiagrama(cargado.conexionesDiagrama ?? []);
-        setPlanoImagen(cargado.plano?.imagen ?? null);
-        setPlanoCalibracion(cargado.plano?.calibracion ?? null);
+        // modules/persistencia/tipos.ts tipa Tablero/FuenteEnergia/
+        // Transformador/Diferencial con los stubs MÍNIMOS de
+        // modules/validacion/tipos.ts (solo lo que persistencia
+        // necesita para empaquetar/desempaquetar, ver su nota de
+        // cabecera) — en runtime, un proyecto ya guardado SÍ trae la
+        // entidad completa (la misma forma que crearTablero/etc.
+        // producen). Mismo cruce de límite que ya resuelven los
+        // mediators con un cast justificado (ARCHITECTURE.md §11).
+        setTableros((cargado.tableros ?? []) as unknown as Tablero[]);
+        setFuentesEnergia((cargado.fuentesEnergia ?? []) as unknown as FuenteEnergia[]);
+        setTransformadores((cargado.transformadores ?? []) as unknown as Transformador[]);
+        setDiferenciales((cargado.diferenciales ?? []) as unknown as Diferencial[]);
+        setNodosDiagrama((cargado.nodosDiagrama ?? []) as NodoDiagrama[]);
+        setConexionesDiagrama((cargado.conexionesDiagrama ?? []) as ConexionDiagrama[]);
+        setPlanoImagen((cargado.plano?.imagen ?? null) as ImagenPlano | null);
+        setPlanoCalibracion((cargado.plano?.calibracion ?? null) as CalibracionPlano | null);
         setAlturaTechoPlanoM(cargado.plano?.alturaTechoM ?? null);
-        setNodosPlano(cargado.plano?.nodos ?? []);
-        setSegmentosPlano(cargado.plano?.segmentos ?? []);
-        setHabitacionesPlano(cargado.plano?.habitaciones ?? []);
-        setRutasConductorPlano(cargado.plano?.rutasConductor ?? []);
-        setMarcadoresEquipoPlano(cargado.plano?.marcadoresEquipo ?? []);
+        setNodosPlano((cargado.plano?.nodos ?? []) as NodoPlano[]);
+        setSegmentosPlano((cargado.plano?.segmentos ?? []) as SegmentoPlano[]);
+        setHabitacionesPlano((cargado.plano?.habitaciones ?? []) as HabitacionPlano[]);
+        setRutasConductorPlano((cargado.plano?.rutasConductor ?? []) as RutaConductorPlano[]);
+        setMarcadoresEquipoPlano((cargado.plano?.marcadoresEquipo ?? []) as MarcadorEquipoPlano[]);
         setCircuitoActivoId(cargado.circuitos[0]?.id ?? null);
         setAvisoArchivo(`Proyecto "${cargado.proyecto.nombre}" cargado.`);
         setTimeout(() => setAvisoArchivo(""), 5000);
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         setAvisoArchivo(`No se pudo abrir el archivo: ${err.message}`);
         setTimeout(() => setAvisoArchivo(""), 5000);
       });

@@ -18,6 +18,7 @@ import {
 } from "../../modules/diferencial/index.ts";
 import { DataProvider } from "../services/DataProvider.ts";
 import { Logger } from "../services/Logger.ts";
+import type { Circuito } from "../../modules/validacion/tipos.ts";
 
 export const DiferencialMediator = {
   /** ITC-BT-25: máximo de circuitos por diferencial, expuesto para la UI y la validación (ver modules/validacion/referencial.ts). */
@@ -50,8 +51,13 @@ export const DiferencialMediator = {
     return circuitosDeDiferencial(diferencialId, circuitos ?? DataProvider.getCircuitos());
   },
 
-  /** Devuelve el circuito actualizado; el hook decide cómo guardarlo. */
-  asignar(circuito: Parameters<typeof asignarCircuitoADiferencial>[0], diferencialId: Parameters<typeof asignarCircuitoADiferencial>[1]) {
+  /**
+   * Devuelve el circuito actualizado; el hook decide cómo guardarlo.
+   * Genérico explícito en <C> (no `Parameters<typeof asignarCircuitoADiferencial>[0]`,
+   * que colapsaría al constraint `ConDiferencialId` y perdería el tipo
+   * real del circuito) — mismo criterio que TableroMediator.asignar.
+   */
+  asignar<C extends Parameters<typeof asignarCircuitoADiferencial>[0]>(circuito: C, diferencialId: Parameters<typeof asignarCircuitoADiferencial>[1]) {
     if (diferencialId && !DataProvider.getDiferencial(diferencialId)) {
       Logger.warn("DiferencialMediator.asignar: diferencialId no existe", { diferencialId });
     }
@@ -59,7 +65,7 @@ export const DiferencialMediator = {
   },
 
   /** Al borrar un diferencial, libera (no borra) los circuitos que le pertenecían. */
-  liberarCircuitos(diferencialId: Parameters<typeof liberarCircuitosDeDiferencial>[0], circuitos?: Parameters<typeof liberarCircuitosDeDiferencial>[1]) {
+  liberarCircuitos(diferencialId: string, circuitos?: Circuito[]) {
     return liberarCircuitosDeDiferencial(diferencialId, circuitos ?? DataProvider.getCircuitos());
   },
 };
