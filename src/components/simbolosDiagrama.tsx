@@ -1,5 +1,3 @@
-import React from "react";
-
 // Símbolos del diagrama unifilar — ahora como archivos .svg propios
 // (usuario, 2026-11-21: "en formato .SVG"), uno por tipo en
 // assets/simbolos-iec/, editables en Inkscape/Illustrator como
@@ -27,11 +25,11 @@ import React from "react";
 // `?raw` nativo de Vite (sin librería nueva, mismo criterio del resto
 // de la app) y se inyectan ya renderizados dentro de un <g> que solo
 // se encarga de posición/escala/color — nunca del dibujo en sí.
-const archivosSvg = import.meta.glob("../assets/simbolos-iec/*.svg", { query: "?raw", import: "default", eager: true });
+const archivosSvg = import.meta.glob<string>("../assets/simbolos-iec/*.svg", { query: "?raw", import: "default", eager: true });
 
-const SIMBOLOS = {};
+const SIMBOLOS: Record<string, string> = {};
 for (const ruta in archivosSvg) {
-  const tipo = ruta.match(/([^/]+)\.svg$/)[1];
+  const tipo = ruta.match(/([^/]+)\.svg$/)![1];
   SIMBOLOS[tipo] = archivosSvg[ruta];
 }
 
@@ -39,9 +37,10 @@ for (const ruta in archivosSvg) {
 // se extrae UNA sola vez por tipo con el propio parser del navegador
 // — nunca con un regex a mano, que es frágil ante cualquier variación
 // de marcado válido (atributos en otro orden, comentarios, etc.).
-const cacheContenidoInterno = new Map();
-function contenidoInterno(tipo) {
-  if (cacheContenidoInterno.has(tipo)) return cacheContenidoInterno.get(tipo);
+const cacheContenidoInterno = new Map<string, string>();
+function contenidoInterno(tipo: string): string {
+  const cacheado = cacheContenidoInterno.get(tipo);
+  if (cacheado !== undefined) return cacheado;
   const crudo = SIMBOLOS[tipo];
   const html = crudo ? new DOMParser().parseFromString(crudo, "image/svg+xml").documentElement.innerHTML : "";
   cacheContenidoInterno.set(tipo, html);
@@ -84,7 +83,15 @@ const GROSOR_TRAZO_BASE = 1.8;
  * zoom del lienzo, solo deja de encogerse ADEMÁS por el tamaño propio
  * del ícono).
  */
-export function SimboloDiagrama({ tipo, x = 0, y = 0, size = 28, color }) {
+interface SimboloDiagramaProps {
+  tipo: string;
+  x?: number;
+  y?: number;
+  size?: number;
+  color?: string;
+}
+
+export function SimboloDiagrama({ tipo, x = 0, y = 0, size = 28, color }: SimboloDiagramaProps) {
   const html = SIMBOLOS[tipo] ? contenidoInterno(tipo) : SIMBOLO_GENERICO_HTML;
   const escala = size / 32;
   return (
@@ -100,6 +107,6 @@ export function SimboloDiagrama({ tipo, x = 0, y = 0, size = 28, color }) {
   );
 }
 
-export function tieneSimbolo(tipo) {
+export function tieneSimbolo(tipo: string): boolean {
   return Boolean(SIMBOLOS[tipo]);
 }

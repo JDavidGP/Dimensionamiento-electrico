@@ -1,6 +1,12 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
+import { useState } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
+import type { Circuito, Equipo } from "../modules/validacion/tipos.ts";
+
+interface CalcularIluminacionGeneralProps {
+  normativaActiva: string;
+  onCrear: (areaM2: number) => { circuito: Circuito; equipo: Equipo; va: number } | null;
+}
 
 // Calcular iluminación general (NEC Tabla 220.12) — usuario, 2026-11-23,
 // tras preguntar para qué sirve realmente el área construida (m²) de un
@@ -17,7 +23,7 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 // (NEC/CIEN) — REBT (IEC_ES) no tiene este campo, ahí el área es solo
 // UN criterio entre varios para elegir el grado de electrificación a
 // mano, no alimenta una fórmula de VA directa.
-export default function CalcularIluminacionGeneral({ normativaActiva, onCrear }) {
+export default function CalcularIluminacionGeneral({ normativaActiva, onCrear }: CalcularIluminacionGeneralProps) {
   const [abierto, setAbierto] = useState(false);
   const [areaInput, setAreaInput] = useState("");
   const [aviso, setAviso] = useState("");
@@ -28,6 +34,7 @@ export default function CalcularIluminacionGeneral({ normativaActiva, onCrear })
 
   const areaM2 = parseFloat(areaInput);
   const vaCalculados = areaM2 > 0 ? Math.round(areaM2 * vaPorM2) : null;
+  const cargaValida = vaCalculados != null && vaCalculados > 0;
 
   function crear() {
     const resultado = onCrear(areaM2);
@@ -71,16 +78,16 @@ export default function CalcularIluminacionGeneral({ normativaActiva, onCrear })
             <button
               type="button"
               onClick={crear}
-              disabled={!(vaCalculados > 0)}
+              disabled={!cargaValida}
               style={{
                 padding: "8px 14px",
                 borderRadius: 3,
                 border: "none",
-                background: vaCalculados > 0 ? colores.copper : colores.border,
-                color: vaCalculados > 0 ? colores.textSobreAcento : colores.textDim,
+                background: cargaValida ? colores.copper : colores.border,
+                color: cargaValida ? colores.textSobreAcento : colores.textDim,
                 fontWeight: 700,
                 fontSize: 12,
-                cursor: vaCalculados > 0 ? "pointer" : "not-allowed",
+                cursor: cargaValida ? "pointer" : "not-allowed",
                 whiteSpace: "nowrap",
               }}
             >
@@ -88,7 +95,7 @@ export default function CalcularIluminacionGeneral({ normativaActiva, onCrear })
             </button>
           </div>
 
-          {vaCalculados > 0 && (
+          {vaCalculados != null && vaCalculados > 0 && (
             <div style={{ fontSize: 12, color: colores.textMain, marginTop: 8, fontFamily: fuentes.mono }}>
               = {vaCalculados} VA ({areaM2} m² × {vaPorM2} VA/m²)
             </div>
