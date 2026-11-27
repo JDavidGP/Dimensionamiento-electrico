@@ -532,6 +532,14 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                 const b = px(nodoB.punto);
                 const enTrazo = nodoIdsTrazoActual.includes(seg.nodoAId) && nodoIdsTrazoActual.includes(seg.nodoBId);
                 const esConductor = seg.tipo === "conductor";
+                // Medida en vivo (usuario, 2026-11-27: "que se señale las
+                // medidas de cada pared... cuando se dibuja" — para no
+                // perderse después de trazar varias). El espacio MODELO
+                // ya está en metros reales (ver puntosDeHabitacion arriba,
+                // mismo criterio) — ningún cálculo de escala nuevo, es la
+                // MISMA distancia entre nodos que ya usa el resto del
+                // motor del Plano (ej. longitudPolilinea de una ruta).
+                const largoM = App.plano.distancia(nodoA.punto, nodoB.punto);
                 return (
                   <React.Fragment key={seg.id}>
                     <line
@@ -544,6 +552,16 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                       strokeDasharray={esConductor ? `${grosorLinea} ${grosorLinea}` : undefined}
                       strokeLinecap="round"
                     />
+                    <text
+                      x={(a.x + b.x) / 2}
+                      y={(a.y + b.y) / 2 + 13 / transformVista.zoom}
+                      textAnchor="middle"
+                      fontSize={10 / transformVista.zoom}
+                      fill={colores.textDim}
+                      pointerEvents="none"
+                    >
+                      {largoM.toFixed(2)}m
+                    </text>
                     {/* Espesor medido (usuario, 2026-11-20: "medir el ancho visible de
                         una pared, 2 clicks") — solo registro visual, no alimenta ningún
                         cálculo todavía. */}
@@ -559,6 +577,37 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                       </text>
                     )}
                   </React.Fragment>
+                );
+              })}
+
+              {/* Área/perímetro de cada ambiente ya generado, directo
+                  sobre el plano (mismo pedido del usuario: "que se
+                  señale las medidas... de cada ambiente" — antes solo
+                  vivían en la lista lateral "AMBIENTES", nunca sobre el
+                  propio dibujo). Centroide simple (promedio de sus nodos)
+                  — alcanza para un rectángulo/polígono convexo típico de
+                  un ambiente; no intenta resolver el centroide "real" de
+                  un polígono cóncavo raro. */}
+              {habitaciones.map((h) => {
+                const puntos = puntosDeHabitacion(h);
+                if (puntos.length < 3) return null;
+                const centroideModelo = {
+                  x: puntos.reduce((acc, p) => acc + p.x, 0) / puntos.length,
+                  y: puntos.reduce((acc, p) => acc + p.y, 0) / puntos.length,
+                };
+                const c = px(centroideModelo);
+                return (
+                  <text
+                    key={`medidas-${h.id}`}
+                    x={c.x}
+                    y={c.y}
+                    textAnchor="middle"
+                    fontSize={11 / transformVista.zoom}
+                    fill={colores.textDim}
+                    pointerEvents="none"
+                  >
+                    {h.areaM2.toFixed(2)}m² · {h.perimetroM.toFixed(2)}m perímetro
+                  </text>
                 );
               })}
 
