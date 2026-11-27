@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { colores } from "../styles/colores";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPOS_FUENTE_UI } from "./PanelTableros";
 import { ContenidoSvgDiagrama, cajaEnvolvente, PALETA_IMPRESION } from "./DiagramaSvgContenido.jsx";
 

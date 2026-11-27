@@ -89,7 +89,12 @@ import {
   SNAP_ANGULO_TOLERANCIA_GRADOS,
 } from "../../modules/geometria/index.ts";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria, componentesPorCategoriaPlano } from "../../shared/data/bibliotecaComponentes.ts";
-import { OrigenMediator } from "./OrigenMediator.js";
+import { OrigenMediator } from "./OrigenMediator.ts";
+import type { NodoPlano, RutaConductorPlano, MarcadorEquipoPlano, Punto, EntidadVinculadaRuta } from "../../modules/plano/tipos.ts";
+import type { Circuito, Equipo } from "../../modules/validacion/tipos.ts";
+import type { Tablero, FuenteEnergia, Transformador } from "../services/DataProvider.ts";
+import type { Diferencial } from "../../modules/diferencial/tipos.ts";
+import type { NodoDiagrama, ConexionDiagrama } from "../../modules/diagrama/tipos.ts";
 
 export const PlanoMediator = {
   RADIO_SNAP_METROS,
@@ -145,7 +150,7 @@ export const PlanoMediator = {
    * una vez vinculado a UNA ruta, ese circuito/tablero no aparece como
    * candidato en las demás (una distancia, un dueño).
    */
-  candidatosEntidadRuta({ circuitos = [], tableros = [], rutas = [], rutaId = null } = {}) {
+  candidatosEntidadRuta({ circuitos = [], tableros = [], rutas = [], rutaId = null }: { circuitos?: Circuito[]; tableros?: Tablero[]; rutas?: RutaConductorPlano[]; rutaId?: string | null } = {}) {
     const vinculados = new Set(rutas.filter((r) => r.id !== rutaId && r.entidadId).map((r) => r.entidadId));
     return {
       circuitos: circuitos.filter((c) => !vinculados.has(c.id)),
@@ -154,7 +159,7 @@ export const PlanoMediator = {
   },
 
   /** La entidad real (circuito o tablero) vinculada a esta ruta, o null si no tiene vínculo o ya no existe. */
-  resolverEntidadRuta(ruta, { circuitos = [], tableros = [] } = {}) {
+  resolverEntidadRuta(ruta: RutaConductorPlano | null | undefined, { circuitos = [], tableros = [] }: { circuitos?: Circuito[]; tableros?: Tablero[] } = {}) {
     if (!ruta?.entidadId) return null;
     if (ruta.entidadTipo === "circuito") return circuitos.find((c) => c.id === ruta.entidadId) ?? null;
     if (ruta.entidadTipo === "tablero") return tableros.find((t) => t.id === ruta.entidadId) ?? null;
@@ -174,8 +179,8 @@ export const PlanoMediator = {
    * que desincronizacionRutas/candidatosEntidadRuta: solo lo que el
    * usuario ya confirmó como la ruta real de ese circuito/tablero.
    */
-  entidadesPorCajaEmpalme({ marcadores = [], nodos = [], rutas = [], circuitos = [], tableros = [] } = {}) {
-    const resultado = {};
+  entidadesPorCajaEmpalme({ marcadores = [], nodos = [], rutas = [], circuitos = [], tableros = [] }: { marcadores?: MarcadorEquipoPlano[]; nodos?: NodoPlano[]; rutas?: RutaConductorPlano[]; circuitos?: Circuito[]; tableros?: Tablero[] } = {}) {
+    const resultado: Record<string, { tipo: EntidadVinculadaRuta | null; id: string; nombre?: string }[]> = {};
     for (const marcador of marcadores) {
       if (marcador.tipo !== "caja_empalme") continue;
       const nodo = nodoCercano(marcador.punto, nodos);
@@ -183,8 +188,8 @@ export const PlanoMediator = {
         resultado[marcador.id] = [];
         continue;
       }
-      const vistas = new Set();
-      const entidades = [];
+      const vistas = new Set<string>();
+      const entidades: { tipo: EntidadVinculadaRuta | null; id: string; nombre?: string }[] = [];
       for (const ruta of rutas) {
         if (!ruta.entidadId || !ruta.nodoIds.includes(nodo.id)) continue;
         const clave = `${ruta.entidadTipo}:${ruta.entidadId}`;
@@ -245,7 +250,12 @@ export const PlanoMediator = {
    * un nodo del diagrama Y a un marcador del plano a la vez, son
    * aspectos distintos (topología eléctrica vs. ubicación física).
    */
-  candidatosEntidadEquipo(tipoEquipo, { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [], diferenciales = [], marcadores = [], marcadorId = null } = {}) {
+  candidatosEntidadEquipo(
+    tipoEquipo: string,
+    { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [], diferenciales = [], marcadores = [], marcadorId = null }: {
+      tableros?: Tablero[]; equipos?: Equipo[]; circuitos?: Circuito[]; fuentesEnergia?: FuenteEnergia[]; transformadores?: Transformador[]; diferenciales?: Diferencial[]; marcadores?: MarcadorEquipoPlano[]; marcadorId?: string | null;
+    } = {}
+  ) {
     const comp = obtenerComponente(tipoEquipo);
     if (!comp?.entidadVinculada) return [];
     const vinculados = new Set(marcadores.filter((m) => m.id !== marcadorId && m.entidadId).map((m) => m.entidadId));
@@ -274,7 +284,12 @@ export const PlanoMediator = {
   },
 
   /** La entidad real que representa este marcador, o null si no tiene vínculo o ya no existe. */
-  resolverEntidadEquipo(marcador, { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [], diferenciales = [] } = {}) {
+  resolverEntidadEquipo(
+    marcador: MarcadorEquipoPlano | null | undefined,
+    { tableros = [], equipos = [], circuitos = [], fuentesEnergia = [], transformadores = [], diferenciales = [] }: {
+      tableros?: Tablero[]; equipos?: Equipo[]; circuitos?: Circuito[]; fuentesEnergia?: FuenteEnergia[]; transformadores?: Transformador[]; diferenciales?: Diferencial[];
+    } = {}
+  ) {
     if (!marcador?.entidadId) return null;
     const comp = obtenerComponente(marcador.tipo);
     if (comp?.entidadVinculada === "tablero") return tableros.find((t) => t.id === marcador.entidadId) ?? null;
@@ -298,15 +313,15 @@ export const PlanoMediator = {
    * solo que aquí cruza nodos del diagrama con marcadores del plano en
    * vez de marcadores con entidades reales.
    */
-  conexionesDiagramaEnPlano({ nodosDiagrama = [], conexionesDiagrama = [], marcadoresEquipoPlano = [] } = {}) {
-    const puntoPorNodoId = new Map();
+  conexionesDiagramaEnPlano({ nodosDiagrama = [], conexionesDiagrama = [], marcadoresEquipoPlano = [] }: { nodosDiagrama?: NodoDiagrama[]; conexionesDiagrama?: ConexionDiagrama[]; marcadoresEquipoPlano?: MarcadorEquipoPlano[] } = {}) {
+    const puntoPorNodoId = new Map<string, Punto>();
     for (const nodo of nodosDiagrama) {
-      if (!nodo.entidadId) continue;
+      if (!nodo.entidadId || !nodo.id) continue;
       const marcador = marcadoresEquipoPlano.find((m) => m.entidadId === nodo.entidadId);
       if (marcador) puntoPorNodoId.set(nodo.id, marcador.punto);
     }
 
-    const conexiones = [];
+    const conexiones: { id?: string; puntoOrigen: Punto; puntoDestino: Punto }[] = [];
     let sinResolver = 0;
     for (const conexion of conexionesDiagrama) {
       const puntoOrigen = puntoPorNodoId.get(conexion.nodoOrigenId);

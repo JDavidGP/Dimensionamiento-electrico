@@ -9,6 +9,8 @@ import {
   LISTA_NORMATIVAS,
   obtenerNormativaPorId,
 } from "../../modules/normativa/index.ts";
+import type { Normativa, Fases } from "../../modules/normativa/tipos.ts";
+import type { Circuito, Equipo, ResultadoVerificacionNormativa, NormativaEngine } from "../../modules/validacion/tipos.ts";
 import { Cache } from "../services/Cache.ts";
 import { Config } from "../services/Config.ts";
 
@@ -27,9 +29,9 @@ export const NormativaMediator = {
   },
 
   /** Objeto completo de normativa (para inyectar al motor). */
-  obtener(id) {
+  obtener(id?: string | null): Normativa {
     const key = CACHE_KEY + (id || Config.normativaPorDefecto);
-    if (Cache.has(key)) return Cache.get(key);
+    if (Cache.has(key)) return Cache.get<Normativa>(key)!;
     const normativa = obtenerNormativaPorId(id || Config.normativaPorDefecto);
     Cache.set(key, normativa);
     return normativa;
@@ -41,7 +43,7 @@ export const NormativaMediator = {
   },
 
   /** Voltajes sugeridos según fases. */
-  voltajesPorFase(normativaId, fases) {
+  voltajesPorFase(normativaId: string | null | undefined, fases: Fases): number[] {
     const n = this.obtener(normativaId);
     return n.voltajesPorFase?.[fases] ?? [];
   },
@@ -50,10 +52,16 @@ export const NormativaMediator = {
    * Gancho futuro: verificación normativa explícita de un circuito.
    * Hoy las reglas viven dentro del dimensionamiento del motor.
    */
-  verificarCircuito(normativaId, circuito, contexto = {}) {
-    const n = this.obtener(normativaId);
+  verificarCircuito(normativaId: string | null | undefined, circuito: Circuito, contexto: { corriente: number; breaker: number | string | null; calibre: string | null; equipos: Equipo[] }): ResultadoVerificacionNormativa {
+    // Normativa no declara `verificarCircuito` en su contrato (Normativa,
+    // modules/normativa/tipos.ts) porque NINGUNA normativa real lo
+    // implementa todavía (ver comentario del método) — el cast acá solo
+    // declara ese gancho OPCIONAL (mismo shape que NormativaEngine, que
+    // modules/validacion/electrica.ts ya espera recibir), nunca inventa
+    // un dato nuevo.
+    const n = this.obtener(normativaId) as Normativa & NormativaEngine;
     if (typeof n.verificarCircuito === "function") {
-      return n.verificarCircuito(circuito, contexto);
+      return n.verificarCircuito(circuito, contexto) ?? { ok: true, mensajes: [] };
     }
     return { ok: true, mensajes: [] };
   },

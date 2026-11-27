@@ -15,13 +15,35 @@ import {
   equipoAFormulario,
   ESTADOS,
 } from "../../modules/validacion/index.ts";
-import { NormativaMediator } from "./NormativaMediator.js";
+import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, NodoDiagrama, MarcadorEquipoPlano, RutaConductorPlano, Proyecto, ResultadoCalculoLaxo } from "../../modules/validacion/tipos.ts";
+import { NormativaMediator } from "./NormativaMediator.ts";
 import { DataProvider } from "../services/DataProvider.ts";
+
+type ArgsIntegridad = [
+  proyecto: Proyecto | null | undefined,
+  circuitos: Circuito[] | undefined,
+  equipos: Equipo[] | undefined,
+  tableros: Tablero[] | undefined,
+  fuentesEnergia: FuenteEnergia[] | undefined,
+  nodosDiagrama: NodoDiagrama[] | undefined,
+  transformadores: Transformador[] | undefined,
+  marcadoresEquipoPlano: MarcadorEquipoPlano[] | undefined,
+  diferenciales: Diferencial[] | undefined,
+  rutasConductorPlano: RutaConductorPlano[] | undefined,
+];
+
+interface OpcionesDetalleElectrico {
+  proyecto?: Proyecto | null;
+  circuitos?: Circuito[];
+  equipos?: Equipo[];
+  normativaId?: string | null;
+  resultadoCalculo?: ResultadoCalculoLaxo;
+}
 
 export const ValidacionMediator = {
   ESTADOS,
 
-  listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano) {
+  listaIntegridad(...[proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano]: ArgsIntegridad) {
     return obtenerListaIntegridad(
       proyecto ?? DataProvider.getProyecto(),
       circuitos ?? DataProvider.getCircuitos(),
@@ -36,7 +58,7 @@ export const ValidacionMediator = {
     );
   },
 
-  resumen(proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano) {
+  resumen(...[proyecto, circuitos, equipos, tableros, fuentesEnergia, nodosDiagrama, transformadores, marcadoresEquipoPlano, diferenciales, rutasConductorPlano]: ArgsIntegridad) {
     return resumenIntegridad(
       proyecto ?? DataProvider.getProyecto(),
       circuitos ?? DataProvider.getCircuitos(),
@@ -51,18 +73,18 @@ export const ValidacionMediator = {
     );
   },
 
-  detalleElectrico(id, opts = {}) {
+  detalleElectrico(id: string, opts: OpcionesDetalleElectrico = {}) {
     const proyecto = opts.proyecto ?? DataProvider.getProyecto();
     const circuitos = opts.circuitos ?? DataProvider.getCircuitos();
     const equipos = opts.equipos ?? DataProvider.getEquipos();
     const normativaId = opts.normativaId ?? DataProvider.getNormativaActivaId();
     const resultadoCalculo =
-      opts.resultadoCalculo ?? DataProvider.getResultado(id);
+      opts.resultadoCalculo ?? DataProvider.getResultado(id) ?? undefined;
 
     return obtenerDetalleElectrico(id, proyecto, circuitos, equipos, {
       resultadoCalculo,
       normativaEngine: {
-        verificarCircuito: (circuito, ctx) =>
+        verificarCircuito: (circuito: Circuito, ctx: { corriente: number; breaker: number | string | null; calibre: string | null; equipos: Equipo[] }) =>
           NormativaMediator.verificarCircuito(normativaId, circuito, ctx),
       },
     });

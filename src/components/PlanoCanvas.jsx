@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { colores, colorAmbiente } from "../styles/colores";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
 
 // Mismo mapa categoría->color que ya usa DiagramaUnifilar.jsx — un

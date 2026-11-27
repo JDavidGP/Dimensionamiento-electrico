@@ -7,7 +7,7 @@
 // (habitacionQueContiene), nunca se copia aparte. Prueba pura, sin
 // navegador (geometría de modules/plano/index.ts) — la verificación
 // en vivo contra la UI real va en test_interior_exterior_plano_ui.mjs.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 let fallos = 0;
 function assert(cond, msg) {

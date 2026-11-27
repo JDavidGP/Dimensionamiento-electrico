@@ -1,7 +1,7 @@
 // Autoorganización del diagrama unifilar (usuario, 2026-11-20) — layout
 // en capas por camino más largo desde un nodo raíz, sentido de las
 // conexiones.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

@@ -7,7 +7,7 @@
 // límite ACUMULADO total pasa de 3% (solo interior) a 3%+DI cuando el
 // edificio tiene su esquemaContadores asignado, y que SIN ese dato la
 // compensación no se aplica (comportamiento de siempre).
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

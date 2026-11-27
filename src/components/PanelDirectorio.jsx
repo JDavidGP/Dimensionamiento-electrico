@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import { inputStyle } from "./Campo";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 
 // "Directorio" — pestaña dedicada al sistema de etiquetado. Arrancó
 // como una tabla de SOLO LECTURA (2026-11-20). Siguiente ronda, pedido

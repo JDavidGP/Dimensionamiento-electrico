@@ -5,7 +5,7 @@
 // de NEC). Valores de referencia copiados a mano del texto oficial
 // (https://www.plcmadrid.es/documentos-rebt/ITC-21.pdf, extraído con
 // pdftotext -layout, páginas 3 y 5-6) — no del módulo bajo prueba.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 let fallos = 0;
 function assert(cond, msg) {

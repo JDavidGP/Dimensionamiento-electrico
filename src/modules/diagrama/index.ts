@@ -24,7 +24,7 @@
 // conmutación (registrar primero, calcular después).
 //
 // CERO gráfico, cero UI. Módulo puro — se usa a través de
-// DiagramaMediator (core/mediators/DiagramaMediator.js).
+// DiagramaMediator (core/mediators/DiagramaMediator.ts).
 
 import { generarId } from "../../shared/utils/id.ts";
 import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.ts";

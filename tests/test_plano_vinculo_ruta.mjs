@@ -3,7 +3,7 @@
 // distancia desde el plano". Prueba a nivel ApplicationMediator:
 // vincularRutaConductor, candidatosEntidadRuta (con exclusión del ya
 // vinculado), resolverEntidadRuta.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

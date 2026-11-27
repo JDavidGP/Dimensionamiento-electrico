@@ -1,7 +1,7 @@
 import React from "react";
 import Campo, { inputStyle } from "./Campo";
 import { colores, fuentes } from "../styles/colores";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPOS_INSTALACION, OPCIONES_REPRESENTACION_CIRCUITO } from "../shared/constants/constantes.ts";
 
 const FASES = [

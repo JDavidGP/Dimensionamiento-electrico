@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 
 // Catálogo vía NormativaMediator (no import directo de módulos de normativa)
 const LISTA_NORMATIVAS = App.normativa.listar().map((meta) => App.normativa.obtener(meta.id));

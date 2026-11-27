@@ -7,7 +7,7 @@
 // referencia copiados a mano de los documentos que aportó el usuario
 // (NEC_subterr_neo.docx, REBT_conexión_subterráneo.docx), no del
 // módulo bajo prueba.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 let fallos = 0;
 function assert(cond, msg) {

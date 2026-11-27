@@ -25,7 +25,9 @@ import {
   EtiquetadoMediator,
   PlanoMediator,
   ImportacionMediator,
-} from "./mediators/index.js";
+} from "./mediators/index.ts";
+import type { SnapshotDatos } from "./services/DataProvider.ts";
+import type { DatosSerializarProyecto } from "../modules/persistencia/tipos.ts";
 
 export const ApplicationMediator = {
   // --- Servicios expuestos de forma controlada ---
@@ -64,8 +66,8 @@ export const ApplicationMediator = {
     normativaActiva,
     tipoInstalacion,
     resultados,
-  } = {}) {
-    const partial = {};
+  }: Partial<SnapshotDatos> = {}): void {
+    const partial: Partial<SnapshotDatos> = {};
     if (proyecto !== undefined) partial.proyecto = proyecto;
     if (circuitos !== undefined) partial.circuitos = circuitos;
     if (equipos !== undefined) partial.equipos = equipos;
@@ -82,15 +84,15 @@ export const ApplicationMediator = {
   },
 
   /** Guardar / abrir proyecto — .pdf por defecto (usuario, 2026-11-22); .json queda disponible para quien lo prefiera. */
-  guardarProyecto(estado) {
+  guardarProyecto(estado: DatosSerializarProyecto) {
     return PersistenciaMediator.descargarPdf(estado);
   },
 
-  guardarProyectoComoJson(estado) {
+  guardarProyectoComoJson(estado: DatosSerializarProyecto) {
     return PersistenciaMediator.descargarJson(estado);
   },
 
-  async abrirProyecto(archivo) {
+  async abrirProyecto(archivo: File) {
     return PersistenciaMediator.abrirDesdeArchivo(archivo);
   },
 

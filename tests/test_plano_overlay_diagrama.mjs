@@ -1,6 +1,6 @@
 // Vista combinada "diagrama sobre plano" — resolución pura de
 // conexiones del diagrama a puntos del plano vía entidadId compartido.
-import { PlanoMediator } from "../src/core/mediators/PlanoMediator.js";
+import { PlanoMediator } from "../src/core/mediators/PlanoMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

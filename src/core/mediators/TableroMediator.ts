@@ -55,9 +55,17 @@ import {
   calcularCortocircuitoMonofasico,
   limiteCaidaTensionDI_REBT,
 } from "../../modules/motor/index.ts";
+import type { ResultadoAlimentador } from "../../modules/motor/calcularAlimentador.ts";
+import type { CaidaAcumulada } from "../../modules/motor/caidaTensionAcumulada.ts";
+import type { BalanceFases as ResultadoBalanceFases } from "../../modules/motor/balanceFases.ts";
+import type { ResultadoCargaSimultaneaViviendas, SimultaneidadREBT } from "../../modules/motor/simultaneidadREBT.ts";
 import { DataProvider } from "../services/DataProvider.ts";
-import { NormativaMediator } from "./NormativaMediator.js";
-import { OrigenMediator } from "./OrigenMediator.js";
+import type { Tablero, FuenteEnergia, Transformador } from "../services/DataProvider.ts";
+import type { Circuito, Equipo } from "../../modules/validacion/tipos.ts";
+import type { ResultadoCircuito } from "../../modules/motor/tipos.ts";
+import type { DatosTablero } from "../../modules/tablero/tipos.ts";
+import { NormativaMediator } from "./NormativaMediator.ts";
+import { OrigenMediator } from "./OrigenMediator.ts";
 import { Logger } from "../services/Logger.ts";
 import { Config } from "../services/Config.ts";
 
@@ -72,20 +80,87 @@ import { Config } from "../services/Config.ts";
  * tramos reales distintos — calibres distintos, pedido explícito del
  * usuario 2026-11-20). NO muta `tablero`.
  */
-function conRespaldoDeFuente(tablero, tableros, fuentesEnergia) {
+function conRespaldoDeFuente<T extends { longitudAlimentador?: number | string; tableroPadreId?: string | null; materialAlimentador?: string }>(
+  tablero: T,
+  tableros: Tablero[],
+  fuentesEnergia: FuenteEnergia[]
+): T {
   if (Number(tablero.longitudAlimentador) > 0) return tablero;
   const origen = OrigenMediator.resolver(tablero.tableroPadreId, tableros, fuentesEnergia, []);
-  const fuente = origen?.fuente;
+  const fuente = origen && "fuente" in origen ? origen.fuente : null;
   if (!fuente || !(Number(fuente.distanciaM) > 0)) return tablero;
   return { ...tablero, longitudAlimentador: fuente.distanciaM, materialAlimentador: fuente.materialConductor || tablero.materialAlimentador };
 }
+
+/**
+ * `Tablero.simultaneidadREBT` (modules/tablero/tipos.ts) queda tipado
+ * como `Record<string, unknown> | null` a propósito — ese módulo no
+ * conoce la forma real (ITC-BT-10), que vive en modules/motor/
+ * simultaneidadREBT.ts. Este mediador SÍ cruza ambos dominios (ver
+ * cabecera del archivo), así que este es el punto de unión correcto.
+ */
+function simultaneidadDe(tablero: { simultaneidadREBT?: Record<string, unknown> | null }): SimultaneidadREBT | null {
+  return (tablero.simultaneidadREBT as SimultaneidadREBT | null) ?? null;
+}
+
+// Contratos de retorno documentados en el comentario de cada método —
+// ver ahí el detalle completo de cada rama. Viven acá (no en un
+// módulo puro) porque combinan formas de varios módulos (motor +
+// tablero) específicamente para lo que ESTE mediador agrega.
+
+// El "ok:false" acá es deliberadamente MÁS LAXO que ResultadoAlimentador
+// (que sí es un union disjunto estricto) — el código real chequea
+// .ciclo / .pendiente / .motivo / .error por PRESENCIA (duck typing: cada
+// campo falta en las ramas a las que no aplica), nunca los 3 a la vez.
+// Forzar un union disjunto estricto acá rompería ese patrón en cada punto
+// de lectura sin ganar nada real (el contrato de arriba ya documenta
+// exactamente qué combinación de campos trae cada caso real).
+type ResultadoAlimentadorAgregado =
+  | {
+      ok: false;
+      ciclo?: boolean;
+      error?: string;
+      pendiente?: boolean;
+      sinCircuitos?: boolean;
+      motivo?: string;
+      potenciaTotalW?: number;
+      cosPhiCombinado?: number;
+      corrienteDiseno?: number;
+      simultaneidadREBT?: ResultadoCargaSimultaneaViviendas;
+      cantidadCircuitos?: number;
+    }
+  | (Extract<ResultadoAlimentador, { ok: true }> & { simultaneidadREBT?: ResultadoCargaSimultaneaViviendas });
+
+type ResultadoCaidaAcumuladaDesdeCircuito =
+  | { aplica: false }
+  | { aplica: true; ok: false; ciclo: true; error: string }
+  | { aplica: true; ok: false; noDeterminado: true; motivo: string }
+  | { aplica: true; ok: false; tramoFallido: true; motivo: string }
+  | (CaidaAcumulada & { ok: true; cantidadTableros: number });
+
+type ResultadoCortocircuitoTablero =
+  | { aplica: false }
+  | { aplica: true; ok: false; pendiente?: true; motivo: string }
+  | { aplica: true; ok: true; iccA: number; xrDisponible: boolean; xrInterpolado: boolean | null; cantidadTramos: number };
+
+interface ContribuyenteLinea {
+  tipo: "circuito" | "subtablero";
+  id: string;
+  nombre?: string;
+  corrienteA: number;
+}
+
+type ResultadoBalanceTablero =
+  | { aplica: false }
+  | { aplica: true; ok: false; noDeterminado: true; motivo: string }
+  | (Extract<ResultadoBalanceFases, { aplica: true }> & { ok: true; contribuyentesPorLinea: Record<string, ContribuyenteLinea[]> });
 
 export const TableroMediator = {
   /** Grados de electrificación REBT ITC-BT-10 (§2.1), expuestos para la UI — mismo patrón que OrigenMediator.MODOS_CONMUTACION. */
   GRADOS_ELECTRIFICACION,
 
   /** Fábrica de un tablero nuevo (no lo guarda — eso lo hace el hook). */
-  crear(datos) {
+  crear(datos: DatosTablero) {
     return crearTablero(datos);
   },
 
@@ -95,7 +170,7 @@ export const TableroMediator = {
    * sentido físico) — la validación de padre inexistente la hace
    * ValidacionMediator sobre el modelo guardado.
    */
-  editar(tablero, cambios) {
+  editar(tablero: Tablero, cambios: DatosTablero) {
     let cambiosFinal = cambios;
     if (cambios.tableroPadreId && cambios.tableroPadreId === tablero.id) {
       Logger.warn("TableroMediator.editar: tableroPadreId no puede ser el propio tablero, se ignora", {
@@ -110,21 +185,21 @@ export const TableroMediator = {
     return DataProvider.getTableros();
   },
 
-  obtener(id) {
+  obtener(id: string) {
     return DataProvider.getTablero(id);
   },
 
   /** Circuitos que pertenecen a un tablero (lectura calculada, no una segunda copia). */
-  circuitosDe(tableroId, circuitos) {
+  circuitosDe(tableroId: string, circuitos?: Circuito[]) {
     return circuitosDeTablero(tableroId, circuitos ?? DataProvider.getCircuitos());
   },
 
-  sinAsignar(circuitos) {
+  sinAsignar(circuitos?: Circuito[]) {
     return circuitosSinTablero(circuitos ?? DataProvider.getCircuitos());
   },
 
   /** Devuelve el circuito actualizado; el hook decide cómo guardarlo. */
-  asignar(circuito, tableroId) {
+  asignar<C extends Parameters<typeof asignarCircuitoATablero>[0]>(circuito: C, tableroId: string | null) {
     if (tableroId && !DataProvider.getTablero(tableroId)) {
       Logger.warn("TableroMediator.asignar: tableroId no existe", { tableroId });
     }
@@ -132,12 +207,12 @@ export const TableroMediator = {
   },
 
   /** Devuelve el circuito con sus líneas (L1/L2/L3) actualizadas; el hook decide cómo guardarlo. */
-  asignarLineas(circuito, lineas) {
+  asignarLineas<C extends object>(circuito: C, lineas: unknown) {
     return asignarLineasACircuito(circuito, lineas);
   },
 
   /** Al borrar un tablero, libera (no borra) los circuitos que le pertenecían. */
-  liberarCircuitos(tableroId, circuitos) {
+  liberarCircuitos(tableroId: string, circuitos?: Circuito[]) {
     return liberarCircuitosDeTablero(tableroId, circuitos ?? DataProvider.getCircuitos());
   },
 
@@ -157,7 +232,10 @@ export const TableroMediator = {
    * conservador: usa el límite SIN transformador propio, más estricto,
    * nunca el más permisivo por falta de información).
    */
-  tieneTransformadorPropio(tableroId, { tableros, fuentesEnergia, transformadores } = {}) {
+  tieneTransformadorPropio(
+    tableroId: string | null | undefined,
+    { tableros, fuentesEnergia, transformadores }: { tableros?: Tablero[]; fuentesEnergia?: FuenteEnergia[]; transformadores?: Transformador[] } = {}
+  ): boolean {
     const listaTableros = tableros ?? DataProvider.getTableros();
     const { cadena, ciclo } = obtenerCadenaAscendente(tableroId, listaTableros);
     if (ciclo || cadena.length === 0) return false;
@@ -198,7 +276,13 @@ export const TableroMediator = {
    * fases). Esta función asume una sola tensión de referencia válida
    * para toda la cadena.
    */
-  caidaAcumuladaDesdeCircuito(circuito, { tableros, circuitos, resultados, normativaId, resultadoCircuito, equipos, fuentesEnergia, transformadores, tipoInstalacion } = {}) {
+  caidaAcumuladaDesdeCircuito(
+    circuito: Circuito,
+    { tableros, circuitos, resultados, normativaId, resultadoCircuito, equipos, fuentesEnergia, transformadores, tipoInstalacion }: {
+      tableros?: Tablero[]; circuitos?: Circuito[]; resultados?: ResultadoCircuito[]; normativaId?: string | null;
+      resultadoCircuito?: ResultadoCircuito | null; equipos?: Equipo[]; fuentesEnergia?: FuenteEnergia[]; transformadores?: Transformador[]; tipoInstalacion?: string | null;
+    } = {}
+  ): ResultadoCaidaAcumuladaDesdeCircuito {
     if (!circuito?.tableroId) {
       return { aplica: false };
     }
@@ -235,7 +319,11 @@ export const TableroMediator = {
       // solo la porción que le corresponde a este circuito en particular
       // — la caída de tensión del conductor depende de la corriente
       // real que lo atraviesa, no de a quién "le toca" cada amperio.
-      const alim = this.calcularAlimentadorAgregado(tablero.id, { tableros: listaTableros, circuitos, resultados, normativaId });
+      // tablero.id!: viene de obtenerCadenaAscendente (modules/tablero),
+      // tipado con id opcional porque esa misma forma también describe un
+      // tablero ANTES de crearse — en una cadena ya armada siempre viene
+      // de un tablero real ya guardado (con id).
+      const alim = this.calcularAlimentadorAgregado(tablero.id!, { tableros: listaTableros, circuitos, resultados, normativaId });
 
       if (!alim.ok) {
         if (alim.ciclo) {
@@ -243,7 +331,7 @@ export const TableroMediator = {
           // del ciclo hijo→padre que ya se descartó arriba con
           // obtenerCadenaAscendente. Puede pasar en una rama hermana sin
           // afectar el camino ascendente en sí.
-          return { aplica: true, ok: false, ciclo: true, error: alim.error };
+          return { aplica: true, ok: false, ciclo: true, error: alim.error ?? "Error desconocido." };
         }
         if (alim.pendiente) {
           return {
@@ -312,11 +400,11 @@ export const TableroMediator = {
 
     const indiceViviendaEnCadena = cadena.findIndex((t) => {
       const padreDeT = listaTableros.find((p) => p.id === t.tableroPadreId);
-      return padreDeT?.simultaneidadREBT?.activa === true;
+      return (padreDeT && simultaneidadDe(padreDeT)?.activa) === true;
     });
     if (indiceViviendaEnCadena >= 0 && limitePctOverride != null) {
       const edificio = listaTableros.find((p) => p.id === cadena[indiceViviendaEnCadena].tableroPadreId);
-      const limiteDI = limiteCaidaTensionDI_REBT(edificio?.simultaneidadREBT?.esquemaContadores);
+      const limiteDI = limiteCaidaTensionDI_REBT(edificio ? simultaneidadDe(edificio)?.esquemaContadores : undefined);
       if (limiteDI != null) {
         const indiceTramoDI = 1 + indiceViviendaEnCadena; // índice 0 de deltaVPorTramo es el circuito propio
         deltaVParaEvaluar = deltaVPorTramo.slice(0, indiceTramoDI + 1); // circuito + tramos hasta la DI inclusive, nunca lo que esté arriba (LGA)
@@ -328,9 +416,8 @@ export const TableroMediator = {
     const evaluacion = evaluarCaidaAcumulada(deltaVParaEvaluar, Number(circuito.voltaje), limitePctFinal);
 
     return {
-      aplica: true,
-      ok: true,
       ...evaluacion,
+      ok: true,
       cantidadTableros: cantidadTablerosIncluidos,
     };
   },
@@ -374,7 +461,12 @@ export const TableroMediator = {
    *   { aplica: true, ok: true, iccA, xrDisponible,
    *     xrInterpolado, cantidadTramos }
    */
-  cortocircuitoDesdeTablero(tableroId, { tableros, circuitos, resultados, normativaId, fuentesEnergia, transformadores } = {}) {
+  cortocircuitoDesdeTablero(
+    tableroId: string,
+    { tableros, circuitos, resultados, normativaId, fuentesEnergia, transformadores }: {
+      tableros?: Tablero[]; circuitos?: Circuito[]; resultados?: ResultadoCircuito[]; normativaId?: string | null; fuentesEnergia?: FuenteEnergia[]; transformadores?: Transformador[];
+    } = {}
+  ): ResultadoCortocircuitoTablero {
     const listaTableros = tableros ?? DataProvider.getTableros();
     const listaFuentesEnergia = fuentesEnergia ?? DataProvider.getFuentesEnergia();
     const listaTransformadores = transformadores ?? DataProvider.getTransformadores();
@@ -410,7 +502,7 @@ export const TableroMediator = {
     let rConductor = 0;
     let xConductor = 0;
     for (const tablero of cadena) {
-      const alim = this.calcularAlimentadorAgregado(tablero.id, { tableros: listaTableros, circuitos, resultados, normativaId });
+      const alim = this.calcularAlimentadorAgregado(tablero.id!, { tableros: listaTableros, circuitos, resultados, normativaId });
       if (!alim.ok) {
         if (alim.pendiente) {
           return { aplica: true, ok: false, pendiente: true, motivo: `Tablero "${tablero.nombre}": ${alim.motivo}` };
@@ -477,7 +569,12 @@ export const TableroMediator = {
    * tensión, balance de fases, subtablero con alimentación mixta
    * 120V/240V simultánea.
    */
-  calcularAlimentadorAgregado(tableroId, { tableros, circuitos, resultados, normativaId, fuentesEnergia } = {}) {
+  calcularAlimentadorAgregado(
+    tableroId: string,
+    { tableros, circuitos, resultados, normativaId, fuentesEnergia }: {
+      tableros?: Tablero[]; circuitos?: Circuito[]; resultados?: ResultadoCircuito[]; normativaId?: string | null; fuentesEnergia?: FuenteEnergia[];
+    } = {}
+  ): ResultadoAlimentadorAgregado {
     const listaTableros = tableros ?? DataProvider.getTableros();
     const listaFuentesEnergia = fuentesEnergia ?? DataProvider.getFuentesEnergia();
     const { orden, ciclo, tableroCiclo } = obtenerArbolDescendentePostOrden(tableroId, listaTableros);
@@ -501,16 +598,17 @@ export const TableroMediator = {
 
     const listaCircuitos = circuitos ?? DataProvider.getCircuitos();
     const listaResultados = resultados ?? DataProvider.getResultados();
-    const agregados = {}; // tableroId -> resultado ya calculado (memo, se llena en post-orden)
+    const agregados: Record<string, ResultadoAlimentadorAgregado> = {}; // tableroId -> resultado ya calculado (memo, se llena en post-orden)
 
     for (const t of orden) {
-      const hijos = hijosDeTablero(t.id, listaTableros);
+      const tId = t.id!; // ver nota de tablero.id! más arriba — siempre viene de un tablero real ya guardado
+      const hijos = hijosDeTablero(tId, listaTableros);
       // Edificio de viviendas REBT ITC-BT-10 (usuario, 2026-11-19): este
       // tablero es la "gestión de la conexión del edificio" — sus hijos
       // DIRECTOS son las "viviendas" (cada una gestiona sus propios
       // circuitos igual que siempre, nada cambia ahí). Ver
       // modules/motor/simultaneidadREBT.js.
-      const simultaneidadActiva = t.simultaneidadREBT?.activa === true;
+      const simultaneidadActiva = simultaneidadDe(t)?.activa === true;
 
       // Un hijo "sin circuitos todavía" bloquea normalmente — salvo que
       // el padre tenga activo el modo de viviendas, en cuyo caso
@@ -520,7 +618,7 @@ export const TableroMediator = {
       // pendiente, un tramo que no cumple) sigue bloqueando igual que
       // antes — el respaldo de ITC-BT-10 no cubre datos rotos.
       const hijoIncompleto = hijos.find((h) => {
-        const r = agregados[h.id];
+        const r = agregados[h.id!];
         if (r?.ok) return false;
         if (simultaneidadActiva && r?.sinCircuitos) return false;
         return true;
@@ -530,8 +628,10 @@ export const TableroMediator = {
         // Nunca se suma 0 y se sigue como si el hijo no existiera: este
         // tablero hereda la misma falta de dato que su hijo, con el
         // motivo puntual de cuál hijo es.
-        const rHijo = agregados[hijoIncompleto.id];
-        agregados[t.id] = {
+        // Narrowed a "ok:false" porque es justo lo que hijoIncompleto.find()
+        // arriba acaba de verificar para este hijo (nunca ok:true).
+        const rHijo = agregados[hijoIncompleto.id!] as Extract<ResultadoAlimentadorAgregado, { ok: false }>;
+        agregados[tId] = {
           ok: false,
           pendiente: !!rHijo.pendiente,
           motivo: `Tablero hijo "${hijoIncompleto.nombre}" ${
@@ -541,13 +641,20 @@ export const TableroMediator = {
         continue;
       }
 
-      const circuitosPropios = circuitosDeTablero(t.id, listaCircuitos);
+      const circuitosPropios = circuitosDeTablero(tId, listaCircuitos);
       const resultadosPropios = circuitosPropios
         .map((c) => listaResultados.find((r) => r.id === c.id))
         .filter(Boolean);
 
-      let pseudoResultadosHijos;
-      let cargaViviendas = null;
+      // Disfrazadas de "resultado de circuito" para reusar
+      // combinarResultadosCircuitos (vía calcularAlimentador) sin
+      // tocarlo — ESE código, verificado, solo lee `.cargaDemandaNormativaW`
+      // y `.cosPhiEfectivo` de cada entrada `ok:true`, nunca el resto del
+      // contrato de ResultadoCircuito (normativa, tipo, etc., que estas
+      // entidades no tienen por no ser circuitos reales) — el cast es
+      // honesto sobre esa forma reducida, no un `any` de relleno.
+      let pseudoResultadosHijos: ResultadoCircuito[];
+      let cargaViviendas: ResultadoCargaSimultaneaViviendas | null = null;
 
       if (simultaneidadActiva && hijos.length > 0) {
         // ITC-BT-10 §3.1: potencia prevista de cada vivienda = su
@@ -558,26 +665,26 @@ export const TableroMediator = {
         // Guía-BT-10 ("ya que no se conoce la previsión exacta de
         // demanda eléctrica").
         const potenciasViviendas = hijos.map((h) => {
-          const r = agregados[h.id];
+          const r = agregados[h.id!];
           if (r?.ok) return r.potenciaTotalW;
-          return potenciaMinimaGrado(h.gradoElectrificacion ?? t.simultaneidadREBT.gradoPorDefecto);
+          return potenciaMinimaGrado(h.gradoElectrificacion ?? simultaneidadDe(t)?.gradoPorDefecto ?? "");
         });
         cargaViviendas = calcularCargaSimultaneaViviendas(potenciasViviendas);
         // cosPhiEfectivo=1: ITC-BT-10 da potencias PREVISTAS a prever,
         // no cargas reales con un factor de potencia propio — mismo
         // criterio que demanda100() en IEC_ES (modules/normativa/iec/es.js).
-        pseudoResultadosHijos = cargaViviendas.ok
+        pseudoResultadosHijos = (cargaViviendas.ok
           ? [{ ok: true, cargaDemandaNormativaW: cargaViviendas.cargaW, cosPhiEfectivo: 1 }]
-          : []; // n inválido no debería pasar nunca (hijos.length ya es >0) — si pasa, no se inventa una carga.
+          : []) as ResultadoCircuito[]; // n inválido no debería pasar nunca (hijos.length ya es >0) — si pasa, no se inventa una carga.
       } else {
         // Demanda de cada hijo, YA agregada de su propio subárbol,
         // disfrazada de "resultado de circuito" para reusar
         // combinarResultadosCircuitos sin tocarlo.
         pseudoResultadosHijos = hijos.map((h) => ({
           ok: true,
-          cargaDemandaNormativaW: agregados[h.id].potenciaTotalW,
-          cosPhiEfectivo: agregados[h.id].cosPhiCombinado,
-        }));
+          cargaDemandaNormativaW: agregados[h.id!].potenciaTotalW,
+          cosPhiEfectivo: agregados[h.id!].cosPhiCombinado,
+        })) as ResultadoCircuito[];
       }
 
       const tEfectivo = conRespaldoDeFuente(t, listaTableros, listaFuentesEnergia);
@@ -586,7 +693,7 @@ export const TableroMediator = {
       // recalcularlo (mismo criterio que contribuyentesPorLinea en
       // balanceFasesDeTablero) — campo opcional, no cambia el contrato
       // existente para quien no usa este modo.
-      agregados[t.id] = cargaViviendas ? { ...resultado, simultaneidadREBT: cargaViviendas } : resultado;
+      agregados[tId] = cargaViviendas ? { ...resultado, simultaneidadREBT: cargaViviendas } : resultado;
     }
 
     return agregados[tableroId];
@@ -635,7 +742,12 @@ export const TableroMediator = {
    * y balance visibles). FUERA DE ALCANCE todavía: subtablero con
    * alimentación mixta 120V/240V simultánea.
    */
-  balanceFasesDeTablero(tableroId, { tableros, circuitos, resultados, normativaId, umbralPct } = {}) {
+  balanceFasesDeTablero(
+    tableroId: string,
+    { tableros, circuitos, resultados, normativaId, umbralPct }: {
+      tableros?: Tablero[]; circuitos?: Circuito[]; resultados?: ResultadoCircuito[]; normativaId?: string | null; umbralPct?: number;
+    } = {}
+  ): ResultadoBalanceTablero {
     const listaTableros = tableros ?? DataProvider.getTableros();
     const tablero = listaTableros.find((t) => t.id === tableroId);
     if (!tablero) {
@@ -654,13 +766,13 @@ export const TableroMediator = {
       return { aplica: false }; // nada que balancear todavía
     }
 
-    const aportes = {};
+    const aportes: Record<string, number> = {};
     // Quién aporta cuánto a cada línea — mismos totales que `aportes`,
     // desglosados por origen. No alimenta el cálculo (eso es `aportes`
     // solo); existe para que la UI pueda sugerir qué mover sin tener
     // que recorrer todo esto de nuevo por su cuenta.
-    const contribuyentesPorLinea = {};
-    function registrarContribuyente(linea, item) {
+    const contribuyentesPorLinea: Record<string, ContribuyenteLinea[]> = {};
+    function registrarContribuyente(linea: string, item: ContribuyenteLinea): void {
       (contribuyentesPorLinea[linea] ??= []).push(item);
     }
 
@@ -682,7 +794,7 @@ export const TableroMediator = {
           motivo: `Circuito "${c.nombre}" todavía no calcula OK.`,
         };
       }
-      for (const linea of c.lineas) {
+      for (const linea of c.lineas as string[]) {
         aportes[linea] = (aportes[linea] ?? 0) + r.corrienteDiseno;
         registrarContribuyente(linea, { tipo: "circuito", id: c.id, nombre: c.nombre, corrienteA: r.corrienteDiseno });
       }
@@ -697,7 +809,7 @@ export const TableroMediator = {
           motivo: `Subtablero "${hijo.nombre}" todavía no tiene línea(s) de alimentador asignada(s).`,
         };
       }
-      const alimHijo = this.calcularAlimentadorAgregado(hijo.id, {
+      const alimHijo = this.calcularAlimentadorAgregado(hijo.id!, {
         tableros: listaTableros,
         circuitos: listaCircuitos,
         resultados: listaResultados,
@@ -713,7 +825,7 @@ export const TableroMediator = {
       }
       for (const linea of hijo.lineasAlimentador) {
         aportes[linea] = (aportes[linea] ?? 0) + alimHijo.corrienteDiseno;
-        registrarContribuyente(linea, { tipo: "subtablero", id: hijo.id, nombre: hijo.nombre, corrienteA: alimHijo.corrienteDiseno });
+        registrarContribuyente(linea, { tipo: "subtablero", id: hijo.id!, nombre: hijo.nombre, corrienteA: alimHijo.corrienteDiseno });
       }
     }
 
@@ -722,6 +834,6 @@ export const TableroMediator = {
       return { aplica: false };
     }
 
-    return { aplica: true, ok: true, ...resultado, contribuyentesPorLinea };
+    return { ...resultado, ok: true, contribuyentesPorLinea };
   },
 };

@@ -6,7 +6,7 @@
 // probó aparte en test_caida_rebt_puro.mjs. Acá se prueba que la
 // app REAL (ApplicationMediator) ya puede usar todo esto, no solo las
 // funciones puras en aislamiento.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

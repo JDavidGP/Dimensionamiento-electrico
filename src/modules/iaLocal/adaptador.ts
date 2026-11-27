@@ -12,10 +12,11 @@
 // voltaje por defecto cuando el documento no lo dio — igual que ya
 // hace el formulario de tablero (tensionPorDefecto en PanelTableros.jsx).
 
-import { ApplicationMediator as App } from "../../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../../core/ApplicationMediator.ts";
 import type { TableroExtraido } from "./esquema.ts";
 import type { FormularioCircuito, FormularioEquipo } from "../validacion/formularios.ts";
 import type { FormularioTablero } from "../../shared/data/plantillas.ts";
+import type { Fases } from "../normativa/tipos.ts";
 
 const { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } = App.data.tablas.plantillas();
 
@@ -51,7 +52,7 @@ export interface TableroParaImportar {
   circuitos: CircuitoParaImportar[];
 }
 
-function primerVoltajeEstandar(normativaActiva: string, fases: string): number | null {
+function primerVoltajeEstandar(normativaActiva: string, fases: Fases): number | null {
   const lista = App.normativa.voltajesPorFase(normativaActiva, fases);
   return lista?.[0] ?? null;
 }

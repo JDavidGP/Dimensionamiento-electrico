@@ -13,22 +13,36 @@
  * que el resto de los mediadores de dominio.
  */
 import { generarMemoriaTecnica } from "../../modules/documento/index.ts";
+import type { DatosMemoriaTecnica } from "../../modules/documento/tipos.ts";
 import { DataProvider } from "../services/DataProvider.ts";
 import { Logger } from "../services/Logger.ts";
-import { NormativaMediator } from "./NormativaMediator.js";
-import { OrigenMediator } from "./OrigenMediator.js";
-import { ValidacionMediator } from "./ValidacionMediator.js";
+import { NormativaMediator } from "./NormativaMediator.ts";
+import { OrigenMediator } from "./OrigenMediator.ts";
+import { ValidacionMediator } from "./ValidacionMediator.ts";
+import type { Tablero, FuenteEnergia, Transformador } from "../services/DataProvider.ts";
 
 /** Etiqueta legible del origen de un tablero (tablero padre / fuente de energía / transformador / acometida / referencia rota). */
-function etiquetaOrigen(tablero, tableros, fuentesEnergia, transformadores) {
+function etiquetaOrigen(tablero: Tablero, tableros: Tablero[], fuentesEnergia: FuenteEnergia[], transformadores: Transformador[]): string {
   if (!tablero.tableroPadreId) return "Red eléctrica local (acometida / poste)";
   const resuelto = OrigenMediator.resolver(tablero.tableroPadreId, tableros, fuentesEnergia, transformadores);
-  if (resuelto.tipo === "tablero") return resuelto.tablero.nombre;
-  if (resuelto.tipo === "transformador") return `${resuelto.transformador.nombre} (Transformador)`;
-  if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.RED_LOCAL) return `${resuelto.fuente.nombre} (Red local)`;
-  if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.BATERIA) return `${resuelto.fuente.nombre} (Batería)`;
-  if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.GENERADOR) return `${resuelto.fuente.nombre} (Generador)`;
+  if (resuelto.tipo === "tablero") return resuelto.tablero.nombre ?? "";
+  if (resuelto.tipo === "transformador") return `${resuelto.transformador.nombre ?? ""} (Transformador)`;
+  if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.RED_LOCAL) return `${resuelto.fuente.nombre ?? ""} (Red local)`;
+  if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.BATERIA) return `${resuelto.fuente.nombre ?? ""} (Batería)`;
+  if (resuelto.tipo === OrigenMediator.TIPOS_FUENTE_ENERGIA.GENERADOR) return `${resuelto.fuente.nombre ?? ""} (Generador)`;
   return `Origen desconocido (referencia rota: ${tablero.tableroPadreId})`;
+}
+
+interface OverridesMemoriaTecnica extends Omit<DatosMemoriaTecnica, "normativa" | "tableros" | "fuentesEnergia" | "transformadores"> {
+  normativaActiva?: string | null;
+  // Más estrictos que DatosMemoriaTecnica (que los declara con id
+  // opcional / sin tipar — ver modules/documento/tipos.ts): acá
+  // siempre son tableros/fuentes/transformadores YA guardados en el
+  // proyecto en curso (mismo tipo que expone DataProvider), nunca uno
+  // a medio crear.
+  tableros?: Tablero[];
+  fuentesEnergia?: FuenteEnergia[];
+  transformadores?: Transformador[];
 }
 
 export const DocumentoMediator = {
@@ -41,7 +55,7 @@ export const DocumentoMediator = {
    * render, así que llamarlo con datos recién cambiados sin pasarlos
    * explícitos puede leer un render atrás.
    */
-  memoriaTecnica(overrides = {}) {
+  memoriaTecnica(overrides: OverridesMemoriaTecnica = {}) {
     const proyecto = overrides.proyecto ?? DataProvider.getProyecto();
     const normativaId = overrides.normativaActiva ?? DataProvider.getNormativaActivaId();
     const normativaObj = NormativaMediator.obtener(normativaId);
@@ -54,17 +68,24 @@ export const DocumentoMediator = {
     const transformadores = overrides.transformadores ?? DataProvider.getTransformadores();
     const alimentadores = overrides.alimentadores ?? {};
     const listaIntegridad =
-      overrides.listaIntegridad ?? ValidacionMediator.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia);
+      overrides.listaIntegridad ?? ValidacionMediator.listaIntegridad(proyecto, circuitos, equipos, tableros, fuentesEnergia, undefined, undefined, undefined, undefined, undefined);
 
-    const origenPorTablero = {};
+    const origenPorTablero: Record<string, string> = {};
     for (const t of tableros) {
       origenPorTablero[t.id] = etiquetaOrigen(t, tableros, fuentesEnergia, transformadores);
     }
 
     Logger.debug("DocumentoMediator.memoriaTecnica", { circuitos: circuitos.length, tableros: tableros.length });
 
+    // `proyecto`/`listaIntegridad` cruzan acá de la forma ESTRICTA
+    // (modules/validacion/tipos.ts: Proyecto/Entrada) a la forma LAXA
+    // que generarMemoriaTecnica declara a propósito (modules/documento/
+    // tipos.ts: índice `[clave: string]: unknown`), porque ese módulo
+    // puro no depende de validacion (ver ARCHITECTURE.md §11) — este
+    // mediador SÍ puede cruzar ambos dominios, así que el cast es el
+    // punto de unión correcto, no uno inventado para silenciar un error.
     return generarMemoriaTecnica({
-      proyecto,
+      proyecto: proyecto as DatosMemoriaTecnica["proyecto"],
       normativa: normativaObj ? { id: normativaObj.id, nombre: normativaObj.nombre } : { id: normativaId, nombre: normativaId ?? "Sin normativa" },
       tipoInstalacion,
       circuitos,
@@ -75,7 +96,7 @@ export const DocumentoMediator = {
       origenPorTablero,
       fuentesEnergia,
       transformadores,
-      listaIntegridad,
+      listaIntegridad: listaIntegridad as DatosMemoriaTecnica["listaIntegridad"],
     });
   },
 };

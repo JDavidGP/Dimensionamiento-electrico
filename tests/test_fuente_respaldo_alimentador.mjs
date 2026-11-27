@@ -3,7 +3,7 @@
 // de energía que SÍ los tiene, TableroMediator.calcularAlimentadorAgregado
 // debe usarlos como respaldo — sin que el tablero necesite repetir el
 // dato (ver conRespaldoDeFuente en TableroMediator.js).
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

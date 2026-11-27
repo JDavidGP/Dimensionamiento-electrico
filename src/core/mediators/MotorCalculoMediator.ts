@@ -36,7 +36,9 @@ import {
   GRADOS_ELECTRIFICACION,
   calcularCargaSimultaneaViviendas,
 } from "../../modules/motor/index.ts";
-import { NormativaMediator } from "./NormativaMediator.js";
+import type { ResultadoCircuito, ContextoInstalacionCircuito } from "../../modules/motor/index.ts";
+import type { Circuito, Equipo } from "../../modules/validacion/tipos.ts";
+import { NormativaMediator } from "./NormativaMediator.ts";
 import { DataProvider } from "../services/DataProvider.ts";
 import { Logger } from "../services/Logger.ts";
 
@@ -53,7 +55,7 @@ export const MotorCalculoMediator = {
    * vía TableroMediator.tieneTransformadorPropio — este mediador no
    * conoce tableros, solo reenvía lo que le dan.
    */
-  calcularCircuito(circuito, equipos, normativaId, contextoInstalacion) {
+  calcularCircuito(circuito: Circuito, equipos: Equipo[], normativaId?: string | null, contextoInstalacion?: ContextoInstalacionCircuito): ResultadoCircuito {
     const id = normativaId ?? DataProvider.getNormativaActivaId();
     const normativa = NormativaMediator.obtener(id);
     try {
@@ -64,7 +66,7 @@ export const MotorCalculoMediator = {
         ok: false,
         id: circuito?.id,
         nombre: circuito?.nombre,
-        error: err.message || "Error en cálculo de circuito",
+        error: err instanceof Error ? err.message : "Error en cálculo de circuito",
       };
     }
   },
@@ -75,13 +77,18 @@ export const MotorCalculoMediator = {
    * opcional — ver calcularCircuito. Sin este parámetro, comportamiento
    * idéntico a siempre (cada circuito usa `{}` por defecto en el motor).
    */
-  calcularTodos(circuitos, equipos, normativaId, contextoPorCircuitoId) {
+  calcularTodos(
+    circuitos?: Circuito[],
+    equipos?: Equipo[],
+    normativaId?: string | null,
+    contextoPorCircuitoId?: Record<string, ContextoInstalacionCircuito>
+  ): ResultadoCircuito[] {
     const id = normativaId ?? DataProvider.getNormativaActivaId();
     return (circuitos || DataProvider.getCircuitos()).map((c) => {
       const eqs = (equipos || DataProvider.getEquipos()).filter(
         (e) => e.circuitoId === c.id
       );
-      return this.calcularCircuito(c, eqs, id, contextoPorCircuitoId?.[c.id]);
+      return this.calcularCircuito(c, eqs, id, c.id ? contextoPorCircuitoId?.[c.id] : undefined);
     });
   },
 

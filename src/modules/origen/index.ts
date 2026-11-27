@@ -10,7 +10,7 @@
 // de resolución encima es más barata y no arriesga nada de eso.
 //
 // CERO gráfico, cero UI. Módulo puro — se usa a través de
-// OrigenMediator (core/mediators/OrigenMediator.js).
+// OrigenMediator (core/mediators/OrigenMediator.ts).
 
 import type { Tablero, FuenteEnergia, Transformador } from "./tipos.ts";
 

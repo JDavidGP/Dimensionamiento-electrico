@@ -16,6 +16,7 @@ import {
   nombreArchivo,
 } from "../../modules/persistencia/index.ts";
 import { generarPdfProyecto, extraerDatosDePdf } from "../../modules/persistencia/pdf.ts";
+import type { DatosSerializarProyecto, ProyectoSerializado } from "../../modules/persistencia/tipos.ts";
 import { OPCIONES_TIPO_INSTALACION } from "../../shared/constants/constantes.ts";
 import { Logger } from "../services/Logger.ts";
 import { Config } from "../services/Config.ts";
@@ -25,7 +26,7 @@ export const PersistenciaMediator = {
   planoVacio,
   nombreArchivo,
 
-  serializar({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }) {
+  serializar({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }: DatosSerializarProyecto): ProyectoSerializado {
     const data = serializarProyecto({
       proyecto,
       normativaActiva,
@@ -44,7 +45,7 @@ export const PersistenciaMediator = {
     return data;
   },
 
-  deserializar(data) {
+  deserializar(data: unknown): ProyectoSerializado {
     try {
       return deserializarProyecto(data);
     } catch (err) {
@@ -54,7 +55,7 @@ export const PersistenciaMediator = {
   },
 
   /** Descarga el proyecto como archivo .json en el navegador. */
-  descargarJson({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }) {
+  descargarJson({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }: DatosSerializarProyecto): string {
     const datos = this.serializar({
       proyecto,
       normativaActiva,
@@ -82,7 +83,7 @@ export const PersistenciaMediator = {
   },
 
   /** Descarga el proyecto como archivo .pdf (ficha legible + datos completos incrustados). */
-  async descargarPdf({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }) {
+  async descargarPdf({ proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, tableros, fuentesEnergia, transformadores, diferenciales, nodosDiagrama, conexionesDiagrama, plano }: DatosSerializarProyecto): Promise<string> {
     const datos = this.serializar({
       proyecto,
       normativaActiva,
@@ -106,7 +107,7 @@ export const PersistenciaMediator = {
         `Guardado: ${new Date().toLocaleString()}`,
       ],
     });
-    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -117,7 +118,7 @@ export const PersistenciaMediator = {
   },
 
   /** Lee un File del input (.pdf o, por compatibilidad, .json de versiones anteriores) y deserializa. */
-  abrirDesdeArchivo(archivo) {
+  abrirDesdeArchivo(archivo: File): Promise<ProyectoSerializado> {
     const esPdf = archivo.type === "application/pdf" || /\.pdf$/i.test(archivo.name || "");
     if (esPdf) return this.abrirDesdeArchivoPdf(archivo);
 
@@ -125,7 +126,7 @@ export const PersistenciaMediator = {
       const lector = new FileReader();
       lector.onload = (e) => {
         try {
-          const cargado = this.deserializar(JSON.parse(e.target.result));
+          const cargado = this.deserializar(JSON.parse(e.target?.result as string));
           resolve(cargado);
         } catch (err) {
           reject(err);
@@ -136,12 +137,12 @@ export const PersistenciaMediator = {
     });
   },
 
-  abrirDesdeArchivoPdf(archivo) {
+  abrirDesdeArchivoPdf(archivo: File): Promise<ProyectoSerializado> {
     return new Promise((resolve, reject) => {
       const lector = new FileReader();
       lector.onload = async (e) => {
         try {
-          const datos = await extraerDatosDePdf(e.target.result);
+          const datos = await extraerDatosDePdf(e.target?.result as ArrayBuffer);
           resolve(this.deserializar(datos));
         } catch (err) {
           reject(err);

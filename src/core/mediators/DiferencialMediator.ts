@@ -25,15 +25,15 @@ export const DiferencialMediator = {
   SENSIBILIDAD_MAXIMA_DIFERENCIAL_GENERAL_MA,
 
   /** ¿Le falta un diferencial a este circuito? (ITC-BT-25 §2.1 — todos los circuitos, sin excepción). El llamador gatea esto a IEC_ES. */
-  requiereDiferencial(circuito) {
+  requiereDiferencial(circuito: Parameters<typeof requiereDiferencialREBT>[0]) {
     return requiereDiferencialREBT(circuito);
   },
 
-  crear(datos) {
+  crear(datos: Parameters<typeof crearDiferencial>[0]) {
     return crearDiferencial(datos);
   },
 
-  editar(diferencial, cambios) {
+  editar(diferencial: Parameters<typeof editarDiferencial>[0], cambios: Parameters<typeof editarDiferencial>[1]) {
     return editarDiferencial(diferencial, cambios);
   },
 
@@ -41,17 +41,17 @@ export const DiferencialMediator = {
     return DataProvider.getDiferenciales();
   },
 
-  obtener(id) {
+  obtener(id: string) {
     return DataProvider.getDiferencial(id);
   },
 
   /** Circuitos que pertenecen a un diferencial (lectura calculada, no una segunda copia). */
-  circuitosDe(diferencialId, circuitos) {
+  circuitosDe(diferencialId: Parameters<typeof circuitosDeDiferencial>[0], circuitos?: Parameters<typeof circuitosDeDiferencial>[1]) {
     return circuitosDeDiferencial(diferencialId, circuitos ?? DataProvider.getCircuitos());
   },
 
   /** Devuelve el circuito actualizado; el hook decide cómo guardarlo. */
-  asignar(circuito, diferencialId) {
+  asignar(circuito: Parameters<typeof asignarCircuitoADiferencial>[0], diferencialId: Parameters<typeof asignarCircuitoADiferencial>[1]) {
     if (diferencialId && !DataProvider.getDiferencial(diferencialId)) {
       Logger.warn("DiferencialMediator.asignar: diferencialId no existe", { diferencialId });
     }
@@ -59,7 +59,7 @@ export const DiferencialMediator = {
   },
 
   /** Al borrar un diferencial, libera (no borra) los circuitos que le pertenecían. */
-  liberarCircuitos(diferencialId, circuitos) {
+  liberarCircuitos(diferencialId: Parameters<typeof liberarCircuitosDeDiferencial>[0], circuitos?: Parameters<typeof liberarCircuitosDeDiferencial>[1]) {
     return liberarCircuitosDeDiferencial(diferencialId, circuitos ?? DataProvider.getCircuitos());
   },
 };

@@ -1,7 +1,7 @@
 // CRUD completo de Transformador (usuario, 2026-11-20): editar/eliminar
 // + entrada propia de integridad (mismo patrón que fuentesEnergia) —
 // antes solo existía "crear".
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

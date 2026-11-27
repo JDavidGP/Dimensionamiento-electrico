@@ -15,15 +15,15 @@
 import { sugerirEtiquetaTablero, sugerirEtiquetaCircuito, sugerirEtiquetaEquipo } from "../../modules/etiquetado/index.ts";
 
 export const EtiquetadoMediator = {
-  sugerirTablero(tableros) {
+  sugerirTablero(tableros?: Parameters<typeof sugerirEtiquetaTablero>[0]): string {
     return sugerirEtiquetaTablero(tableros);
   },
 
-  sugerirCircuito(tableroEtiqueta, circuitosDelTablero) {
+  sugerirCircuito(tableroEtiqueta: Parameters<typeof sugerirEtiquetaCircuito>[0], circuitosDelTablero?: Parameters<typeof sugerirEtiquetaCircuito>[1]): string {
     return sugerirEtiquetaCircuito(tableroEtiqueta, circuitosDelTablero);
   },
 
-  sugerirEquipo(circuitoEtiqueta, equiposDelCircuito) {
+  sugerirEquipo(circuitoEtiqueta: Parameters<typeof sugerirEtiquetaEquipo>[0], equiposDelCircuito?: Parameters<typeof sugerirEtiquetaEquipo>[1]): string {
     return sugerirEtiquetaEquipo(circuitoEtiqueta, equiposDelCircuito);
   },
 };

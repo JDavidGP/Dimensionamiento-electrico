@@ -2,7 +2,7 @@
 // puerta (usuario, 2026-11-20) — probado con una imagen SINTÉTICA
 // (un array de grises armado a mano, no un archivo), para conocer
 // exactamente dónde "debería" encontrar cada línea.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

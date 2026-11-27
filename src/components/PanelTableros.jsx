@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
 import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPOS_INSTALACION } from "../shared/constants/constantes.ts";
 
 const FASES = [

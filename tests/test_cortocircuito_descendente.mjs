@@ -4,7 +4,7 @@
 // sumando la impedancia de cada alimentador de la cadena hasta el
 // tablero objetivo. Prueba TableroMediator.cortocircuitoDesdeTablero a
 // nivel ApplicationMediator (app real, no solo funciones puras).
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

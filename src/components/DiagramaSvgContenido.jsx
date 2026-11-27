@@ -1,6 +1,6 @@
 import React from "react";
 import { colores, fuentes } from "../styles/colores";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
 
 // Contenido SVG puro del diagrama unifilar (defs + conexiones + nodos)

@@ -1,4 +1,4 @@
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 const catalogo = App.diagrama.CATALOGO_COMPONENTES;
 console.log(`Catálogo tiene ${catalogo.length} tipos.`);

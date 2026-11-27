@@ -19,7 +19,7 @@
 // reescribir con su propia convención sin que nada se la vuelva a pisar.
 //
 // Módulo puro — cero React, cero UI. Se usa a través de
-// EtiquetadoMediator (core/mediators/EtiquetadoMediator.js).
+// EtiquetadoMediator (core/mediators/EtiquetadoMediator.ts).
 
 interface ConEtiqueta {
   etiqueta?: string;

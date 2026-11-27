@@ -1,4 +1,4 @@
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 let fallos = 0;
 function assert(cond, msg) {

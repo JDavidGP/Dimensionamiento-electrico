@@ -43,8 +43,11 @@ import {
 } from "../../modules/geometria/index.ts";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoriaDiagrama } from "../../shared/data/bibliotecaComponentes.ts";
 import { DataProvider } from "../services/DataProvider.ts";
+import type { Tablero, FuenteEnergia, Transformador } from "../services/DataProvider.ts";
 import { Logger } from "../services/Logger.ts";
-import { OrigenMediator } from "./OrigenMediator.js";
+import { OrigenMediator } from "./OrigenMediator.ts";
+import type { NodoDiagrama, ConexionDiagrama, DatosNodo, DatosConexion } from "../../modules/diagrama/tipos.ts";
+import type { Equipo } from "../../modules/validacion/tipos.ts";
 
 export const DiagramaMediator = {
   // Catálogo expuesto para la UI — mismo patrón que OrigenMediator con sus enums.
@@ -58,12 +61,12 @@ export const DiagramaMediator = {
   ZOOM_MAX,
 
   /** Posiciones nuevas (nodoId -> {x,y}) que acomodan el diagrama en capas según el sentido de las conexiones — el hook decide cómo aplicarlas. */
-  autoorganizar(nodos, conexiones, opciones) {
+  autoorganizar(nodos?: Parameters<typeof autoorganizarNodos>[0], conexiones?: Parameters<typeof autoorganizarNodos>[1], opciones?: Parameters<typeof autoorganizarNodos>[2]) {
     return autoorganizarNodos(nodos ?? [], conexiones ?? [], opciones);
   },
 
   /** Símbolo del catálogo que mejor representa a un equipo, por palabras clave en su nombre/función (ver seleccionSimbolo.ts) — nunca certero, cae a "carga_especial" ante la duda. */
-  elegirSimboloEquipo(equipo) {
+  elegirSimboloEquipo(equipo: Parameters<typeof elegirSimboloEquipo>[0]) {
     return elegirSimboloEquipo(equipo);
   },
 
@@ -77,41 +80,41 @@ export const DiagramaMediator = {
   ajustarAVentana,
 
   /** Fábrica de un nodo nuevo (no lo guarda — eso lo hace el hook). */
-  crearNodo(datos) {
+  crearNodo(datos: DatosNodo) {
     return crearNodo(datos);
   },
 
   /** Devuelve el nodo editado; el hook decide cómo guardarlo. */
-  editarNodo(nodo, cambios) {
+  editarNodo(nodo: NodoDiagrama, cambios: DatosNodo) {
     return editarNodo(nodo, cambios);
   },
 
   /** Conexiones que quedan tras eliminar un nodo (las suyas se eliminan, no quedan rotas). */
-  conexionesTrasEliminarNodo(nodoId, conexiones) {
+  conexionesTrasEliminarNodo(nodoId: string, conexiones?: ConexionDiagrama[]) {
     return eliminarConexionesDeNodo(nodoId, conexiones ?? []);
   },
 
   /** Fábrica de una conexión nueva, validada contra cardinalidad antes de crearla. */
-  crearConexionValidada(datos, nodos, conexionesExistentes) {
+  crearConexionValidada(datos: DatosConexion & { nodoOrigenId: string; nodoDestinoId: string }, nodos?: NodoDiagrama[], conexionesExistentes?: ConexionDiagrama[]) {
     const validacion = validarConexion(datos, nodos ?? [], conexionesExistentes ?? []);
     if (!validacion.valido) {
       Logger.warn("DiagramaMediator.crearConexionValidada: conexión rechazada", { motivo: validacion.motivo });
-      return { ok: false, motivo: validacion.motivo };
+      return { ok: false as const, motivo: validacion.motivo };
     }
-    return { ok: true, conexion: crearConexion(datos) };
+    return { ok: true as const, conexion: crearConexion(datos) };
   },
 
   /** Devuelve la conexión editada; el hook decide cómo guardarla. */
-  editarConexion(conexion, cambios) {
+  editarConexion(conexion: ConexionDiagrama, cambios: DatosConexion) {
     return editarConexion(conexion, cambios);
   },
 
-  validarConexion(conexionPropuesta, nodos, conexionesExistentes) {
+  validarConexion(conexionPropuesta: { nodoOrigenId: string; nodoDestinoId: string }, nodos?: NodoDiagrama[], conexionesExistentes?: ConexionDiagrama[]) {
     return validarConexion(conexionPropuesta, nodos ?? DataProvider.getNodosDiagrama(), conexionesExistentes ?? DataProvider.getConexionesDiagrama());
   },
 
   /** Solo la compatibilidad semántica tipo→tipo (sin cardinalidad ni existencia de nodos) — útil para la UI, ej. resaltar destinos válidos antes de arrastrar una conexión. */
-  validarReglaElectrica(tipoOrigen, tipoDestino) {
+  validarReglaElectrica(tipoOrigen: string, tipoDestino: string) {
     return validarReglaElectrica(tipoOrigen, tipoDestino);
   },
 
@@ -131,7 +134,10 @@ export const DiagramaMediator = {
    * tablero/equipo/fuente dos veces). `nodoId` excluye al propio nodo
    * de esa exclusión cuando se está reeditando su vínculo.
    */
-  candidatosEntidad(tipoNodo, { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [], nodos = [], nodoId = null } = {}) {
+  candidatosEntidad(
+    tipoNodo: string,
+    { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [], nodos = [], nodoId = null }: { tableros?: Tablero[]; equipos?: Equipo[]; fuentesEnergia?: FuenteEnergia[]; transformadores?: Transformador[]; nodos?: NodoDiagrama[]; nodoId?: string | null } = {}
+  ) {
     const comp = obtenerComponente(tipoNodo);
     if (!comp?.entidadVinculada) return [];
     const vinculados = new Set(nodos.filter((n) => n.id !== nodoId && n.entidadId).map((n) => n.entidadId));
@@ -154,7 +160,10 @@ export const DiagramaMediator = {
   },
 
   /** La entidad real (tablero/equipo/fuenteEnergia/transformador) que representa este nodo, o null si no tiene vínculo o la entidad ya no existe. */
-  resolverEntidad(nodo, { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [] } = {}) {
+  resolverEntidad(
+    nodo: NodoDiagrama | null | undefined,
+    { tableros = [], equipos = [], fuentesEnergia = [], transformadores = [] }: { tableros?: Tablero[]; equipos?: Equipo[]; fuentesEnergia?: FuenteEnergia[]; transformadores?: Transformador[] } = {}
+  ) {
     if (!nodo?.entidadId) return null;
     const comp = obtenerComponente(nodo.tipo);
     if (comp?.entidadVinculada === "tablero") return tableros.find((t) => t.id === nodo.entidadId) ?? null;
@@ -165,7 +174,7 @@ export const DiagramaMediator = {
   },
 
   /** Nodos tras liberar (desvincular, no borrar) los que apuntaban a una entidad eliminada. */
-  liberarNodosDeEntidad(entidadId, nodos) {
+  liberarNodosDeEntidad(entidadId: string, nodos?: NodoDiagrama[]) {
     return liberarNodosDeEntidad(entidadId, nodos ?? []);
   },
 };

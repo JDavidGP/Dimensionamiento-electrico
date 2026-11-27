@@ -20,7 +20,23 @@
  * resto de los mediadores de dominio.
  */
 import { interpretarTexto } from "../../modules/importacionEquipos/index.ts";
-import { ValidacionMediator } from "./ValidacionMediator.js";
+import { ValidacionMediator } from "./ValidacionMediator.ts";
+import type { Circuito } from "../../modules/validacion/tipos.ts";
+
+export interface FilaImportacionOk {
+  numeroLinea: number;
+  ok: true;
+  etiquetaCircuito: string;
+  nombreCircuito: string | undefined;
+  nombre: string;
+  equipo: ReturnType<typeof ValidacionMediator.formularioAEquipo>;
+}
+export interface FilaImportacionError {
+  numeroLinea: number;
+  ok: false;
+  motivo: string;
+}
+export type FilaImportacion = FilaImportacionOk | FilaImportacionError;
 
 // Campos del formulario de equipo que el texto NO especifica —
 // mismos defaults seguros que ya usa EQUIPO_VACIO (shared/data/
@@ -43,10 +59,10 @@ export const ImportacionMediator = {
    * (listo para guardar tal cual, sin volver a interpretarlo) — si es
    * false, el `motivo` exacto del rechazo, nunca un dato inventado.
    */
-  previsualizar(texto, circuitos = []) {
+  previsualizar(texto: string, circuitos: Circuito[] = []): FilaImportacion[] {
     const comandos = interpretarTexto(texto);
 
-    return comandos.map((cmd) => {
+    return comandos.map((cmd): FilaImportacion => {
       if (!cmd.ok) return cmd;
 
       const candidatos = circuitos.filter((c) => c.etiqueta === cmd.etiquetaCircuito);

@@ -4,7 +4,7 @@
 // empalme sepa qué circuito(s) pasan por ella". Prueba la capa PURA:
 // PlanoMediator.entidadesPorCajaEmpalme (modules/plano/index.ts +
 // PlanoMediator.js, nodoCercano/rutas ya existentes, nada nuevo ahí).
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) { console.error("FALLO:", msg); process.exitCode = 1; } else { console.log("OK:", msg); }

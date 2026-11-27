@@ -7,7 +7,7 @@
 // ApplicationMediator: la función de liberación en sí
 // (liberarRutasDeEntidad) y la red de seguridad en
 // validarIntegridadReferencial para proyectos que ya tenían el dato roto.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

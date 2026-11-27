@@ -238,7 +238,7 @@ metros** — no saben que alguna vez hubo una imagen ni una escala.
 
 - `PlanoMediator` es un mediador de dominio más, mismo nivel que
   `TableroMediator`/`OrigenMediator` — se registra en
-  `core/mediators/index.js` y en `ApplicationMediator` igual que los
+  `core/mediators/index.ts` y en `ApplicationMediator` igual que los
   demás (ver §3 de `ARCHITECTURE.md`).
 - El **motor eléctrico nunca importa nada de `modules/plano/` ni de
   `modules/geometria/`** — la única vía permitida es que la capa de

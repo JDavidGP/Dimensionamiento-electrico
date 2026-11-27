@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { colores } from "../styles/colores";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { ContenidoSvgDiagrama } from "./DiagramaSvgContenido.jsx";
 
 // Editor mínimo del diagrama unifilar — Fase 3 de la spec del usuario

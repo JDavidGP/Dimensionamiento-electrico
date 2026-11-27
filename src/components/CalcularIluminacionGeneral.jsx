@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 
 // Calcular iluminación general (NEC Tabla 220.12) — usuario, 2026-11-23,
 // tras preguntar para qué sirve realmente el área construida (m²) de un

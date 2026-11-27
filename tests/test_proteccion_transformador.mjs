@@ -2,7 +2,7 @@
 // (usuario, 2026-11-21, subió la tabla con datos duros). Prueba contra
 // el ejemplo numérico EXACTO del propio documento: 75kVA 480V→208Y/120V
 // trifásico, antes de confiar en la función para cualquier otro caso.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

@@ -3,7 +3,7 @@
 // plano. Prueba la matemática pura (intersección de 2 círculos) con
 // casos conocidos de antemano (triángulos 3-4-5, tangencia, sin
 // solución), antes de tocar la UI.
-import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../src/core/ApplicationMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) {

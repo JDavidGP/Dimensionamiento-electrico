@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle, colorEstadoDe } from "./Campo";
 import { BotonPill } from "./PanelTableros";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPOS_CONEXION_EQUIPO } from "../shared/data/equiposEspeciales.ts";
 
 // Lista propia de Transformadores, con su CRUD completo — mismo patrón

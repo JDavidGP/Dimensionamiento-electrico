@@ -31,6 +31,7 @@ import {
   CONMUTACION_VACIA,
   normalizarConmutacion,
 } from "../../modules/origen/index.ts";
+import type { TableroConPadre as TableroConPadreOrigen } from "../../modules/origen/tipos.ts";
 import {
   TRANSFORMADOR_VACIO,
   crearTransformador,
@@ -38,6 +39,7 @@ import {
   liberarTablerosDeTransformador,
   calcularCorrientesNominales,
 } from "../../modules/motor/transformador.ts";
+import type { TableroConPadre } from "../../modules/motor/transformador.ts";
 import {
   TAMANOS_ESTANDAR_NEC_240_6_A,
   seleccionarProteccionTransformador,
@@ -62,82 +64,82 @@ export const OrigenMediator = {
   TAMANOS_ESTANDAR_IEC_60947_2,
 
   /** Fábrica de una fuente de energía nueva (no la guarda — eso lo hace el hook). */
-  crearFuente(datos) {
+  crearFuente(datos: Parameters<typeof crearFuenteEnergia>[0]) {
     return crearFuenteEnergia(datos);
   },
 
   /** Devuelve la fuente editada; el hook decide cómo guardarla. */
-  editarFuente(fuente, cambios) {
+  editarFuente(fuente: Parameters<typeof editarFuenteEnergia>[0], cambios: Parameters<typeof editarFuenteEnergia>[1]) {
     return editarFuenteEnergia(fuente, cambios);
   },
 
   /** Deja a lo sumo una fuente con `rol` (se lo quita a cualquier otra que lo tuviera). */
-  limpiarRolDuplicado(fuentes, fuenteId, rol) {
+  limpiarRolDuplicado(fuentes: Parameters<typeof limpiarRolDuplicado>[0], fuenteId: Parameters<typeof limpiarRolDuplicado>[1], rol: Parameters<typeof limpiarRolDuplicado>[2]) {
     return limpiarRolDuplicado(fuentes ?? [], fuenteId, rol);
   },
 
   /** Al eliminar una fuente, los tableros que la tenían como padre quedan libres (null), no rotos. */
-  liberarTableros(fuenteId, tableros) {
+  liberarTableros<T extends TableroConPadreOrigen>(fuenteId: string, tableros?: T[]): T[] {
     return liberarTablerosDeFuente(fuenteId, tableros ?? []);
   },
 
   /** Fábrica de un transformador nuevo (no lo guarda — eso lo hace el hook). */
-  crearTransformador(datos) {
+  crearTransformador(datos: Parameters<typeof crearTransformador>[0]) {
     return crearTransformador(datos);
   },
 
   /** Devuelve el transformador editado; el hook decide cómo guardarlo. */
-  editarTransformador(transformador, cambios) {
+  editarTransformador(transformador: Parameters<typeof editarTransformador>[0], cambios: Parameters<typeof editarTransformador>[1]) {
     return editarTransformador(transformador, cambios);
   },
 
   /** Al eliminar un transformador, los tableros que lo tenían como padre quedan libres (null), no rotos. */
-  liberarTablerosDeTransformador(transformadorId, tableros) {
+  liberarTablerosDeTransformador<T extends TableroConPadre>(transformadorId: string, tableros?: T[]): T[] {
     return liberarTablerosDeTransformador(transformadorId, tableros ?? []);
   },
 
   /** Corriente nominal de placa en cada devanado — único cálculo que se desprende directamente de la identidad del transformador (kVA + tensiones). */
-  calcularCorrientesNominales(transformador) {
+  calcularCorrientesNominales(transformador: Parameters<typeof calcularCorrientesNominales>[0]) {
     return calcularCorrientesNominales(transformador);
   },
 
   /** Protección de sobrecorriente del transformador — NEC Tabla 450.3(B), solo NEC/CIEN (ver proteccionTransformador.ts). */
-  seleccionarProteccionTransformador(parametros) {
+  seleccionarProteccionTransformador(parametros: Parameters<typeof seleccionarProteccionTransformador>[0]) {
     return seleccionarProteccionTransformador(parametros);
   },
 
   /** Interruptor general BT propuesto para IEC_ES (REBT) — criterio distinto al de NEC, ver proteccionTransformador.ts. */
-  seleccionarProteccionTransformadorREBT(parametros) {
+  seleccionarProteccionTransformadorREBT(parametros: Parameters<typeof seleccionarProteccionTransformadorREBT>[0]) {
     return seleccionarProteccionTransformadorREBT(parametros);
   },
 
   /** %Z de placa (+ X/R opcional) → impedancia en Ω — ver cortocircuito.ts. */
-  calcularImpedanciaTransformadorOhm(parametros) {
+  calcularImpedanciaTransformadorOhm(parametros: Parameters<typeof calcularImpedanciaTransformadorOhm>[0]) {
     return calcularImpedanciaTransformadorOhm(parametros);
   },
 
   /** X/R por tamaño/refrigeración del transformador (tabla citada, interpolada) — ver cortocircuito.ts. */
-  obtenerXRTransformador(parametros) {
+  obtenerXRTransformador(parametros: Parameters<typeof obtenerXRTransformador>[0]) {
     return obtenerXRTransformador(parametros);
   },
 
   /** Cortocircuito trifásico — expuesto acá (no solo en MotorCalculoMediator) para componer con calcularImpedanciaTransformadorOhm sin saltar de mediador a mitad de un cálculo del mismo dominio (Origen/Transformador). */
-  calcularCortocircuitoTrifasico(...args) {
+  calcularCortocircuitoTrifasico(...args: Parameters<typeof calcularCortocircuitoTrifasico>) {
     return calcularCortocircuitoTrifasico(...args);
   },
 
   /** Cortocircuito monofásico — mismo motivo que calcularCortocircuitoTrifasico arriba, para transformador fases:"mono". */
-  calcularCortocircuitoMonofasico(...args) {
+  calcularCortocircuitoMonofasico(...args: Parameters<typeof calcularCortocircuitoMonofasico>) {
     return calcularCortocircuitoMonofasico(...args);
   },
 
   /** Resuelve qué es un origenId (tableroPadreId) contra los tres catálogos. */
-  resolver(origenId, tableros, fuentesEnergia, transformadores) {
+  resolver(origenId: Parameters<typeof resolverOrigen>[0], tableros?: Parameters<typeof resolverOrigen>[1], fuentesEnergia?: Parameters<typeof resolverOrigen>[2], transformadores?: Parameters<typeof resolverOrigen>[3]) {
     return resolverOrigen(origenId, tableros ?? [], fuentesEnergia ?? [], transformadores ?? []);
   },
 
   /** Normaliza un esquema de conmutación (tablero.conmutacion) antes de guardarlo. */
-  normalizarConmutacion(datos) {
+  normalizarConmutacion(datos: Parameters<typeof normalizarConmutacion>[0]) {
     return normalizarConmutacion(datos);
   },
 };

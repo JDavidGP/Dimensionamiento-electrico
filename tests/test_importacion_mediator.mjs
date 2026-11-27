@@ -1,4 +1,4 @@
-import { ImportacionMediator } from "../src/core/mediators/ImportacionMediator.js";
+import { ImportacionMediator } from "../src/core/mediators/ImportacionMediator.ts";
 
 function assert(cond, msg) {
   if (!cond) { console.error("FALLO:", msg); process.exitCode = 1; } else { console.log("OK:", msg); }

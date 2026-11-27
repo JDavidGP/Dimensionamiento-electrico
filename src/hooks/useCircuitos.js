@@ -4,7 +4,7 @@
  * (no importa motor, normativa ni validación directamente).
  */
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../shared/constants/constantes.ts";
 import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.ts";
 import { rectificarImagen } from "../shared/utils/rectificarImagen.ts";

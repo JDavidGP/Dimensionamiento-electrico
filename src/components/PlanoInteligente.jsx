@@ -3,7 +3,7 @@ import { colores, fuentes } from "../styles/colores";
 import { inputStyle } from "./Campo";
 import { BotonPill } from "./PanelTableros";
 import PlanoCanvas from "./PlanoCanvas";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 
 // Plano inteligente — Fase 1 (2026-11-20): calibración de escala +
 // trazado manual de paredes. Ver PLANO_INTELIGENTE_DISENO.md para el

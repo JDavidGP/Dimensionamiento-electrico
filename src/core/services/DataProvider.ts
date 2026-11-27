@@ -9,7 +9,11 @@
  */
 import { Repository } from "./Repository.ts";
 import { Logger } from "./Logger.ts";
-import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, Proyecto } from "../../modules/validacion/tipos.ts";
+import type { Circuito, Equipo, Proyecto } from "../../modules/validacion/tipos.ts";
+import type { Tablero as TableroCompleto } from "../../modules/tablero/tipos.ts";
+import type { FuenteEnergia as FuenteEnergiaCompleta } from "../../modules/origen/tipos.ts";
+import type { Transformador as TransformadorCompleto } from "../../modules/motor/transformador.ts";
+import type { Diferencial } from "../../modules/diferencial/tipos.ts";
 import type { NodoDiagrama, ConexionDiagrama } from "../../modules/diagrama/tipos.ts";
 import type { ResultadoCircuito } from "../../modules/motor/tipos.ts";
 
@@ -18,10 +22,22 @@ import type { ResultadoCircuito } from "../../modules/motor/tipos.ts";
  * (todavía) el modelo canónico completo, que sigue viviendo en
  * hooks/useCircuitos.js hasta que esa etapa de la migración a
  * TypeScript llegue (ver la nota gemela en modules/diagrama/tipos.ts).
- * Reusa las formas MÍNIMAS ya definidas para motor/validación/diagrama
- * — lo suficiente para lo que este servicio en sí necesita (sobre todo
- * `id`, para los `.find` de abajo), no una forma inventada en paralelo.
+ * Reusa las formas ya definidas en cada módulo de dominio — Tablero/
+ * FuenteEnergia/Transformador/Diferencial vienen de su módulo "dueño"
+ * (más completos que los stubs mínimos que modules/validacion/tipos.ts
+ * declara solo para lo que ESE módulo necesita leer), Circuito/Equipo/
+ * Proyecto de modules/validacion/tipos.ts (ahí sí es la forma más
+ * completa disponible hoy). Nada de esto inventa una forma nueva en
+ * paralelo — el único ajuste es `id` vuelto obligatorio (en sus módulos
+ * "dueño" es opcional porque ESE mismo tipo también describe el dato
+ * ANTES de crearse; en el snapshot del proyecto ya en curso, todo lo
+ * que vive acá ya fue creado y siempre tiene id).
  */
+type ConIdObligatorio<T extends { id?: string }> = Omit<T, "id"> & { id: string };
+export type Tablero = ConIdObligatorio<TableroCompleto>;
+export type FuenteEnergia = ConIdObligatorio<FuenteEnergiaCompleta>;
+export type Transformador = ConIdObligatorio<TransformadorCompleto>;
+
 export interface SnapshotDatos {
   proyecto: Proyecto | null;
   circuitos: Circuito[];

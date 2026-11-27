@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { colores } from "../styles/colores";
-import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
+import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import PlanoCanvas from "./PlanoCanvas";
 
 /**
