@@ -1,16 +1,25 @@
-import React from "react";
-import Campo, { inputStyle } from "./Campo";
-import { colores, fuentes } from "../styles/colores";
+import type { ReactNode } from "react";
+import Campo, { inputStyle } from "./Campo.tsx";
+import { colores, fuentes } from "../styles/colores.ts";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPOS_INSTALACION, OPCIONES_REPRESENTACION_CIRCUITO } from "../shared/constants/constantes.ts";
+import type { FormularioCircuito as FormularioCircuitoTipo } from "../modules/validacion/formularios.ts";
+import type { Fases } from "../modules/normativa/tipos.ts";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
   { valor: "bi", label: "Bi" },
   { valor: "tri", label: "Tri" },
-];
+] as const;
 
-function BotonPill({ activo, onClick, children, flex = 1 }) {
+interface BotonPillProps {
+  activo: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  flex?: number | string;
+}
+
+function BotonPill({ activo, onClick, children, flex = 1 }: BotonPillProps) {
   return (
     <button
       onClick={onClick}
@@ -34,9 +43,21 @@ function BotonPill({ activo, onClick, children, flex = 1 }) {
 // Un Circuito es lo que tiene un breaker físico: voltaje, fases,
 // material, distancia, y su TIPO (dedicado/mixto). Los equipos se
 // agregan después, dentro del circuito ya creado.
-export default function FormularioCircuito({ form, setForm, onGuardar, onCancelar, error, editando, normativaActiva, onCambiarFases, tipoInstalacion }) {
+interface FormularioCircuitoProps {
+  form: FormularioCircuitoTipo;
+  setForm: (form: FormularioCircuitoTipo) => void;
+  onGuardar: () => void;
+  onCancelar: () => void;
+  error: string;
+  editando: string | null;
+  normativaActiva: string;
+  onCambiarFases: (fase: Fases) => void;
+  tipoInstalacion: string;
+}
+
+export default function FormularioCircuito({ form, setForm, onGuardar, onCancelar, error, editando, normativaActiva, onCambiarFases, tipoInstalacion }: FormularioCircuitoProps) {
   const normativa = App.normativa.obtener(normativaActiva);
-  const voltajesEstandar = normativa.voltajesPorFase[form.fases] ?? [];
+  const voltajesEstandar = normativa.voltajesPorFase[form.fases as Fases] ?? [];
   // Residencial básico oculta "Tri" (pedido explícito del usuario, ver la
   // nota larga en shared/constants/constantes.ts, TIPOS_INSTALACION) — NO
   // se le cambia la fase a un circuito que ya la tenía en tri si se
@@ -52,7 +73,7 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
     fasesPermitidasPorNormativa.includes(f.valor)
   );
 
-  function elegirVoltajeEstandar(v) {
+  function elegirVoltajeEstandar(v: number): void {
     setForm({ ...form, voltaje: String(v), voltajeManual: false });
   }
 
@@ -131,7 +152,7 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
               <span style={{ padding: "0 10px" }}>{v}V</span>
             </BotonPill>
           ))}
-          <BotonPill flex="0 0 auto" activo={form.voltajeManual} onClick={() => setForm({ ...form, voltajeManual: true })}>
+          <BotonPill flex="0 0 auto" activo={!!form.voltajeManual} onClick={() => setForm({ ...form, voltajeManual: true })}>
             <span style={{ padding: "0 10px" }}>Manual</span>
           </BotonPill>
         </div>

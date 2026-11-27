@@ -1,6 +1,14 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
-import Campo, { inputStyle, colorEstadoDe } from "./Campo";
+import { useState, type FormEvent } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import Campo, { inputStyle, colorEstadoDe } from "./Campo.tsx";
+import type { Diferencial, DatosDiferencial } from "../modules/diferencial/tipos.ts";
+import type { Entrada } from "../modules/validacion/index.ts";
+
+interface FormDiferencial {
+  nombre: string;
+  sensibilidadMA: string;
+  notas: string;
+}
 
 // Lista propia de Diferenciales (ID), con su CRUD completo — mismo
 // patrón exacto que PanelTransformadores.jsx. REBT ITC-BT-25, cita
@@ -13,13 +21,21 @@ import Campo, { inputStyle, colorEstadoDe } from "./Campo";
 // circuito, no por bloque de 5) — este panel se renderiza SOLO bajo
 // IEC_ES (ver App.jsx), mismo criterio que PanelFuentesEnergia/
 // PanelTransformadores con sus bloques REBT.
-const FORM_VACIO = { nombre: "", sensibilidadMA: "30", notas: "" };
+const FORM_VACIO: FormDiferencial = { nombre: "", sensibilidadMA: "30", notas: "" };
 
-export default function PanelDiferenciales({ diferenciales = [], crearDiferencial, editarDiferencial, eliminarDiferencial, listaIntegridad = [] }) {
-  const [activoId, setActivoId] = useState(null);
+interface PanelDiferencialesProps {
+  diferenciales?: Diferencial[];
+  crearDiferencial: (datos: DatosDiferencial) => Diferencial;
+  editarDiferencial: (id: string, cambios: DatosDiferencial) => void;
+  eliminarDiferencial: (id: string) => void;
+  listaIntegridad?: Entrada[];
+}
+
+export default function PanelDiferenciales({ diferenciales = [], crearDiferencial, editarDiferencial, eliminarDiferencial, listaIntegridad = [] }: PanelDiferencialesProps) {
+  const [activoId, setActivoId] = useState<string | null>(null);
   const [formAbierto, setFormAbierto] = useState(false);
-  const [editandoId, setEditandoId] = useState(null);
-  const [form, setForm] = useState(FORM_VACIO);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormDiferencial>(FORM_VACIO);
 
   function abrirCreacion() {
     setForm(FORM_VACIO);
@@ -27,7 +43,7 @@ export default function PanelDiferenciales({ diferenciales = [], crearDiferencia
     setFormAbierto(true);
   }
 
-  function abrirEdicion(d) {
+  function abrirEdicion(d: Diferencial): void {
     setForm({
       nombre: d.nombre,
       sensibilidadMA: d.sensibilidadMA ? String(d.sensibilidadMA) : "30",
@@ -43,7 +59,7 @@ export default function PanelDiferenciales({ diferenciales = [], crearDiferencia
     setFormAbierto(false);
   }
 
-  function alGuardar(e) {
+  function alGuardar(e: FormEvent): void {
     e.preventDefault();
     if (!form.nombre.trim()) return;
     if (editandoId) {
@@ -55,7 +71,7 @@ export default function PanelDiferenciales({ diferenciales = [], crearDiferencia
     cerrarForm();
   }
 
-  function alEliminar(d) {
+  function alEliminar(d: Diferencial): void {
     eliminarDiferencial(d.id);
     if (activoId === d.id) setActivoId(null);
     if (editandoId === d.id) cerrarForm();
@@ -203,7 +219,7 @@ export default function PanelDiferenciales({ diferenciales = [], crearDiferencia
                   </button>
                 </div>
 
-                {activo && entradaIntegridad?.problemas?.length > 0 && (
+                {activo && entradaIntegridad && entradaIntegridad.problemas.length > 0 && (
                   <div style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px" }}>
                     {entradaIntegridad.problemas.map((p, i) => (
                       <div
