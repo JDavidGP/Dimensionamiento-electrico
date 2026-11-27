@@ -1,26 +1,33 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
+import type { Normativa } from "../modules/normativa/tipos.ts";
+import type { Circuito } from "../modules/validacion/tipos.ts";
 
 // Catálogo vía NormativaMediator (no import directo de módulos de normativa)
-const LISTA_NORMATIVAS = App.normativa.listar().map((meta) => App.normativa.obtener(meta.id));
-import { colores, fuentes } from "../styles/colores";
+const LISTA_NORMATIVAS: Normativa[] = App.normativa.listar().map((meta) => App.normativa.obtener(meta.id));
+import { colores } from "../styles/colores.ts";
 import { TIPOS_INSTALACION, OPCIONES_TIPO_INSTALACION } from "../shared/constants/constantes.ts";
 
+interface GrupoNormativa {
+  familia: string;
+  opciones: Normativa[];
+}
+
 // Agrupa por familia manteniendo el orden de LISTA_NORMATIVAS (NEC, CIEN, IEC...)
-function agruparPorFamilia(lista) {
-  const familias = [];
-  const mapa = new Map();
+function agruparPorFamilia(lista: Normativa[]): GrupoNormativa[] {
+  const familias: string[] = [];
+  const mapa = new Map<string, Normativa[]>();
   for (const n of lista) {
     if (!mapa.has(n.familia)) {
       mapa.set(n.familia, []);
       familias.push(n.familia);
     }
-    mapa.get(n.familia).push(n);
+    mapa.get(n.familia)!.push(n);
   }
-  return familias.map((familia) => ({ familia, opciones: mapa.get(familia) }));
+  return familias.map((familia) => ({ familia, opciones: mapa.get(familia)! }));
 }
 
-const estiloBotonPrincipal = (activo) => ({
+const estiloBotonPrincipal = (activo: boolean): CSSProperties => ({
   flex: 1,
   padding: "8px 6px",
   borderRadius: 3,
@@ -33,7 +40,7 @@ const estiloBotonPrincipal = (activo) => ({
   textAlign: "left",
 });
 
-const estiloBotonSecundario = (habilitado) => ({
+const estiloBotonSecundario = (habilitado: boolean): CSSProperties => ({
   flex: 1,
   padding: "8px 6px",
   borderRadius: 3,
@@ -47,7 +54,7 @@ const estiloBotonSecundario = (habilitado) => ({
   textAlign: "left",
 });
 
-const estiloOpcionLista = {
+const estiloOpcionLista: CSSProperties = {
   display: "block",
   width: "100%",
   textAlign: "left",
@@ -60,7 +67,15 @@ const estiloOpcionLista = {
   cursor: "pointer",
 };
 
-export default function SelectorNormativa({ normativaActiva, setNormativaActiva, circuitos = [], tipoInstalacion, setTipoInstalacion }) {
+interface SelectorNormativaProps {
+  normativaActiva: string;
+  setNormativaActiva: (id: string) => void;
+  circuitos?: Circuito[];
+  tipoInstalacion: string;
+  setTipoInstalacion?: (valor: string) => void;
+}
+
+export default function SelectorNormativa({ normativaActiva, setNormativaActiva, circuitos = [], tipoInstalacion, setTipoInstalacion }: SelectorNormativaProps) {
   const grupos = agruparPorFamilia(LISTA_NORMATIVAS);
   const normativaActivaObj = LISTA_NORMATIVAS.find((n) => n.id === normativaActiva);
 
@@ -88,7 +103,7 @@ export default function SelectorNormativa({ normativaActiva, setNormativaActiva,
   const normativaPendienteObj = LISTA_NORMATIVAS.find((n) => n.id === idPendiente);
   const hayCambioPendiente = idPendiente !== normativaActiva;
 
-  function elegirFamilia(familia) {
+  function elegirFamilia(familia: string): void {
     const opciones = grupos.find((g) => g.familia === familia)?.opciones ?? [];
     setFamiliaPendiente(familia);
     setIdPendiente(opciones[0]?.id); // por defecto, la primera variante de esa familia
@@ -96,7 +111,7 @@ export default function SelectorNormativa({ normativaActiva, setNormativaActiva,
     setConfirmando(false);
   }
 
-  function elegirVariante(id) {
+  function elegirVariante(id: string): void {
     setIdPendiente(id);
     setAbiertoVariante(false);
     setConfirmando(false);
@@ -190,7 +205,7 @@ export default function SelectorNormativa({ normativaActiva, setNormativaActiva,
                 overflow: "hidden",
               }}
             >
-              {grupoPendiente.opciones.map((n) => (
+              {grupoPendiente?.opciones.map((n) => (
                 <button key={n.id} style={estiloOpcionLista} onClick={() => elegirVariante(n.id)}>
                   {n.region ?? n.nombre}
                 </button>
