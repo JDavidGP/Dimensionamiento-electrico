@@ -26,7 +26,7 @@
 // CERO gráfico, cero UI. Módulo puro — se usa a través de
 // DiagramaMediator (core/mediators/DiagramaMediator.js).
 
-import { generarId } from "../../shared/utils/id.js";
+import { generarId } from "../../shared/utils/id.ts";
 import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.js";
 import { validarReglaElectrica } from "./reglas.ts";
 import type { NodoDiagrama, DatosNodo, ConexionDiagrama, DatosConexion, ResultadoValidacion } from "./tipos.ts";

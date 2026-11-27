@@ -17,7 +17,7 @@
 // padre del padre...). Todavía NO hay jerarquía visual ni lista de
 // subpaneles hacia abajo — eso sigue siendo el siguiente paso.
 
-import { generarId } from "../../shared/utils/id.js";
+import { generarId } from "../../shared/utils/id.ts";
 import type { Tablero, DatosTablero, ConTableroId } from "./tipos.ts";
 
 function normalizar(datos: DatosTablero = {}): Omit<Tablero, "id"> {

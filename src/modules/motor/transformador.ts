@@ -19,7 +19,7 @@
 // nominal primaria/secundaria). NO incluye %Z aplicado a cortocircuito,
 // ni derateo térmico, ni acoplamiento con caídaTensionAcumulada.
 
-import { generarId } from "../../shared/utils/id.js";
+import { generarId } from "../../shared/utils/id.ts";
 
 /** Forma de un Transformador. conexionPrimaria/Secundaria toman valores
  * de TIPOS_CONEXION_EQUIPO (shared/data/equiposEspeciales.js) — delta o

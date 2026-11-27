@@ -25,7 +25,7 @@
 // Módulo puro — se usa a través de PlanoMediator, igual criterio que
 // modules/tablero/index.js con TableroMediator.
 
-import { generarId } from "../../shared/utils/id.js";
+import { generarId } from "../../shared/utils/id.ts";
 import { distancia, areaPoligono, perimetroPoligono, longitudPolilinea, puntosRectangulo, puntoDentroDePoligono } from "../geometria/index.ts";
 import type { Punto, NodoPlano, SegmentoPlano, TipoSegmento, HabitacionPlano, RutaConductorPlano, MarcadorEquipoPlano, EntidadVinculadaRuta } from "./tipos.ts";
 

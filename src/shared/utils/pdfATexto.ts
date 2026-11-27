@@ -1,4 +1,4 @@
-// src/shared/utils/pdfATexto.js
+// src/shared/utils/pdfATexto.ts
 //
 // Extrae el texto de TODAS las páginas de un PDF arbitrario (memoria
 // técnica, cálculo eléctrico, etc. — no necesariamente generado por
@@ -13,7 +13,13 @@
 
 const MAX_PAGINAS = 60; // límite razonable — una memoria técnica real no pasa de esto
 
-export async function extraerTextoPDF(archivo) {
+export interface TextoPDF {
+  texto: string;
+  paginasLeidas: number;
+  paginasTotal: number;
+}
+
+export async function extraerTextoPDF(archivo: File): Promise<TextoPDF> {
   const [pdfjsLib, pdfjsWorkerUrlModulo] = await Promise.all([
     import("pdfjs-dist"),
     import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
@@ -28,7 +34,7 @@ export async function extraerTextoPDF(archivo) {
   for (let n = 1; n <= totalPaginas; n++) {
     const pagina = await documento.getPage(n);
     const contenido = await pagina.getTextContent();
-    const texto = contenido.items.map((item) => item.str).join(" ");
+    const texto = contenido.items.map((item) => ("str" in item ? item.str : "")).join(" ");
     textosPorPagina.push(texto);
   }
 

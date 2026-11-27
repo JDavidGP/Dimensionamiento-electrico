@@ -18,7 +18,7 @@
 // 5), así que la UI que crea diferenciales queda gateada a IEC_ES —
 // este módulo en sí no conoce normativas, solo datos relacionales.
 
-import { generarId } from "../../shared/utils/id.js";
+import { generarId } from "../../shared/utils/id.ts";
 import type { Diferencial, DatosDiferencial, ConDiferencialId } from "./tipos.ts";
 
 /** ITC-BT-25, cita exacta: "garantizando un máximo de cinco circuitos por cada diferencial". Confirmado FIJO por el usuario, no varía por tipo de instalación. */

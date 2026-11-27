@@ -1,4 +1,4 @@
-import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../src/shared/utils/lineasFases.js";
+import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../src/shared/utils/lineasFases.ts";
 
 let fallos = 0;
 function assert(cond, msg) {

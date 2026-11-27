@@ -4,8 +4,12 @@
 // solo que en dos niveles distintos (circuito↔su tablero, subtablero↔su
 // padre). Cero React, cero import de UI — se prueba con Node puro.
 
+import type { Fases } from "../../modules/normativa/tipos.ts";
+
+export type Linea = "L1" | "L2" | "L3";
+
 /** Líneas que tiene un tablero según sus fases ("mono"→1, "bi"→2, "tri"→3). */
-export function lineasDisponiblesDeTablero(fasesTablero) {
+export function lineasDisponiblesDeTablero(fasesTablero: Fases | null | undefined): Linea[] {
   if (fasesTablero === "tri") return ["L1", "L2", "L3"];
   if (fasesTablero === "bi") return ["L1", "L2"];
   if (fasesTablero === "mono") return ["L1"];
@@ -18,7 +22,7 @@ export function lineasDisponiblesDeTablero(fasesTablero) {
  * disponibles (ej. un tri colgado por error de un tablero bi usa las 2
  * que hay, no inventa una tercera).
  */
-export function lineasRequeridas(fasesPropias, disponibles) {
+export function lineasRequeridas(fasesPropias: Fases | null | undefined, disponibles: Linea[]): number {
   if (fasesPropias === "tri") return disponibles.length;
   if (fasesPropias === "bi") return Math.min(2, disponibles.length);
   return Math.min(1, disponibles.length);
@@ -36,7 +40,7 @@ export function lineasRequeridas(fasesPropias, disponibles) {
  *         quitar una antes de agregar otra (evita que un click deje en
  *         silencio una cantidad incorrecta de líneas).
  */
-export function siguienteSeleccionLineas(actuales, linea, requeridas) {
+export function siguienteSeleccionLineas(actuales: Linea[], linea: Linea, requeridas: number): Linea[] {
   const yaSeleccionada = actuales.includes(linea);
   if (yaSeleccionada) {
     return actuales.filter((l) => l !== linea);

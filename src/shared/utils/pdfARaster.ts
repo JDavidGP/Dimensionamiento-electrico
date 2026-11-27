@@ -1,4 +1,4 @@
-// src/shared/utils/pdfARaster.js
+// src/shared/utils/pdfARaster.ts
 //
 // Soporte de PDF para el plano inteligente (Fase 2, 2026-11-20) — ver
 // PLANO_INTELIGENTE_DISENO.md §5, tabla de "PDF vectorial": v1 trata
@@ -28,16 +28,20 @@
 const DPI_REFERENCIA = 150;
 const PUNTOS_POR_PULGADA_PDF = 72; // unidad nativa de PDF, fija por especificación
 
+export interface RasterPDF {
+  dataUrl: string;
+  anchoPx: number;
+  altoPx: number;
+  paginasTotal: number;
+}
+
 /**
  * Renderiza la PRIMERA página de un PDF a un data URL de imagen —
  * misma forma de datos que ya produce la carga de una imagen directa
  * (ver cargarImagenPlano en useCircuitos.js), para no duplicar ningún
  * otro código de calibración/render/persistencia.
- *
- * @param {File} archivo
- * @returns {Promise<{dataUrl:string, anchoPx:number, altoPx:number, paginasTotal:number}>}
  */
-export async function renderizarPrimeraPaginaPDF(archivo) {
+export async function renderizarPrimeraPaginaPDF(archivo: File): Promise<RasterPDF> {
   // Import dinámico — pdfjs-dist pesa bastante (~1.3MB el worker) y la
   // enorme mayoría de sesiones nunca toca la pestaña Plano con un PDF:
   // cargarlo acá en vez de como import estático arriba hace que Vite lo
@@ -60,6 +64,7 @@ export async function renderizarPrimeraPaginaPDF(archivo) {
   canvas.width = Math.round(viewport.width);
   canvas.height = Math.round(viewport.height);
   const contexto = canvas.getContext("2d");
+  if (!contexto) throw new Error("No se pudo obtener el contexto 2D del lienzo para rasterizar el PDF.");
   await pagina.render({ canvasContext: contexto, viewport }).promise;
 
   return {
@@ -70,6 +75,6 @@ export async function renderizarPrimeraPaginaPDF(archivo) {
   };
 }
 
-export function esArchivoPDF(archivo) {
+export function esArchivoPDF(archivo: File): boolean {
   return archivo.type === "application/pdf" || /\.pdf$/i.test(archivo.name || "");
 }

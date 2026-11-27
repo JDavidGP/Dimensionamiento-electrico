@@ -425,7 +425,7 @@ es una excepción nueva, es la misma regla de oro de `ARCHITECTURE.md`
 
 ## 10. Fase 2 — lo construido (2026-11-20)
 
-- **Soporte de PDF** (`shared/utils/pdfARaster.js`): cualquier PDF se
+- **Soporte de PDF** (`shared/utils/pdfARaster.ts`): cualquier PDF se
   renderiza (vía `pdfjs-dist`, import dinámico — no engorda la carga
   inicial de la app para quien nunca sube un PDF) a un raster de
   **150 DPI de referencia, una constante fija en el código, nunca
@@ -446,7 +446,7 @@ es una excepción nueva, es la misma regla de oro de `ARCHITECTURE.md`
 ## 11. Fase 2, segunda ronda (2026-11-20) — corrección de perspectiva + DXF
 
 - **Corrección de perspectiva** (`modules/plano/homografia.js` +
-  `shared/utils/rectificarImagen.js`): modo "Corregir perspectiva" —
+  `shared/utils/rectificarImagen.ts`): modo "Corregir perspectiva" —
   4 clicks en las esquinas de un rectángulo real conocido (ej. una
   habitación, en una foto), se ingresa su ancho/alto reales, y se
   resuelve una homografía 3×3 (DLT — Direct Linear Transform, álgebra

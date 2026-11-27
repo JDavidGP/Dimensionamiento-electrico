@@ -1,4 +1,4 @@
-// src/shared/utils/rectificarImagen.js
+// src/shared/utils/rectificarImagen.ts
 //
 // Aplica una homografía (ver modules/plano/homografia.js) para
 // "enderezar" una foto con perspectiva — muestreo inverso: por cada
@@ -13,19 +13,22 @@
 // vive en shared/utils junto a pdfARaster.js, mismo criterio: utilidad
 // de conversión de formato de imagen, no un dominio de la app.
 
-function aplicarMatrizPunto(m, x, y) {
+function aplicarMatrizPunto(m: number[], x: number, y: number): { x: number; y: number } {
   const w = m[6] * x + m[7] * y + m[8];
   return { x: (m[0] * x + m[1] * y + m[2]) / w, y: (m[3] * x + m[4] * y + m[5]) / w };
 }
 
+export interface ImagenRectificada {
+  dataUrl: string;
+  anchoPx: number;
+  altoPx: number;
+}
+
 /**
- * @param {string} dataUrlOrigen - la foto tal cual (con perspectiva)
- * @param {number[]} matrizDestinoAOrigen - homografía YA invertida (destino→origen), ver invertirMatriz3x3
- * @param {number} anchoDestinoPx
- * @param {number} altoDestinoPx
- * @returns {Promise<{dataUrl:string, anchoPx:number, altoPx:number}>}
+ * @param dataUrlOrigen - la foto tal cual (con perspectiva)
+ * @param matrizDestinoAOrigen - homografía YA invertida (destino→origen), ver invertirMatriz3x3
  */
-export function rectificarImagen(dataUrlOrigen, matrizDestinoAOrigen, anchoDestinoPx, altoDestinoPx) {
+export function rectificarImagen(dataUrlOrigen: string, matrizDestinoAOrigen: number[], anchoDestinoPx: number, altoDestinoPx: number): Promise<ImagenRectificada> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -34,6 +37,7 @@ export function rectificarImagen(dataUrlOrigen, matrizDestinoAOrigen, anchoDesti
         lienzoOrigen.width = img.naturalWidth;
         lienzoOrigen.height = img.naturalHeight;
         const ctxOrigen = lienzoOrigen.getContext("2d", { willReadFrequently: true });
+        if (!ctxOrigen) throw new Error("No se pudo obtener el contexto 2D del lienzo de origen.");
         ctxOrigen.drawImage(img, 0, 0);
         const anchoOrigen = lienzoOrigen.width;
         const altoOrigen = lienzoOrigen.height;
@@ -43,6 +47,7 @@ export function rectificarImagen(dataUrlOrigen, matrizDestinoAOrigen, anchoDesti
         lienzoDestino.width = anchoDestinoPx;
         lienzoDestino.height = altoDestinoPx;
         const ctxDestino = lienzoDestino.getContext("2d");
+        if (!ctxDestino) throw new Error("No se pudo obtener el contexto 2D del lienzo de destino.");
         const imagenDestino = ctxDestino.createImageData(anchoDestinoPx, altoDestinoPx);
 
         for (let y = 0; y < altoDestinoPx; y++) {

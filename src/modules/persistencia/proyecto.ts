@@ -1,4 +1,4 @@
-import { generarId } from "../../shared/utils/id.js";
+import { generarId } from "../../shared/utils/id.ts";
 import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../../shared/constants/constantes.js";
 import type { ProyectoMeta, PlanoProyecto, DatosSerializarProyecto, ProyectoSerializado } from "./tipos.ts";
 

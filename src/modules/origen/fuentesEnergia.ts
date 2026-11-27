@@ -70,7 +70,7 @@
 // Módulo puro — se usa a través de OrigenMediator, igual criterio que
 // modules/tablero/index.js con TableroMediator.
 
-import { generarId } from "../../shared/utils/id.js";
+import { generarId } from "../../shared/utils/id.ts";
 import { TIPOS_FUENTE_ENERGIA, ROLES_FUENTE } from "./tipos.ts";
 import type { FuenteEnergia, DatosFuenteEnergia, TableroConPadre } from "./tipos.ts";
 

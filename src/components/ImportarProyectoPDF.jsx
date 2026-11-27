@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { colores, fuentes } from "../styles/colores";
-import { esArchivoPDF } from "../shared/utils/pdfARaster.js";
-import { extraerTextoPDF } from "../shared/utils/pdfATexto.js";
+import { esArchivoPDF } from "../shared/utils/pdfARaster.ts";
+import { extraerTextoPDF } from "../shared/utils/pdfATexto.ts";
 import { extraerDeTexto, CONFIG_IA_LOCAL_DEFECTO, ErrorIALocal } from "../modules/iaLocal/ollamaClient.ts";
 import { validarExtraccion } from "../modules/iaLocal/esquema.ts";
 import { adaptarParaImportar } from "../modules/iaLocal/adaptador.ts";

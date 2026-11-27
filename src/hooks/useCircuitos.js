@@ -6,8 +6,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../shared/constants/constantes.js";
-import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.js";
-import { rectificarImagen } from "../shared/utils/rectificarImagen.js";
+import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.ts";
+import { rectificarImagen } from "../shared/utils/rectificarImagen.ts";
 
 const { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } = App.data.tablas.plantillas();
 
@@ -1050,7 +1050,7 @@ export function useCircuitos() {
   // Carga el archivo (imagen o PDF) como data URL (embebida en el
   // proyecto, ver la nota en modules/persistencia/proyecto.js sobre
   // por qué). Un PDF se renderiza a un raster de referencia (ver
-  // shared/utils/pdfARaster.js — DPI fijo, independiente del
+  // shared/utils/pdfARaster.ts — DPI fijo, independiente del
   // dispositivo) y de ahí en más sigue EXACTAMENTE el mismo flujo que
   // una imagen: ningún otro código (calibración/trazado/render/
   // persistencia) distingue de dónde salió el raster. Al cargar un
@@ -1732,7 +1732,7 @@ export function useCircuitos() {
   // Corrección de perspectiva (Fase 2, 2do pedido) — ver
   // modules/plano/homografia.js para el porqué. PX_POR_METRO_RECTIFICADO
   // es una constante FIJA, igual criterio que DPI_REFERENCIA en
-  // shared/utils/pdfARaster.js: no depende del dispositivo, así que la
+  // shared/utils/pdfARaster.ts: no depende del dispositivo, así que la
   // imagen rectificada (y su escala) sale igual en cualquier lado.
   //
   // Como el rectángulo destino se define con un tamaño real conocido

@@ -2,7 +2,7 @@
 // si está disponible (navegadores modernos); si no, un fallback simple
 // basado en timestamp + número aleatorio, suficiente para distinguir
 // elementos dentro de una misma sesión.
-export function generarId() {
+export function generarId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }

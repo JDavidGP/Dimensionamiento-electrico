@@ -19,7 +19,7 @@
 // de CV para esto, a diferencia de la detección automática de bordes/
 // paredes que sí la necesitaría.
 //
-// Módulo puro — cero DOM/canvas (eso es shared/utils/rectificarImagen.js,
+// Módulo puro — cero DOM/canvas (eso es shared/utils/rectificarImagen.ts,
 // que aplica la matriz que este módulo calcula). Se usa a través de
 // PlanoMediator.
 
