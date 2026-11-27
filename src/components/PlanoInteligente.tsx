@@ -1,9 +1,75 @@
-import React, { useRef, useState, useMemo, useEffect } from "react";
-import { colores, fuentes } from "../styles/colores";
-import { inputStyle } from "./Campo";
-import { BotonPill } from "./PanelTableros";
-import PlanoCanvas from "./PlanoCanvas";
+import { Fragment, useRef, useState, useMemo, type FormEvent, type ChangeEvent } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import { inputStyle } from "./Campo.tsx";
+import { BotonPill } from "./PanelTableros.tsx";
+import PlanoCanvas, { type PlanoCanvasHandle } from "./PlanoCanvas.tsx";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
+import type { useCircuitos } from "../hooks/useCircuitos.ts";
+import type { Punto, LineaCandidata, EntidadVinculadaRuta, MarcadorEquipoPlano, NodoPlano, SegmentoPlano } from "../modules/plano/tipos.ts";
+import type { TipoAmbiente } from "../modules/plano/tipoAmbiente.ts";
+
+type RetornoHook = ReturnType<typeof useCircuitos>;
+
+type PlanoInteligenteProps = Pick<
+  RetornoHook,
+  | "planoImagen"
+  | "cargarImagenPlano"
+  | "quitarImagenPlano"
+  | "restablecerPlano"
+  | "deshacerPlano"
+  | "puedeDeshacerPlano"
+  | "iniciarArrastrePlano"
+  | "planoCalibracion"
+  | "calibrarPlano"
+  | "calibrarPlanoPorPerimetro"
+  | "alturaTechoPlanoM"
+  | "establecerAlturaTechoPlano"
+  | "nodosPlano"
+  | "segmentosPlano"
+  | "agregarNodoPlano"
+  | "agregarSegmentoPlano"
+  | "eliminarNodoPlano"
+  | "eliminarSegmentoPlano"
+  | "editarSegmentoPlano"
+  | "habitacionesPlano"
+  | "cerrarHabitacionPlano"
+  | "detectarAmbientesPlano"
+  | "eliminarHabitacionPlano"
+  | "renombrarHabitacionPlano"
+  | "editarAlturaHabitacionPlano"
+  | "editarExteriorHabitacionPlano"
+  | "editarTipoAmbienteHabitacionPlano"
+  | "generarHabitacionPlano"
+  | "generarHabitacionPorArrastre"
+  | "moverHabitacionPlano"
+  | "rutasConductorPlano"
+  | "cerrarRutaConductorPlano"
+  | "eliminarRutaConductorPlano"
+  | "renombrarRutaConductorPlano"
+  | "vincularRutaConductorPlano"
+  | "generarRutasAutomaticasCircuito"
+  | "entidadesPorCajaEmpalme"
+  | "aplicarLongitudRutaPlano"
+  | "marcadoresEquipoPlano"
+  | "agregarMarcadorEquipoPlano"
+  | "editarMarcadorEquipoPlano"
+  | "eliminarMarcadorEquipoPlano"
+  | "moverMarcadorEquipoPlano"
+  | "generarGrupoMarcadoresEquipoPlano"
+  | "generarCircuitoMarcadoresEquipoPlano"
+  | "corregirPerspectivaPlano"
+  | "crearPlanoSinImagen"
+  | "exportarDXFPlano"
+  | "tableros"
+  | "equipos"
+  | "circuitos"
+  | "fuentesEnergia"
+  | "transformadores"
+  | "diferenciales"
+  | "advertenciasGFCI"
+  | "advertenciasAFCI"
+  | "advertenciasVolumenBano"
+>;
 
 // Plano inteligente — Fase 1 (2026-11-20): calibración de escala +
 // trazado manual de paredes. Ver PLANO_INTELIGENTE_DISENO.md para el
@@ -115,7 +181,7 @@ export default function PlanoInteligente({
   advertenciasGFCI = [],
   advertenciasAFCI = [],
   advertenciasVolumenBano = [],
-}) {
+}: PlanoInteligenteProps) {
   const [modo, setModo] = useState("mover");
   const [cargando, setCargando] = useState(false);
   const [aviso, setAviso] = useState("");
@@ -134,7 +200,7 @@ export default function PlanoInteligente({
   // nota de cabecera). Las sugerencias son ESTADO EFÍMERO (no se
   // persisten como parte del proyecto) hasta que el instalador acepta
   // una con un click — recién ahí se convierte en una pared real.
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<PlanoCanvasHandle>(null);
   // Pantalla completa táctil (usuario, 2026-11-26, "al entrar a editar
   // se expande a pantalla completa... todas las funciones agrupadas en
   // un botón que puedes expandir o retraer", confirmado Android). Dos
@@ -146,14 +212,14 @@ export default function PlanoInteligente({
   // (Element.requestFullscreen no está soportado ahí) — si fallan o no
   // existen, el modo (1) sigue andando igual, por eso van en try/catch
   // silenciosos, nunca condicionan nada del estado React.
-  const contenedorPlanoRef = useRef(null);
+  const contenedorPlanoRef = useRef<HTMLDivElement>(null);
   const [pantallaCompletaPlano, setPantallaCompletaPlano] = useState(false);
   const [menuPlanoExpandido, setMenuPlanoExpandido] = useState(true);
   // Acordeón de categorías del drawer de pantalla completa (ver
   // CATEGORIAS_MODOS) — null = ninguna categoría abierta todavía.
-  const [categoriaMenuAbierta, setCategoriaMenuAbierta] = useState(null);
-  const [paredesCandidatas, setParedesCandidatas] = useState([]);
-  const [puertasCandidatas, setPuertasCandidatas] = useState([]);
+  const [categoriaMenuAbierta, setCategoriaMenuAbierta] = useState<string | null>(null);
+  const [paredesCandidatas, setParedesCandidatas] = useState<LineaCandidata[]>([]);
+  const [puertasCandidatas, setPuertasCandidatas] = useState<LineaCandidata[]>([]);
   // Asistencia de bordes (Fase 2) — "pega" cada click de trazado al
   // borde más fuerte cercano en la imagen, ver PlanoCanvas.jsx /
   // modules/plano/deteccionBordes.js. Preferencia de herramienta, NO
@@ -191,7 +257,7 @@ export default function PlanoInteligente({
 
   // Calibración: null, [puntoA], o [puntoA, puntoB] (ahí se muestra el
   // formulario de distancia real antes de confirmar).
-  const [puntosCalibracion, setPuntosCalibracion] = useState([]);
+  const [puntosCalibracion, setPuntosCalibracion] = useState<Punto[]>([]);
   const [distanciaRealInput, setDistanciaRealInput] = useState("");
 
   // Calibración alternativa por perímetro (usuario, 2026-11-20): el
@@ -199,7 +265,7 @@ export default function PlanoInteligente({
   // efímero — igual criterio que puntosCalibracion) y, con 3 o más,
   // puede declarar el perímetro real total en vez de una distancia
   // puntual entre 2 esquinas.
-  const [puntosContornoCalibracion, setPuntosContornoCalibracion] = useState([]);
+  const [puntosContornoCalibracion, setPuntosContornoCalibracion] = useState<Punto[]>([]);
   const [perimetroRealInput, setPerimetroRealInput] = useState("");
 
   // Medir espesor de pared (usuario, 2026-11-20): 2 clicks a los dos
@@ -207,11 +273,11 @@ export default function PlanoInteligente({
   // entre esos 2 puntos, convertida a metros con la escala actual, se
   // guarda como espesorM de la pared más cercana al punto medio de
   // esos 2 clicks (nunca se adivina CUÁL pared si no hay ninguna cerca).
-  const [puntosEspesor, setPuntosEspesor] = useState([]);
+  const [puntosEspesor, setPuntosEspesor] = useState<Punto[]>([]);
 
   // Corrección de perspectiva — 4 puntos (esquinas del rectángulo real
   // en la foto), en orden; al completar los 4 se pide ancho/alto real.
-  const [puntosPerspectiva, setPuntosPerspectiva] = useState([]);
+  const [puntosPerspectiva, setPuntosPerspectiva] = useState<Punto[]>([]);
   const [anchoRealInput, setAnchoRealInput] = useState("");
   const [altoRealInput, setAltoRealInput] = useState("");
   const [corrigiendoPerspectiva, setCorrigiendoPerspectiva] = useState(false);
@@ -219,7 +285,7 @@ export default function PlanoInteligente({
   // Trazo de pared (o de conductor, mismo mecanismo — ver modo
   // "conductor") en curso — lista ORDENADA de ids de nodo. Se resetea
   // al cambiar de modo o al cerrar/terminar el trazo.
-  const [trazoActual, setTrazoActual] = useState([]);
+  const [trazoActual, setTrazoActual] = useState<string[]>([]);
   // Nombre del ambiente al tocarlo (usuario, 2026-11-27, probando el
   // .zip en su PC: "cumple un rol informativo para el instalador, así
   // localiza y realiza los cambios que quiera más fácil"). Vive en modo
@@ -227,7 +293,7 @@ export default function PlanoInteligente({
   // absolutamente nada hasta ahora (el modo neutro/de revisión, nunca
   // dispara ninguna creación/edición de dato), así que agregar esto acá
   // no le quita ningún comportamiento a nada que ya existiera.
-  const [habitacionResaltadaId, setHabitacionResaltadaId] = useState(null);
+  const [habitacionResaltadaId, setHabitacionResaltadaId] = useState<string | null>(null);
 
   // ID del circuito junto a cada equipo real (usuario, 2026-11-27,
   // cerrando la discusión sobre qué símbolos merece ver un electricista
@@ -244,12 +310,12 @@ export default function PlanoInteligente({
   // luminaria que controla) — "puntos de luces CON SUS interruptores"
   // explícitamente pedido así.
   const etiquetaCircuitoPorMarcadorId = useMemo(() => {
-    function etiquetaDelEquipo(equipoId) {
+    function etiquetaDelEquipo(equipoId: string) {
       const equipo = equipos.find((e) => e.id === equipoId);
       const circuito = equipo?.circuitoId ? circuitos.find((c) => c.id === equipo.circuitoId) : null;
       return circuito ? circuito.etiqueta || circuito.nombre || null : null;
     }
-    const resultado = {};
+    const resultado: Record<string, string> = {};
     for (const m of marcadoresEquipoPlano) {
       const comp = App.plano.obtenerComponente(m.tipo);
       if (comp?.entidadVinculada === "equipo" && m.entidadId) {
@@ -291,7 +357,7 @@ export default function PlanoInteligente({
   // queda como override manual, no como paso obligatorio.
   const [equipoYaIngresadoSeleccionado, setEquipoYaIngresadoSeleccionado] = useState("");
 
-  function alElegirEquipoYaIngresado(equipoId) {
+  function alElegirEquipoYaIngresado(equipoId: string) {
     setEquipoYaIngresadoSeleccionado(equipoId);
     if (!equipoId) return;
     const equipo = equipos.find((e) => e.id === equipoId);
@@ -333,10 +399,10 @@ export default function PlanoInteligente({
   // como referencia para el siguiente (ver alClickImagen, modo
   // "triangular" y marcadorCercano más abajo) — así se "recorre" el
   // sitio encadenando puntos, sin volver siempre a los 2 originales.
-  const [referenciasTriangulacion, setReferenciasTriangulacion] = useState([]); // hasta 2 {id, punto}
+  const [referenciasTriangulacion, setReferenciasTriangulacion] = useState<{ id: string; punto: Punto }[]>([]); // hasta 2 {id, punto}
   const [distancia1TriangulacionInput, setDistancia1TriangulacionInput] = useState("");
   const [distancia2TriangulacionInput, setDistancia2TriangulacionInput] = useState("");
-  const [candidatosTriangulacion, setCandidatosTriangulacion] = useState([]); // 0-2 puntos MODELO (metros), resultado de interseccionCirculos
+  const [candidatosTriangulacion, setCandidatosTriangulacion] = useState<Punto[]>([]); // 0-2 puntos MODELO (metros), resultado de interseccionCirculos
 
   // Modo "ambiente" — generador por dimensión conocida (pedido
   // explícito del usuario: "etiqueta + perímetro 12x8m" → un polígono
@@ -347,32 +413,39 @@ export default function PlanoInteligente({
   const [anchoAmbienteInput, setAnchoAmbienteInput] = useState("");
   const [altoAmbienteInput, setAltoAmbienteInput] = useState("");
 
-  function etiquetaEntidadEquipo(tipoEquipo, entidad) {
+  // `entidad` es cualquiera de las entidades vinculables (Tablero, Equipo,
+  // Circuito, FuenteEnergia, Transformador, Diferencial) según
+  // `comp.entidadVinculada` — un discriminante ajeno al tipo real de TS, no
+  // una unión discriminada propia. Se tipa como objeto genérico y se castea
+  // adentro (mismo patrón que `coincide` en PanelDirectorio.tsx).
+  function etiquetaEntidadEquipo(tipoEquipo: string, entidadBase: unknown): string {
+    const entidad = entidadBase as Record<string, unknown>;
+    const nombre = String(entidad.nombre ?? "");
     const comp = App.plano.obtenerComponente(tipoEquipo);
     if (comp?.entidadVinculada === "equipo") {
       const circuito = circuitos.find((c) => c.id === entidad.circuitoId);
       const tablero = circuito ? tableros.find((t) => t.id === circuito.tableroId) : null;
       const contexto = [circuito?.nombre, tablero?.nombre].filter(Boolean).join(" · ");
-      return contexto ? `${entidad.nombre || "Equipo sin nombre"} (${contexto})` : entidad.nombre || "Equipo sin nombre";
+      return contexto ? `${nombre || "Equipo sin nombre"} (${contexto})` : nombre || "Equipo sin nombre";
     }
     if (comp?.entidadVinculada === "circuito") {
       const tablero = tableros.find((t) => t.id === entidad.tableroId);
       const etiqueta = entidad.etiqueta ? `${entidad.etiqueta} — ` : "";
-      return tablero ? `${etiqueta}${entidad.nombre || "Circuito sin nombre"} (${tablero.nombre})` : `${etiqueta}${entidad.nombre || "Circuito sin nombre"}`;
+      return tablero ? `${etiqueta}${nombre || "Circuito sin nombre"} (${tablero.nombre})` : `${etiqueta}${nombre || "Circuito sin nombre"}`;
     }
     if (comp?.entidadVinculada === "diferencial") {
       const cantidad = circuitos.filter((c) => c.diferencialId === entidad.id).length;
-      return `${entidad.nombre || "Diferencial sin nombre"} (${entidad.sensibilidadMA ?? 30}mA · ${cantidad} circuito${cantidad === 1 ? "" : "s"})`;
+      return `${nombre || "Diferencial sin nombre"} (${entidad.sensibilidadMA ?? 30}mA · ${cantidad} circuito${cantidad === 1 ? "" : "s"})`;
     }
-    return entidad.nombre || "(sin nombre)";
+    return nombre || "(sin nombre)";
   }
 
-  function mostrarAviso(texto) {
+  function mostrarAviso(texto: string) {
     setAviso(texto);
     setTimeout(() => setAviso(""), 5000);
   }
 
-  function cambiarModo(nuevoModo) {
+  function cambiarModo(nuevoModo: string) {
     setModo(nuevoModo);
     setPuntosCalibracion([]);
     setDistanciaRealInput("");
@@ -397,7 +470,7 @@ export default function PlanoInteligente({
     setCandidatosTriangulacion([]);
   }
 
-  function calcularCandidatosTriangulacion(e) {
+  function calcularCandidatosTriangulacion(e: FormEvent) {
     e.preventDefault();
     const d1 = parseFloat(distancia1TriangulacionInput);
     const d2 = parseFloat(distancia2TriangulacionInput);
@@ -422,7 +495,7 @@ export default function PlanoInteligente({
     );
   }
 
-  function alCrearPlanoSinImagen(e) {
+  function alCrearPlanoSinImagen(e: FormEvent) {
     e.preventDefault();
     const ancho = parseFloat(sinImagenAncho);
     const alto = parseFloat(sinImagenAlto);
@@ -443,8 +516,8 @@ export default function PlanoInteligente({
     );
   }
 
-  async function alSeleccionarArchivo(e) {
-    const archivo = e.target.files[0];
+  async function alSeleccionarArchivo(e: ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0];
     e.target.value = ""; // permite volver a elegir el mismo archivo después
     if (!archivo) return;
     setCargando(true);
@@ -452,7 +525,7 @@ export default function PlanoInteligente({
       await cargarImagenPlano(archivo);
       cambiarModo("mover");
     } catch (err) {
-      mostrarAviso(err.message || "No se pudo cargar la imagen.");
+      mostrarAviso(err instanceof Error ? err.message : "No se pudo cargar la imagen.");
     } finally {
       setCargando(false);
     }
@@ -474,7 +547,7 @@ export default function PlanoInteligente({
    * conductor a equipo"), y correrlo con el snap de ángulo podría
    * alejarlo lo suficiente como para perder ese pegado.
    */
-  function puntoImagenConSnapAngulo(puntoImagen, pegarAEquipo = false) {
+  function puntoImagenConSnapAngulo(puntoImagen: Punto, pegarAEquipo = false) {
     if (!snapAngulo || trazoActual.length === 0 || !planoCalibracion) return puntoImagen;
     const escala = planoCalibracion.escalaMetrosPorPixel;
     const puntoModelo = App.plano.imagenAModelo(puntoImagen, escala);
@@ -500,12 +573,12 @@ export default function PlanoInteligente({
   const ambientesSinDetectar = useMemo(() => {
     if (nodosPlano.length === 0) return 0;
     const caras = App.plano.detectarCaras(nodosPlano, segmentosPlano);
-    const clave = (nodoIds) => [...nodoIds].sort().join(",");
+    const clave = (nodoIds: string[]) => [...nodoIds].sort().join(",");
     const existentes = new Set(habitacionesPlano.map((h) => clave(h.nodoIds)));
     return caras.filter((c) => !existentes.has(clave(c.nodoIds))).length;
   }, [nodosPlano, segmentosPlano, habitacionesPlano]);
 
-  function alClickImagen(puntoImagen) {
+  function alClickImagen(puntoImagen: Punto) {
     if (modo === "mover") {
       const escala = planoCalibracion?.escalaMetrosPorPixel;
       if (!escala) return;
@@ -709,7 +782,7 @@ export default function PlanoInteligente({
   // por medida ya conocida: PlanoCanvas.jsx ya hizo todo el trabajo de
   // arrastre/vista previa en vivo, acá solo llega el resultado final
   // (las 2 esquinas, en espacio imagen) al soltar.
-  function alTrazarRectangulo(puntoImagenA, puntoImagenB) {
+  function alTrazarRectangulo(puntoImagenA: Punto, puntoImagenB: Punto) {
     if (modo === "area_paredes") {
       reconocerParedesEnArea(puntoImagenA, puntoImagenB);
       return;
@@ -730,7 +803,7 @@ export default function PlanoInteligente({
   // arrastre que "Trazar rectángulo" (PlanoCanvas.jsx ya lo resuelve),
   // acá solo se decide qué hacer con las 2 esquinas.
   const AREA_MINIMA_DETECCION_PX = 20;
-  function reconocerParedesEnArea(puntoImagenA, puntoImagenB) {
+  function reconocerParedesEnArea(puntoImagenA: Punto, puntoImagenB: Punto) {
     const x = Math.max(0, Math.round(Math.min(puntoImagenA.x, puntoImagenB.x)));
     const y = Math.max(0, Math.round(Math.min(puntoImagenA.y, puntoImagenB.y)));
     const ancho = Math.round(Math.abs(puntoImagenB.x - puntoImagenA.x));
@@ -757,7 +830,8 @@ export default function PlanoInteligente({
   // evento al lienzo) — mismo criterio en los 2 casos, nunca duplicado.
   // `referenciaDirecta`, si viene, YA es el nodo/equipo exacto (saltea
   // la búsqueda por cercanía).
-  function manejarPuntoTriangulacion(puntoModelo, referenciaDirecta = null) {
+  function manejarPuntoTriangulacion(puntoModelo: Punto, referenciaDirecta: { id: string; punto: Punto } | MarcadorEquipoPlano | null = null) {
+    if (!planoCalibracion) return;
     if (candidatosTriangulacion.length > 0) {
       if (!tipoEquipoSeleccionado) {
         mostrarAviso("Elegí un tipo de equipo arriba antes de confirmar.");
@@ -794,7 +868,7 @@ export default function PlanoInteligente({
     }
   }
 
-  function alClickMarcador(marcador) {
+  function alClickMarcador(marcador: MarcadorEquipoPlano) {
     if (modo === "triangular") {
       manejarPuntoTriangulacion(marcador.punto, marcador);
       return;
@@ -824,20 +898,20 @@ export default function PlanoInteligente({
   }
 
   /** Confirma UNA pared candidata: crea los 2 nodos reales (reusando cercanos, igual que un trazo a mano) + el segmento, y la saca de la lista de sugerencias. */
-  function aceptarParedCandidata(candidato) {
+  function aceptarParedCandidata(candidato: LineaCandidata) {
     const nodoA = agregarNodoPlano({ x: candidato.x1, y: candidato.y1 });
     const nodoB = agregarNodoPlano({ x: candidato.x2, y: candidato.y2 });
     if (nodoA && nodoB) agregarSegmentoPlano(nodoA.id, nodoB.id, "pared");
     setParedesCandidatas(paredesCandidatas.filter((c) => c !== candidato));
   }
 
-  async function confirmarPerspectiva(e) {
+  async function confirmarPerspectiva(e: FormEvent) {
     e.preventDefault();
     setCorrigiendoPerspectiva(true);
     try {
       const resultado = await corregirPerspectivaPlano(puntosPerspectiva, parseFloat(anchoRealInput), parseFloat(altoRealInput));
       if (!resultado.ok) {
-        mostrarAviso(resultado.motivo);
+        mostrarAviso(resultado.motivo ?? "No se pudo corregir la perspectiva.");
         return;
       }
       mostrarAviso("Perspectiva corregida — el plano ya quedó calibrado, podés trazar directo.");
@@ -847,7 +921,7 @@ export default function PlanoInteligente({
     }
   }
 
-  function confirmarCalibracionPerimetro(e) {
+  function confirmarCalibracionPerimetro(e: FormEvent) {
     e.preventDefault();
     const perimetro = parseFloat(perimetroRealInput);
     const resultado = calibrarPlanoPorPerimetro(puntosContornoCalibracion, perimetro);
@@ -859,7 +933,7 @@ export default function PlanoInteligente({
     cambiarModo("pared");
   }
 
-  function confirmarCalibracion(e) {
+  function confirmarCalibracion(e: FormEvent) {
     e.preventDefault();
     const distancia = parseFloat(distanciaRealInput);
     const resultado = calibrarPlano(puntosCalibracion[0], puntosCalibracion[1], distancia);
@@ -1078,7 +1152,7 @@ export default function PlanoInteligente({
           </div>
         )}
 
-        {planoImagen?.paginasTotal > 1 && (
+        {planoImagen && (planoImagen.paginasTotal ?? 0) > 1 && (
           <div style={{ fontSize: 11, color: colores.textDim, marginBottom: 10 }}>
             Este PDF tiene {planoImagen.paginasTotal} páginas — por ahora se usa solo la primera.
           </div>
@@ -1148,7 +1222,7 @@ export default function PlanoInteligente({
               // chico inline, nunca fuerzan un salto de línea propio.
               <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
                 {MODOS.map((m, i) => (
-                  <React.Fragment key={m.valor}>
+                  <Fragment key={m.valor}>
                     {(i === 0 || MODOS[i - 1].grupo !== m.grupo) && (
                       <span
                         style={{
@@ -1166,19 +1240,21 @@ export default function PlanoInteligente({
                     <BotonPill activo={modo === m.valor} onClick={() => cambiarModo(m.valor)} flex="0 0 auto">
                       {m.label}
                     </BotonPill>
-                  </React.Fragment>
+                  </Fragment>
                 ))}
               </div>
             )}
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, fontSize: 11, color: colores.textDim }}>
               <span>Mostrar:</span>
-              {[
-                { clave: "fondo", label: "Imagen de fondo" },
-                { clave: "pared", label: "Paredes" },
-                { clave: "conductor", label: "Conductores" },
-                { clave: "equipos", label: "Equipos" },
-              ].map((c) => (
+              {(
+                [
+                  { clave: "fondo", label: "Imagen de fondo" },
+                  { clave: "pared", label: "Paredes" },
+                  { clave: "conductor", label: "Conductores" },
+                  { clave: "equipos", label: "Equipos" },
+                ] as const
+              ).map((c) => (
                 <label key={c.clave} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                   <input
                     type="checkbox"
@@ -1472,7 +1548,7 @@ export default function PlanoInteligente({
                 ? puntosContornoCalibracion
                 : modo === "espesor"
                   ? puntosEspesor
-                  : modo === "triangular"
+                  : modo === "triangular" && planoCalibracion
                     ? referenciasTriangulacion.map((r) => App.plano.modeloAImagen(r.punto, planoCalibracion.escalaMetrosPorPixel))
                     : puntosCalibracion
           }
@@ -1737,7 +1813,7 @@ export default function PlanoInteligente({
                     <span style={{ fontSize: 10.5, color: colores.textDim }}>Tipo de ambiente:</span>
                     <select
                       value={h.tipoAmbiente ?? "otro"}
-                      onChange={(e) => editarTipoAmbienteHabitacionPlano(h.id, e.target.value)}
+                      onChange={(e) => editarTipoAmbienteHabitacionPlano(h.id, e.target.value as TipoAmbiente)}
                       style={{ ...inputStyle(), padding: "3px 6px", fontSize: 10.5 }}
                     >
                       {App.plano.OPCIONES_TIPO_AMBIENTE.map((o) => (
@@ -1914,7 +1990,7 @@ export default function PlanoInteligente({
                             onChange={(e) => {
                               if (!e.target.value) return vincularRutaConductorPlano(r.id, null, null);
                               const [tipo, id] = e.target.value.split(":");
-                              vincularRutaConductorPlano(r.id, id, tipo);
+                              vincularRutaConductorPlano(r.id, id, tipo as EntidadVinculadaRuta);
                             }}
                           >
                             <option value="">— Vincular a (opcional) —</option>
@@ -1940,7 +2016,7 @@ export default function PlanoInteligente({
                           {entidad && (
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginTop: 4, fontSize: 11, color: colores.textDim }}>
                               <span>
-                                Distancia actual: {Number(r.entidadTipo === "circuito" ? entidad.distancia : entidad.longitudAlimentador || 0).toFixed(2)} m
+                                Distancia actual: {Number(("distancia" in entidad ? entidad.distancia : entidad.longitudAlimentador) || 0).toFixed(2)} m
                               </span>
                               <button
                                 type="button"
@@ -1983,7 +2059,7 @@ export default function PlanoInteligente({
                 return (
                   <div key={m.id} style={{ border: `1px solid ${colores.border}`, borderRadius: 3, padding: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: COLOR_POR_CATEGORIA[comp?.categoria] ?? colores.border, flexShrink: 0 }} />
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: (comp && COLOR_POR_CATEGORIA[comp.categoria as keyof typeof COLOR_POR_CATEGORIA]) ?? colores.border, flexShrink: 0 }} />
                       <div style={{ flex: 1, fontSize: 12, color: colores.textMain }}>{comp?.nombre ?? m.tipo}</div>
                       <span
                         style={{ fontSize: 9.5, color: ambienteDelEquipo ? (ambienteDelEquipo.exterior ? colores.warn : colores.textDim) : colores.textDim, border: `1px solid ${colores.border}`, borderRadius: 3, padding: "1px 5px", textTransform: "uppercase", letterSpacing: "0.03em" }}
@@ -2023,21 +2099,31 @@ export default function PlanoInteligente({
                         ))}
                       </select>
                     )}
-                    {advertenciasGFCI.some((a) => a.marcadorId === m.id) && (
-                      <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
-                        <span>⚡</span>
-                        <span>Requiere GFCI ({advertenciasGFCI.find((a) => a.marcadorId === m.id).motivo}) — marcalo en "Protegido por GFCI" al editar el equipo.</span>
-                      </div>
-                    )}
-                    {advertenciasAFCI.some((a) => a.equipoId === m.entidadId) && (
-                      <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
-                        <span>⚡</span>
-                        <span>
-                          Su circuito requiere AFCI ({advertenciasAFCI.find((a) => a.equipoId === m.entidadId).motivo}) — marcalo en "Protegido por AFCI" al
-                          editar el circuito.
-                        </span>
-                      </div>
-                    )}
+                    {(() => {
+                      const advertenciaGFCI = advertenciasGFCI.find((a) => a.marcadorId === m.id);
+                      return (
+                        advertenciaGFCI && (
+                          <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
+                            <span>⚡</span>
+                            <span>Requiere GFCI ({advertenciaGFCI.motivo}) — marcalo en "Protegido por GFCI" al editar el equipo.</span>
+                          </div>
+                        )
+                      );
+                    })()}
+                    {(() => {
+                      const advertenciaAFCI = advertenciasAFCI.find((a) => a.equipoId === m.entidadId);
+                      return (
+                        advertenciaAFCI && (
+                          <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
+                            <span>⚡</span>
+                            <span>
+                              Su circuito requiere AFCI ({advertenciaAFCI.motivo}) — marcalo en "Protegido por AFCI" al
+                              editar el circuito.
+                            </span>
+                          </div>
+                        )
+                      );
+                    })()}
                     {/* Radio del Volumen 1 (ITC-BT-27 §2.1.2) — solo para
                         "Fuente de agua". Default 0,6m (ducha con rociador
                         fijo, el único número exacto de la norma para el
@@ -2077,10 +2163,10 @@ export default function PlanoInteligente({
                           </div>
                         );
                       })()}
-                    {advertenciasVolumenBano.some((a) => a.marcadorId === m.id) &&
-                      (() => {
-                        const a = advertenciasVolumenBano.find((x) => x.marcadorId === m.id);
-                        return (
+                    {(() => {
+                      const a = advertenciasVolumenBano.find((x) => x.marcadorId === m.id);
+                      return (
+                        a && (
                           <div style={{ fontSize: 10.5, color: a.nivel === "error" ? colores.error : colores.warn, marginTop: 4, display: "flex", gap: 4, alignItems: "flex-start" }}>
                             <span>🛁</span>
                             <span>
@@ -2089,8 +2175,9 @@ export default function PlanoInteligente({
                                 : `${a.motivo} — sin diferencial ≤30mA asignado a su circuito.`}
                             </span>
                           </div>
-                        );
-                      })()}
+                        )
+                      );
+                    })()}
                     {m.tipo === "interruptor_conmutado" && (() => {
                       // Vínculo marcador-a-marcador (usuario, 2026-11-25):
                       // qué luminaria controla este interruptor conmutado —
@@ -2129,8 +2216,8 @@ export default function PlanoInteligente({
 }
 
 /** Segmento más cercano a un punto (modelo, metros) — distancia punto-a-segmento mínima. */
-function segmentoMasCercano(puntoModelo, nodos, segmentos) {
-  let mejor = null;
+function segmentoMasCercano(puntoModelo: Punto, nodos: NodoPlano[], segmentos: SegmentoPlano[]): SegmentoPlano | null {
+  let mejor: SegmentoPlano | null = null;
   let menorDistancia = Infinity;
   for (const seg of segmentos) {
     const a = nodos.find((n) => n.id === seg.nodoAId)?.punto;
@@ -2147,7 +2234,7 @@ function segmentoMasCercano(puntoModelo, nodos, segmentos) {
   return menorDistancia <= 0.3 ? mejor : null;
 }
 
-function distanciaPuntoSegmento(p, a, b) {
+function distanciaPuntoSegmento(p: Punto, a: Punto, b: Punto): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const largo2 = dx * dx + dy * dy;

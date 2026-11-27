@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useState } from "react";
 import Header from "./components/Header.tsx";
 import BarraProyecto from "./components/BarraProyecto.tsx";
 import FormularioCircuito from "./components/FormularioCircuito.tsx";
@@ -17,11 +17,7 @@ import SelectorNormativa from "./components/SelectorNormativa.tsx";
 import DiagramaUnifilar from "./components/DiagramaUnifilar.tsx";
 import InformeTecnico from "./components/InformeTecnico.tsx";
 import PanelDirectorio from "./components/PanelDirectorio.tsx";
-import PlanoInteligenteSinTipar from "./components/PlanoInteligente.jsx";
-// TODO(fase 5): quitar este cast cuando PlanoInteligente.jsx se migre a .tsx
-// (mismo patrón temporal ya usado y luego retirado para PlanoCanvas en
-// VistaCombinadaEsquemas.tsx).
-const PlanoInteligente = PlanoInteligenteSinTipar as unknown as ComponentType<Record<string, unknown>>;
+import PlanoInteligente from "./components/PlanoInteligente.tsx";
 import VistaCombinadaEsquemas from "./components/VistaCombinadaEsquemas.tsx";
 import TabsViewPager from "./components/TabsViewPager.tsx";
 import SubTabs from "./components/SubTabs.tsx";
