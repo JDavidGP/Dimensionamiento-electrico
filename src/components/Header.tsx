@@ -30,7 +30,7 @@ export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFa
         </h1>
       </div>
       <p style={{ color: colores.textDim, fontSize: 13, marginTop: 6, maxWidth: 640 }}>
-        Dimensionamiento sobre carga de demanda normativa (Art. 220/430). Continuidad por equipo. Simultaneidad de campo solo informativa.
+        Dimensionamiento eléctrico aplicado bajo las normativas registradas en este programa. Continuidad por equipo. Simultaneidad de campo solo informativa.
       </p>
       <p style={{ color: colores.warn, fontSize: 12, marginTop: 4, marginBottom: 0, maxWidth: 640 }}>
         Resultados orientativos: deben ser verificados por un profesional habilitado antes de ejecutar la instalación.
