@@ -1,11 +1,7 @@
-import { useMemo, type ComponentType } from "react";
+import { useMemo } from "react";
 import { colores } from "../styles/colores.ts";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
-// PlanoCanvas.jsx todavía no está migrado (pendiente en esta misma
-// Fase 5) — forwardRef() sin anotar infiere RefAttributes<any> sin
-// props propios. Cast temporal, se cae solo cuando ese archivo pase a .tsx.
-import PlanoCanvasSinTipar from "./PlanoCanvas";
-const PlanoCanvas = PlanoCanvasSinTipar as ComponentType<Record<string, unknown>>;
+import PlanoCanvas from "./PlanoCanvas.tsx";
 import type { NodoPlano, SegmentoPlano, HabitacionPlano, MarcadorEquipoPlano, CalibracionPlano } from "../modules/plano/tipos.ts";
 import type { NodoDiagrama, ConexionDiagrama } from "../modules/diagrama/tipos.ts";
 import type { ImagenPlano } from "../hooks/useCircuitos.ts";

@@ -1,13 +1,24 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { colores, colorAmbiente } from "../styles/colores";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, Fragment, type CSSProperties, type PointerEvent as ReactPointerEvent, type WheelEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { colores, colorAmbiente } from "../styles/colores.ts";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
-import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
+import { SimboloDiagrama } from "./simbolosDiagrama.tsx";
+import type {
+  NodoPlano,
+  SegmentoPlano,
+  MarcadorEquipoPlano,
+  HabitacionPlano,
+  Punto,
+  LineaCandidata,
+  ResultadoDeteccionParedes,
+} from "../modules/plano/tipos.ts";
+import type { ImagenPlano } from "../hooks/useCircuitos.ts";
+import type { TransformVista } from "../modules/geometria/vistaZoomPan.ts";
 
 // Mismo mapa categoría->color que ya usa DiagramaUnifilar.jsx — un
 // equipo marcado en el plano se ve del mismo color que su nodo en el
 // diagrama unifilar, coherencia visual entre las dos vistas de la
 // misma entidad (ver nota de arquitectura en modules/plano/index.js).
-const COLOR_POR_CATEGORIA = {
+const COLOR_POR_CATEGORIA: Record<string, string> = {
   fuente: colores.ok,
   medicion_proteccion: colores.warn,
   distribucion: colores.copper,
@@ -15,9 +26,9 @@ const COLOR_POR_CATEGORIA = {
   carga: colores.textDim,
 };
 
-function colorDeEquipo(tipo) {
+function colorDeEquipo(tipo: string): string {
   const comp = App.plano.obtenerComponente(tipo);
-  return COLOR_POR_CATEGORIA[comp?.categoria] ?? colores.border;
+  return (comp && COLOR_POR_CATEGORIA[comp.categoria]) ?? colores.border;
 }
 
 // Modos que arrastran un rectángulo de esquina a esquina — mismo gesto
@@ -25,7 +36,7 @@ function colorDeEquipo(tipo) {
 // PADRE decide qué hacer con las 2 esquinas según cuál de los dos
 // modos esté activo (crear un ambiente, o acotar "Reconocer paredes"
 // a esa zona — usuario, 2026-11-24).
-function esModoArrastreRectangulo(modo) {
+function esModoArrastreRectangulo(modo: string): boolean {
   return modo === "rectangulo" || modo === "area_paredes";
 }
 
@@ -43,7 +54,7 @@ function esModoArrastreRectangulo(modo) {
 const TAMANO_REAL_EQUIPO_M = 0.3;
 const TAMANO_MIN_PANTALLA_PX = 14;
 const TAMANO_MAX_PANTALLA_PX = 48;
-function tamanoMarcadorPx(escalaMetrosPorPixel, zoom) {
+function tamanoMarcadorPx(escalaMetrosPorPixel: number | null | undefined, zoom: number): number {
   if (!escalaMetrosPorPixel) return 22 / zoom;
   const enPantalla = (TAMANO_REAL_EQUIPO_M / escalaMetrosPorPixel) * zoom;
   const acotado = Math.max(TAMANO_MIN_PANTALLA_PX, Math.min(TAMANO_MAX_PANTALLA_PX, enPantalla));
@@ -64,7 +75,72 @@ function tamanoMarcadorPx(escalaMetrosPorPixel, zoom) {
 // vuelta con `modeloAImagen` usando la escala de calibración. Esta es
 // la única razón por la que este componente necesita la escala: para
 // posicionar el fondo correctamente, nunca para calcular nada.
-const PlanoCanvas = forwardRef(function PlanoCanvas(
+interface ConexionDiagramaEnPlano {
+  id?: string;
+  puntoOrigen: Punto;
+  puntoDestino: Punto;
+}
+
+export interface PlanoCanvasHandle {
+  detectarParedesCandidatas: (region?: { x?: number; y?: number; ancho?: number; alto?: number }) => ResultadoDeteccionParedes;
+}
+
+interface PlanoCanvasProps {
+  imagen: ImagenPlano | null;
+  mostrarImagenFondo?: boolean;
+  nodos?: NodoPlano[];
+  segmentos?: SegmentoPlano[];
+  marcadoresEquipo?: MarcadorEquipoPlano[];
+  etiquetaCircuitoPorMarcadorId?: Record<string, string>;
+  habitaciones?: HabitacionPlano[];
+  habitacionResaltadaId?: string | null;
+  escalaMetrosPorPixel?: number | null;
+  puntosGuiaPendientes?: Punto[];
+  nodoIdsTrazoActual?: string[];
+  modo: string;
+  asistenciaBordes?: boolean;
+  paredesCandidatas?: LineaCandidata[];
+  puertasCandidatas?: LineaCandidata[];
+  candidatosTriangulacion?: Punto[];
+  conexionesDiagrama?: ConexionDiagramaEnPlano[];
+  onClickImagen?: (puntoImagen: Punto) => void;
+  onClickMarcador?: (marcador: MarcadorEquipoPlano) => void;
+  onArrastrarHabitacion?: (habitacionId: string, deltaModelo: Punto) => void;
+  onArrastrarMarcador?: (marcadorId: string, deltaModelo: Punto) => void;
+  onIniciarArrastre?: () => void;
+  onClickParedCandidata?: (candidata: LineaCandidata) => void;
+  onTrazarRectangulo?: (inicio: Punto, actual: Punto) => void;
+  ocuparAltoDisponible?: boolean;
+  pantallaCompleta?: boolean;
+  onTogglePantallaCompleta?: () => void;
+}
+
+interface ArrastreVista {
+  x: number;
+  y: number;
+  seMovio: boolean;
+}
+
+interface ArrastreAmbiente {
+  habitacionId: string;
+  x: number;
+  y: number;
+  seMovio: boolean;
+}
+
+interface ArrastreMarcador {
+  marcadorId: string;
+  x: number;
+  y: number;
+  seMovio: boolean;
+}
+
+interface RectanguloArrastre {
+  inicio: Punto;
+  actual: Punto;
+}
+
+const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function PlanoCanvas(
   {
     imagen,
     mostrarImagenFondo = true,
@@ -96,22 +172,22 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   },
   ref
 ) {
-  const contenedorRef = useRef(null);
-  const svgRef = useRef(null);
+  const contenedorRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [tamanoCanvas, setTamanoCanvas] = useState({ ancho: 0, alto: 0 });
-  const [transformVista, setTransformVista] = useState(() => App.plano.transformVistaInicial());
-  const arrastreRef = useRef(null); // { xInicial, yInicial, transformInicial } — solo en modo "mover"
+  const [transformVista, setTransformVista] = useState<TransformVista>(() => App.plano.transformVistaInicial());
+  const arrastreRef = useRef<ArrastreVista | null>(null); // { xInicial, yInicial, transformInicial } — solo en modo "mover"
   // Arrastre de un ambiente entero — modo "mover-ambiente", separado
   // del de arriba (uno mueve la VISTA, este mueve DATOS del proyecto).
   // { habitacionId, x, y, seMovio }.
-  const arrastreAmbienteRef = useRef(null);
+  const arrastreAmbienteRef = useRef<ArrastreAmbiente | null>(null);
   // Arrastre de un equipo ya colocado — modo "mover-equipo" (usuario,
   // 2026-11-24: "genera un grupo... que puedes mover a placer").
   // { marcadorId, x, y, seMovio } — mismo contrato que arrastreAmbienteRef,
   // pero arranca en el onPointerDown del propio marcador (necesita
   // acertarle al ícono, no "cualquier punto del ambiente" como una
   // habitación) en vez del contenedor entero.
-  const arrastreMarcadorRef = useRef(null);
+  const arrastreMarcadorRef = useRef<ArrastreMarcador | null>(null);
   // Pellizco de 2 dedos (zoom + pan táctil) — usuario, 2026-11-26,
   // "continuemos con el mobile táctil". Antes de esto, el único zoom
   // era la rueda del mouse (alWheel); en un teléfono no hay rueda, y
@@ -125,20 +201,20 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
   // medio del pellizco activo, para medir el DELTA cuadro a cuadro
   // (nunca el total desde el inicio, que se desalinearía cada vez que
   // se recalibra el punto medio).
-  const punterosRef = useRef(new Map());
-  const pinchRef = useRef(null);
+  const punterosRef = useRef(new Map<number, Punto>());
+  const pinchRef = useRef<{ distancia: number; medio: Punto } | null>(null);
   // Arrastre de un rectángulo nuevo — modo "rectangulo" (usuario,
   // 2026-11-23: "click en una esquina... estiramos hacia la otra
   // esquina"). `inicio`/`actual` en espacio IMAGEN (mismo contrato que
   // onClickImagen) — SOLO para dibujar la vista previa en vivo acá; el
   // rectángulo real lo arma el padre (onTrazarRectangulo) recién al
   // soltar, nunca mientras se arrastra.
-  const [rectanguloArrastre, setRectanguloArrastre] = useState(null);
+  const [rectanguloArrastre, setRectanguloArrastre] = useState<RectanguloArrastre | null>(null);
   // Canvas oculto con los píxeles de la imagen cargada — solo para que
   // alClick pueda leer un parche chico y "pegarse" al borde más
   // cercano (ver modules/plano/deteccionBordes.js). Se arma UNA vez
   // por imagen, no en cada click.
-  const contextoPixelesRef = useRef(null);
+  const contextoPixelesRef = useRef<CanvasRenderingContext2D | null>(null);
 
   // Único método expuesto al padre (PlanoInteligente.jsx): "Sugerir
   // paredes" (usuario, 2026-11-20) necesita leer TODOS los píxeles de
@@ -157,7 +233,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     // coordenadas YA desplazadas de vuelta a espacio imagen completo,
     // para que el resto del código (aceptarParedCandidata, etc.) no
     // necesite saber que hubo un recorte.
-    detectarParedesCandidatas(region) {
+    detectarParedesCandidatas(region): ResultadoDeteccionParedes {
       const ctx = contextoPixelesRef.current;
       if (!ctx) return { paredes: [], puertas: [] };
       const origenX = region?.x ?? 0;
@@ -170,9 +246,9 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
       for (let i = 0; i < ancho * alto; i++) {
         grises[i] = 0.299 * datos[i * 4] + 0.587 * datos[i * 4 + 1] + 0.114 * datos[i * 4 + 2];
       }
-      const resultado = App.plano.detectarParedesCandidatas(grises, ancho, alto, { escalaMetrosPorPixel });
+      const resultado = App.plano.detectarParedesCandidatas(grises, ancho, alto, { escalaMetrosPorPixel: escalaMetrosPorPixel ?? undefined });
       if (!origenX && !origenY) return resultado;
-      const desplazar = (l) => ({ ...l, x1: l.x1 + origenX, y1: l.y1 + origenY, x2: l.x2 + origenX, y2: l.y2 + origenY });
+      const desplazar = (l: LineaCandidata): LineaCandidata => ({ ...l, x1: l.x1 + origenX, y1: l.y1 + origenY, x2: l.x2 + origenX, y2: l.y2 + origenY });
       return { paredes: resultado.paredes.map(desplazar), puertas: resultado.puertas.map(desplazar) };
     },
   }));
@@ -243,6 +319,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
       lienzo.width = imagen.anchoPx;
       lienzo.height = imagen.altoPx;
       const ctx = lienzo.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return;
       ctx.drawImage(img, 0, 0);
       contextoPixelesRef.current = ctx;
     };
@@ -258,7 +335,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
    * Es solo una AYUDA al trazado manual, nunca detección automática de
    * paredes (ver la nota larga en modules/plano/deteccionBordes.js).
    */
-  function ajustarABorde(puntoImagen) {
+  function ajustarABorde(puntoImagen: Punto): Punto {
     const ctx = contextoPixelesRef.current;
     if (!ctx) return puntoImagen;
     const radio = App.plano.RADIO_BUSQUEDA_BORDE_PX;
@@ -281,38 +358,38 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     return mejor ? { x: x0 + mejor.x, y: y0 + mejor.y } : puntoImagen;
   }
 
-  function puntoPantallaDesdeCliente(clientX, clientY) {
-    const rect = svgRef.current.getBoundingClientRect();
+  function puntoPantallaDesdeCliente(clientX: number, clientY: number): Punto {
+    const rect = svgRef.current!.getBoundingClientRect();
     return { x: clientX - rect.left, y: clientY - rect.top };
   }
 
-  function puntoPantallaDesdeEvento(e) {
+  function puntoPantallaDesdeEvento(e: { clientX: number; clientY: number }): Punto {
     return puntoPantallaDesdeCliente(e.clientX, e.clientY);
   }
 
   // Helpers puros del pellizco de 2 dedos — trabajan en coordenadas de
   // CLIENTE (clientX/Y), antes de restar el offset del lienzo, porque
   // ahí es donde llegan desde punterosRef.
-  function distanciaEntreClientes(a, b) {
+  function distanciaEntreClientes(a: Punto, b: Punto): number {
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
-  function puntoMedioDeClientes(a, b) {
+  function puntoMedioDeClientes(a: Punto, b: Punto): Punto {
     return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
   }
 
   /** Puntos (espacio MODELO, metros) de los nodos de una habitación, en el orden que ya trae — para el hit-test de arrastre y nada más (el área/perímetro YA están calculados, esto no los vuelve a tocar). */
-  function puntosDeHabitacion(h) {
-    return h.nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter(Boolean);
+  function puntosDeHabitacion(h: HabitacionPlano): Punto[] {
+    return h.nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter((p): p is Punto => Boolean(p));
   }
 
   /** La habitación (si alguna) bajo `puntoImagen` — convierte a espacio modelo para el point-in-polygon, ya que ahí es donde viven los nodos. */
-  function habitacionEn(puntoImagen) {
+  function habitacionEn(puntoImagen: Punto): HabitacionPlano | null {
     if (!escalaMetrosPorPixel) return null;
     const puntoModelo = App.plano.imagenAModelo(puntoImagen, escalaMetrosPorPixel);
     return habitaciones.find((h) => App.plano.puntoDentroDePoligono(puntoModelo, puntosDeHabitacion(h))) ?? null;
   }
 
-  function alClick(e) {
+  function alClick(e: ReactMouseEvent<SVGSVGElement>): void {
     if (!imagen || !onClickImagen || arrastreRef.current?.seMovio || arrastreAmbienteRef.current?.seMovio || arrastreMarcadorRef.current?.seMovio) return;
     if (modo === "mover-ambiente" || modo === "mover-equipo" || esModoArrastreRectangulo(modo)) return; // esos modos son solo para arrastrar, un click sin arrastre no hace nada
     let puntoImagen = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
@@ -320,14 +397,14 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     onClickImagen(puntoImagen);
   }
 
-  function alWheel(e) {
+  function alWheel(e: WheelEvent<SVGSVGElement>): void {
     if (!imagen) return;
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
     setTransformVista((actual) => App.plano.aplicarZoom(actual, factor, puntoPantallaDesdeEvento(e)));
   }
 
-  function alPointerDown(e) {
+  function alPointerDown(e: ReactPointerEvent<SVGSVGElement>): void {
     if (!imagen) return;
     punterosRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (punterosRef.current.size >= 2) {
@@ -361,7 +438,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     }
   }
 
-  function alPointerMove(e) {
+  function alPointerMove(e: ReactPointerEvent<SVGSVGElement>): void {
     if (punterosRef.current.has(e.pointerId)) punterosRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (punterosRef.current.size >= 2 && pinchRef.current) {
       // Zoom Y pan de 2 dedos a la vez (igual que cualquier mapa
@@ -375,10 +452,11 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
       const medioNuevo = puntoMedioDeClientes(p1, p2);
       if (pinchRef.current.distancia > 0) {
         const factor = distanciaNueva / pinchRef.current.distancia;
-        const medioLocalAnterior = puntoPantallaDesdeCliente(pinchRef.current.medio.x, pinchRef.current.medio.y);
+        const medioAnterior = pinchRef.current.medio;
+        const medioLocalAnterior = puntoPantallaDesdeCliente(medioAnterior.x, medioAnterior.y);
         setTransformVista((actual) => {
           const conZoom = App.plano.aplicarZoom(actual, factor, medioLocalAnterior);
-          return App.plano.aplicarPan(conZoom, { x: medioNuevo.x - pinchRef.current.medio.x, y: medioNuevo.y - pinchRef.current.medio.y });
+          return App.plano.aplicarPan(conZoom, { x: medioNuevo.x - medioAnterior.x, y: medioNuevo.y - medioAnterior.y });
         });
       }
       pinchRef.current = { distancia: distanciaNueva, medio: medioNuevo };
@@ -402,7 +480,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
         // puntos, solo queda dividir por el zoom (ver coordenadas.js).
         const deltaImagen = { x: dx / transformVista.zoom, y: dy / transformVista.zoom };
         const deltaModelo = App.plano.imagenAModelo(deltaImagen, escalaMetrosPorPixel);
-        onArrastrarHabitacion(arrastreAmbienteRef.current.habitacionId, deltaModelo);
+        onArrastrarHabitacion?.(arrastreAmbienteRef.current.habitacionId, deltaModelo);
         arrastreAmbienteRef.current.x = e.clientX;
         arrastreAmbienteRef.current.y = e.clientY;
       }
@@ -414,7 +492,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
         arrastreMarcadorRef.current.seMovio = true;
         const deltaImagen = { x: dx / transformVista.zoom, y: dy / transformVista.zoom };
         const deltaModelo = App.plano.imagenAModelo(deltaImagen, escalaMetrosPorPixel);
-        onArrastrarMarcador(arrastreMarcadorRef.current.marcadorId, deltaModelo);
+        onArrastrarMarcador?.(arrastreMarcadorRef.current.marcadorId, deltaModelo);
         arrastreMarcadorRef.current.x = e.clientX;
         arrastreMarcadorRef.current.y = e.clientY;
       }
@@ -425,7 +503,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     }
   }
 
-  function alPointerUp(e) {
+  function alPointerUp(e?: ReactPointerEvent<SVGSVGElement>): void {
     if (e) punterosRef.current.delete(e.pointerId);
     if (punterosRef.current.size < 2) pinchRef.current = null;
     arrastreRef.current = null;
@@ -437,18 +515,18 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
     setRectanguloArrastre(null);
   }
 
-  function zoomBoton(factor) {
+  function zoomBoton(factor: number): void {
     const centro = { x: tamanoCanvas.ancho / 2, y: tamanoCanvas.alto / 2 };
     setTransformVista((actual) => App.plano.aplicarZoom(actual, factor, centro));
   }
 
-  function ajustarVista() {
+  function ajustarVista(): void {
     if (!imagen) return;
     setTransformVista(App.plano.ajustarAVentana(imagen.anchoPx, imagen.altoPx, tamanoCanvas.ancho, tamanoCanvas.alto));
   }
 
   // píxeles de imagen de un punto en metros (modelo) — para dibujar.
-  function px(puntoModelo) {
+  function px(puntoModelo: Punto): Punto {
     return escalaMetrosPorPixel ? App.plano.modeloAImagen(puntoModelo, escalaMetrosPorPixel) : puntoModelo;
   }
 
@@ -575,7 +653,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                 // motor del Plano (ej. longitudPolilinea de una ruta).
                 const largoM = App.plano.distancia(nodoA.punto, nodoB.punto);
                 return (
-                  <React.Fragment key={seg.id}>
+                  <Fragment key={seg.id}>
                     <line
                       x1={a.x}
                       y1={a.y}
@@ -599,7 +677,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                     {/* Espesor medido (usuario, 2026-11-20: "medir el ancho visible de
                         una pared, 2 clicks") — solo registro visual, no alimenta ningún
                         cálculo todavía. */}
-                    {seg.tipo === "pared" && seg.espesorM > 0 && (
+                    {seg.tipo === "pared" && seg.espesorM !== "" && seg.espesorM > 0 && (
                       <text
                         x={(a.x + b.x) / 2}
                         y={(a.y + b.y) / 2 - 4 / transformVista.zoom}
@@ -610,7 +688,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                         {(seg.espesorM * 100).toFixed(1)}cm
                       </text>
                     )}
-                  </React.Fragment>
+                  </Fragment>
                 );
               })}
 
@@ -632,7 +710,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                 const c = px(centroideModelo);
                 const resaltada = h.id === habitacionResaltadaId;
                 return (
-                  <React.Fragment key={`medidas-${h.id}`}>
+                  <Fragment key={`medidas-${h.id}`}>
                     {/* Nombre del ambiente al tocarlo (usuario, 2026-11-27,
                         "modo Mover vista" — un click sin arrastre ahí no
                         hacía nada antes de esto): revelado bajo demanda,
@@ -661,7 +739,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
                     >
                       {h.areaM2.toFixed(2)}m² · {h.perimetroM.toFixed(2)}m perímetro
                     </text>
-                  </React.Fragment>
+                  </Fragment>
                 );
               })}
 
@@ -915,7 +993,7 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
 
 export default PlanoCanvas;
 
-const botonZoomEstilo = {
+const botonZoomEstilo: CSSProperties = {
   width: 30,
   height: 30,
   borderRadius: 3,
