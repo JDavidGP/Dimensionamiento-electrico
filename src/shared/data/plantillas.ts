@@ -1,10 +1,12 @@
+import type { FormularioCircuito, FormularioEquipo } from "../../modules/validacion/formularios.ts";
+
 // Un CIRCUITO es lo que tiene un breaker físico: voltaje, fases,
 // material, distancia — son propiedades del cableado, no de cada
 // aparato conectado a él (por eso ya no viven en el equipo).
 //
 // La continuidad (1.25) ya NO vive aquí: se marca por equipo
 // (esCargaContinua), según NEC 210.19 / 215.2.
-export const CIRCUITO_VACIO = {
+export const CIRCUITO_VACIO: FormularioCircuito = {
   nombre: "",
   // Código corto/visible (ej. "TD1-C3") + descripción funcional —
   // sistema de etiquetado, pedido explícito del usuario (2026-11-20).
@@ -14,7 +16,7 @@ export const CIRCUITO_VACIO = {
   etiqueta: "",
   funcion: "",
   // Dónde conviene representar este circuito — ver REPRESENTACION_CIRCUITO
-  // en shared/constants/constantes.js para el porqué completo. Default
+  // en shared/constants/constantes.ts para el porqué completo. Default
   // "ambos": no cambia el comportamiento de ningún proyecto existente.
   representacion: "ambos", // "diagrama" | "plano" | "ambos" | "ninguno"
   tipo: "mixto", // "dedicado" | "mixto"
@@ -53,7 +55,7 @@ export const CIRCUITO_VACIO = {
 
 // Un EQUIPO es un aparato conectado a un circuito.
 // tipoEquipoNEC activa la regla de demanda del Art. 220/430/etc.
-export const EQUIPO_VACIO = {
+export const EQUIPO_VACIO: FormularioEquipo = {
   nombre: "",
   // Mismo sistema de etiquetado que CIRCUITO_VACIO — ver esa nota.
   etiqueta: "",
@@ -77,10 +79,30 @@ export const EQUIPO_VACIO = {
   proteccionGFCI: false,
 };
 
+/**
+ * Estado crudo del formulario de tablero — todo texto (inputs de UI),
+ * antes de convertir. Mismo criterio que FormularioCircuito/
+ * FormularioEquipo (modules/validacion/formularios.ts), pero ese
+ * módulo todavía no tiene su propio formularioATablero/tableroAFormulario
+ * (PanelTableros.jsx sigue sin migrar a TS) — vive acá hasta que eso pase.
+ */
+export interface FormularioTablero {
+  nombre: string;
+  tensionAlimentacion: string;
+  fases: string;
+  tableroPadreId: string | null;
+  longitudAlimentador: string;
+  materialAlimentador: string;
+  lineasAlimentador: unknown[];
+  conmutacion: unknown | null;
+  simultaneidadREBT: unknown | null;
+  gradoElectrificacion: string | null;
+}
+
 // Un TABLERO es dato relacional puro (Fase 3): agrupa circuitos bajo
 // una misma alimentación. CERO gráfico — eso es Fase 6 (esquema
 // unifilar), una entidad distinta que consumirá este dato más adelante.
-export const TABLERO_VACIO = {
+export const TABLERO_VACIO: FormularioTablero = {
   nombre: "",
   tensionAlimentacion: "120",
   fases: "mono", // del ALIMENTADOR — puede ser tri aunque sus circuitos sean mono

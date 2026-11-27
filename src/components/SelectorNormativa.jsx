@@ -4,7 +4,7 @@ import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 // Catálogo vía NormativaMediator (no import directo de módulos de normativa)
 const LISTA_NORMATIVAS = App.normativa.listar().map((meta) => App.normativa.obtener(meta.id));
 import { colores, fuentes } from "../styles/colores";
-import { TIPOS_INSTALACION, OPCIONES_TIPO_INSTALACION } from "../shared/constants/constantes.js";
+import { TIPOS_INSTALACION, OPCIONES_TIPO_INSTALACION } from "../shared/constants/constantes.ts";
 
 // Agrupa por familia manteniendo el orden de LISTA_NORMATIVAS (NEC, CIEN, IEC...)
 function agruparPorFamilia(lista) {
@@ -218,7 +218,7 @@ export default function SelectorNormativa({ normativaActiva, setNormativaActiva,
 
       {/* Tipo de instalación — se aplica al toque, no necesita "Validar"
           como la normativa. Desde que se agregó el 3er nivel (ver nota
-          larga en shared/constants/constantes.js, TIPOS_INSTALACION) SÍ
+          larga en shared/constants/constantes.ts, TIPOS_INSTALACION) SÍ
           filtra algo: Residencial básico oculta el pill "Tri" en
           circuito/equipo. El resto (balance de fases, Transformador,
           motores) todavía no distingue entre avanzado y

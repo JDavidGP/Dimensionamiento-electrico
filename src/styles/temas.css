@@ -8,7 +8,7 @@
  * (prefers-color-scheme) como default si nunca se tocó el selector —
  * ver ToggleTema.jsx para el control y la persistencia.
  *
- * `colores.js` (src/styles/colores.js) exporta REFERENCIAS a estas
+ * `colores.ts` (src/styles/colores.ts) exporta REFERENCIAS a estas
  * variables (`"var(--bg)"`, etc.), no valores fijos — así cambiar de
  * tema repinta toda la app al instante, sin que ningún componente
  * necesite saber que el tema cambió. Confirmado que `var(--x)`

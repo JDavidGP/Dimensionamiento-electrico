@@ -10,7 +10,7 @@ import type { Punto } from "../geometria/index.ts";
 
 export interface NodoDiagrama {
   id?: string;
-  /** id del catálogo (shared/data/bibliotecaComponentes.js) */
+  /** id del catálogo (shared/data/bibliotecaComponentes.ts) */
   tipo: string;
   nombre: string;
   posicion: Punto;
@@ -42,11 +42,13 @@ export type DatosConexion = Partial<Omit<ConexionDiagrama, "id">>;
 
 export type ResultadoValidacion = { valido: true } | { valido: false; motivo: string };
 
-/** Forma de una entrada del catálogo (shared/data/bibliotecaComponentes.js). */
+/** Forma de una entrada del catálogo (shared/data/bibliotecaComponentes.ts). */
 export interface Componente {
   id: string;
   nombre: string;
   categoria: string;
   puntosConexion: { entradas: number; salidas: number };
   entidadVinculada: string | null;
+  /** Fuera del editor de Diagrama unifilar (pero puede seguir ofrecido en "Colocar equipo" del Plano) — ver componentesPorCategoriaDiagrama/componentesPorCategoriaPlano. */
+  soloPlano?: boolean;
 }

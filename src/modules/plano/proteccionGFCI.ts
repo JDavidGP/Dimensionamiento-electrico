@@ -43,7 +43,7 @@ export interface RequerimientoGFCI {
  * ¿El tomacorriente de un ambiente con este tipo (y/o marcado
  * exterior) requiere protección GFCI? `tipoInstalacion` decide si cita
  * 210.8(A) (vivienda) o 210.8(B) (no residencial) — mismo criterio que
- * TIPOS_INSTALACION ya usa el resto de la app, ver shared/constants/constantes.js.
+ * TIPOS_INSTALACION ya usa el resto de la app, ver shared/constants/constantes.ts.
  */
 export function requiereProteccionGFCI(tipoAmbiente: TipoAmbiente | null | undefined, exterior: boolean, esResidencial: boolean): RequerimientoGFCI {
   const seccion = esResidencial ? "NEC 210.8(A)" : "NEC 210.8(B)";

@@ -1,10 +1,10 @@
 import { generarId } from "../../shared/utils/id.ts";
-import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../../shared/constants/constantes.js";
+import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../../shared/constants/constantes.ts";
 import type { ProyectoMeta, PlanoProyecto, DatosSerializarProyecto, ProyectoSerializado } from "./tipos.ts";
 
 // Migración del enum viejo de tipoInstalacion (2 valores: domiciliaria/
 // industrial) al nuevo de 3 (ver la nota larga en shared/constants/
-// constantes.js) — un archivo guardado antes de 2026-11-19 trae el
+// constantes.ts) — un archivo guardado antes de 2026-11-19 trae el
 // valor viejo tal cual, nunca se reescribe el archivo del usuario, solo
 // se traduce al cargarlo. "industrial" mapea a COMERCIAL_INDUSTRIAL (el
 // nivel más cercano a su intención original); "domiciliaria" al nuevo
@@ -16,7 +16,7 @@ const MIGRACION_TIPO_INSTALACION: Record<string, string> = {
 
 function migrarTipoInstalacion(valor: unknown): string {
   if (!valor) return TIPO_INSTALACION_POR_DEFECTO;
-  if (Object.values(TIPOS_INSTALACION).includes(valor as string)) return valor as string;
+  if ((Object.values(TIPOS_INSTALACION) as string[]).includes(valor as string)) return valor as string;
   return MIGRACION_TIPO_INSTALACION[valor as string] ?? TIPO_INSTALACION_POR_DEFECTO;
 }
 

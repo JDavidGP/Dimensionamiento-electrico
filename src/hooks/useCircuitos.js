@@ -5,7 +5,7 @@
  */
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
-import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../shared/constants/constantes.js";
+import { TIPO_INSTALACION_POR_DEFECTO, TIPOS_INSTALACION } from "../shared/constants/constantes.ts";
 import { renderizarPrimeraPaginaPDF, esArchivoPDF } from "../shared/utils/pdfARaster.ts";
 import { rectificarImagen } from "../shared/utils/rectificarImagen.ts";
 
@@ -64,7 +64,7 @@ export function useCircuitos() {
   // Tipo de instalación (domiciliaria/industrial) — elegido junto con
   // la normativa (ver SelectorNormativa.jsx). Por ahora es puramente
   // informativo: no filtra ni agrega equipos/tablas todavía — ver la
-  // nota de investigación NEC/REBT en shared/constants/constantes.js.
+  // nota de investigación NEC/REBT en shared/constants/constantes.ts.
   const [tipoInstalacion, setTipoInstalacion] = useState(TIPO_INSTALACION_POR_DEFECTO);
 
   // Umbral de desbalance de fases — vive como estado de React (no solo

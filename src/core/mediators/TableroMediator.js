@@ -626,7 +626,7 @@ export const TableroMediator = {
    * este recorrido en la UI.
    *
    * UMBRAL: 10% recomendado (CONFIRMADO, ver UMBRAL_DESBALANCE_FASES_PCT
-   * en shared/constants/constantes.js), MODIFICABLE vía
+   * en shared/constants/constantes.ts), MODIFICABLE vía
    * Config.limites.desbalanceFasesPct o pasando `umbralPct` explícito
    * acá (Ajustes, en la UI) — si el umbral efectivo supera el
    * recomendado, el resultado trae una advertencia seria (ver

@@ -1,9 +1,11 @@
+import type { Material } from "../../modules/normativa/tipos.ts";
+
 // Sección transversal de cada calibre AWG, en mm² — es lo que conecta el
 // sistema americano (AWG, para NEC) con el sistema métrico (mm², para
 // IEC/CIEN). Con esta área + la resistividad del material, la resistencia
 // se calcula, no se busca en una tabla fija — así el mismo cálculo sirve
 // para cualquier sección, incluidas las mm² estándar de IEC más adelante.
-export const AREA_MM2_POR_AWG = {
+export const AREA_MM2_POR_AWG: Record<string, number> = {
   "14": 2.08,
   "12": 3.31,
   "10": 5.26,
@@ -28,7 +30,7 @@ export const AREA_MM2_POR_AWG = {
 // la reactancia no se deriva de un área simple (depende del espaciado
 // entre conductores y la geometría de la canalización), así que se
 // mantiene como tabla de referencia aproximada por calibre.
-export const REACTANCIA_OHM_KM_POR_AWG = {
+export const REACTANCIA_OHM_KM_POR_AWG: Record<string, number> = {
   "14": 0.15,
   "12": 0.14,
   "10": 0.13,
@@ -85,7 +87,7 @@ export const REACTANCIA_OHM_KM_POR_AWG = {
 // Pendiente real que sigue abierto: la Tabla 310.12 (servicio de
 // vivienda), anotado aparte en la ruta guía — no tiene relación con
 // este spot-check.
-export const AMPACIDAD_60C_POR_AWG = {
+export const AMPACIDAD_60C_POR_AWG: Record<Material, Record<string, number>> = {
   cobre: {
     "14": 15, "12": 20, "10": 30, "8": 40, "6": 55, "4": 70,
     "3": 85, "2": 95, "1": 110, "1/0": 125, "2/0": 145,
@@ -100,8 +102,8 @@ export const AMPACIDAD_60C_POR_AWG = {
 
 // Orden explícito de más delgado a más grueso — JavaScript reordena
 // automáticamente llaves de objeto que parecen enteros, así que NO se
-// debe recorrer con Object.keys(). Ver nota en calcularCircuito.js.
-export const ORDEN_AWG = {
+// debe recorrer con Object.keys().
+export const ORDEN_AWG: Record<Material, string[]> = {
   cobre: ["14", "12", "10", "8", "6", "4", "3", "2", "1", "1/0", "2/0", "3/0", "4/0", "250", "300", "350", "400", "500"],
   aluminio: ["10", "8", "6", "4", "3", "2", "1", "1/0", "2/0", "3/0", "4/0", "250", "300", "350", "400", "500"],
 };

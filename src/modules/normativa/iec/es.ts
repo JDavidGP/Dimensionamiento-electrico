@@ -22,7 +22,7 @@
 
 import { IEC_BASE } from "./_base.ts";
 import type { Normativa, ReglaDemanda, ContextoCaidaTensionREBT } from "../tipos.ts";
-import { TIPOS_INSTALACION } from "../../../shared/constants/constantes.js";
+import { TIPOS_INSTALACION } from "../../../shared/constants/constantes.ts";
 
 // Breakers estándar IEC 60898 (tamaños típicos disponibles comercialmente)
 const BREAKERS_IEC_ES = [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125];

@@ -3,7 +3,7 @@ import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle } from "./Campo";
 import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
-import { TIPOS_INSTALACION } from "../shared/constants/constantes.js";
+import { TIPOS_INSTALACION } from "../shared/constants/constantes.ts";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
@@ -819,7 +819,7 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
 // BloqueLlenadoConducto, pero solo para IEC_ES: REBT da el diámetro
 // DIRECTO por tabla (sección+cantidad), no un % de llenado de área, y
 // solo para conductores de LA MISMA sección en un tubo (ver la nota
-// larga en shared/data/canalizacionREBT.js) — si el grupo marcado
+// larga en shared/data/canalizacionREBT.ts) — si el grupo marcado
 // mezcla secciones distintas, se avisa en vez de forzar un cálculo que
 // la norma no tabula.
 //

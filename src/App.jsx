@@ -24,7 +24,7 @@ import SubTabs from "./components/SubTabs";
 import PiePagina from "./components/PiePagina";
 import { useCircuitos } from "./hooks/useCircuitos";
 import { colores, fuentes } from "./styles/colores";
-import { OPCIONES_TIPO_INSTALACION, TIPOS_INSTALACION } from "./shared/constants/constantes.js";
+import { OPCIONES_TIPO_INSTALACION, TIPOS_INSTALACION } from "./shared/constants/constantes.ts";
 
 // Tab layout + ViewPager2 (pedido del usuario, retomado 2026-11-19):
 // 7 pestañas, escalonadas por el ORDEN en que se van ingresando los

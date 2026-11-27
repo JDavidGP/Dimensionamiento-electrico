@@ -11,7 +11,7 @@ import {
   componentesPorCategoria,
   componentesPorCategoriaDiagrama,
   componentesPorCategoriaPlano,
-} from "../src/shared/data/bibliotecaComponentes.js";
+} from "../src/shared/data/bibliotecaComponentes.ts";
 
 function assert(cond, msg) {
   if (!cond) { console.error("FALLO:", msg); process.exitCode = 1; } else { console.log("OK:", msg); }

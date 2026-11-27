@@ -9,12 +9,12 @@ import {
   AREA_MM2_POR_AWG,
   REACTANCIA_OHM_KM_POR_AWG,
   ORDEN_AWG,
-} from "../../shared/data/seccionesConductor.js";
+} from "../../shared/data/seccionesConductor.ts";
 import {
   TABLA_220_55_COL_A as TABLA_220_55_COL_A_CRUDA,
   NOTA1_220_55_UMBRAL_KW,
   NOTA1_220_55_PCT_POR_KW,
-} from "../../shared/data/tiposEquipoNEC.js";
+} from "../../shared/data/tiposEquipoNEC.ts";
 
 const TABLA_220_55_COL_A: Record<number, number> = TABLA_220_55_COL_A_CRUDA;
 import { CANALIZACION_NEC } from "./canalizacionNEC.ts";

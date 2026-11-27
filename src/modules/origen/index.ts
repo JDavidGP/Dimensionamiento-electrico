@@ -56,7 +56,7 @@ export type ResultadoOrigen =
  *     como origen seleccionable (registro — "nos hace falta datos para
  *     desarrollar ese apartado"), gateado en la UI a
  *     tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL
- *     (ver shared/constants/constantes.js, PanelTableros.jsx). Sigue
+ *     (ver shared/constants/constantes.ts, PanelTableros.jsx). Sigue
  *     PENDIENTE, a propósito, todo lo que requeriría datos reales de un
  *     proyecto industrial que todavía no hay: que evaluarCaidaAcumulada
  *     (modules/motor/caidaTensionAcumulada.js) deje de asumir una sola
@@ -91,7 +91,7 @@ export type ResultadoOrigen =
  *   - Tipo de instalación — domiciliaria o industrial: YA CONECTADO
  *     (ver SelectorNormativa.jsx) pero todavía puramente informativo
  *     — no filtra equipos/tablas todavía (ver
- *     shared/constants/constantes.js para la investigación NEC/REBT
+ *     shared/constants/constantes.ts para la investigación NEC/REBT
  *     sobre qué distingue a una instalación industrial).
  *   - Objetivo explícito del usuario al pedir esto: mantener la
  *     aplicación "más limpia" — o sea, estos son candidatos a opciones

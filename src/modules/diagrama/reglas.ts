@@ -39,7 +39,7 @@
 // CERO gráfico, cero UI. Módulo puro — se usa a través de index.js
 // (validarConexion) y, por extensión, DiagramaMediator.
 
-import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.js";
+import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.ts";
 import type { ResultadoValidacion } from "./tipos.ts";
 
 // Categoría de origen → categorías de destino permitidas por defecto.

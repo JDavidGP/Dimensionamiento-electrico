@@ -2,11 +2,11 @@
  * Repository — acceso a datos de referencia (tablas estáticas).
  * No realiza cálculos. Usado por NormativaMediator y DataProvider.
  */
-import { BREAKERS_COMERCIALES } from "../../shared/data/breakers.js";
-import * as materiales from "../../shared/data/materiales.js";
-import * as secciones from "../../shared/data/seccionesConductor.js";
-import * as tiposEquipo from "../../shared/data/tiposEquipoNEC.js";
-import { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } from "../../shared/data/plantillas.js";
+import { BREAKERS_COMERCIALES } from "../../shared/data/breakers.ts";
+import * as materiales from "../../shared/data/materiales.ts";
+import * as secciones from "../../shared/data/seccionesConductor.ts";
+import * as tiposEquipo from "../../shared/data/tiposEquipoNEC.ts";
+import { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } from "../../shared/data/plantillas.ts";
 import { Cache } from "./Cache.js";
 import { Logger } from "./Logger.js";
 

@@ -17,7 +17,7 @@
 // informativa N.° 4 + 215.2(A)(1) Nota informativa N.° 2, nota
 // INFORMATIVA no exigible por artículo, NEC §90.5). Ver el comentario
 // completo de LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT en
-// shared/constants/constantes.js — sigue nombrada PROVISIONAL como
+// shared/constants/constantes.ts — sigue nombrada PROVISIONAL como
 // política del proyecto (afinable para media tensión/transformadores),
 // no porque la cifra esté sin verificar.
 //
@@ -32,7 +32,7 @@
 // la cadena falló o está pendiente — eso lo resuelve el llamador
 // (TableroMediator.caidaAcumuladaDesdeCircuito) ANTES de invocarla: si
 // esta función se llama, es porque todos los tramos son válidos.
-import { LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT } from "../../shared/constants/constantes.js";
+import { LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT } from "../../shared/constants/constantes.ts";
 
 export interface CaidaAcumulada {
   aplica: true;

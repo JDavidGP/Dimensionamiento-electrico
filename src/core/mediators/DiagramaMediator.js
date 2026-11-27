@@ -41,7 +41,7 @@ import {
   ZOOM_MIN,
   ZOOM_MAX,
 } from "../../modules/geometria/index.ts";
-import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoriaDiagrama } from "../../shared/data/bibliotecaComponentes.js";
+import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoriaDiagrama } from "../../shared/data/bibliotecaComponentes.ts";
 import { DataProvider } from "../services/DataProvider.js";
 import { Logger } from "../services/Logger.js";
 import { OrigenMediator } from "./OrigenMediator.js";

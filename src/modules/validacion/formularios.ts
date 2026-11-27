@@ -1,6 +1,6 @@
-import { MIN_COSPHI, MAX_COSPHI, MIN_TEMP_C, MAX_TEMP_C } from "../../shared/constants/constantes.js";
+import { MIN_COSPHI, MAX_COSPHI, MIN_TEMP_C, MAX_TEMP_C } from "../../shared/constants/constantes.ts";
 import { generarId } from "../../shared/utils/id.ts";
-import { TIPOS_EQUIPO_NEC as TIPOS_EQUIPO_NEC_CRUDO } from "../../shared/data/tiposEquipoNEC.js";
+import { TIPOS_EQUIPO_NEC as TIPOS_EQUIPO_NEC_CRUDO } from "../../shared/data/tiposEquipoNEC.ts";
 const TIPOS_EQUIPO_NEC: Record<string, unknown> = TIPOS_EQUIPO_NEC_CRUDO;
 import type { Circuito, Equipo } from "./tipos.ts";
 

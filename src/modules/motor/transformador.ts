@@ -22,7 +22,7 @@
 import { generarId } from "../../shared/utils/id.ts";
 
 /** Forma de un Transformador. conexionPrimaria/Secundaria toman valores
- * de TIPOS_CONEXION_EQUIPO (shared/data/equiposEspeciales.js) — delta o
+ * de TIPOS_CONEXION_EQUIPO (shared/data/equiposEspeciales.ts) — delta o
  * estrella, ya que un transformador no usa serie/paralelo entre
  * devanados. "" = sin asignar todavía; no se valida aquí a propósito
  * (scaffold — "después vemos los detalles"). */

@@ -1,7 +1,7 @@
 // src/modules/diagrama/seleccionSimbolo.ts
 //
 // Elige automáticamente qué símbolo del catálogo (ver
-// shared/data/bibliotecaComponentes.js) representa mejor a un equipo,
+// shared/data/bibliotecaComponentes.ts) representa mejor a un equipo,
 // a partir de su nombre/función y tipoEquipoNEC — usado por el armado
 // automático del diagrama tras importar (por PDF+IA o por texto, ver
 // useCircuitos.js), para no dejar todo bajo "carga_especial" cuando

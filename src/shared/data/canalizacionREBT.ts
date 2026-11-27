@@ -1,4 +1,4 @@
-// src/shared/data/canalizacionREBT.js
+// src/shared/data/canalizacionREBT.ts
 //
 // ITC-BT-21 (REBT, RD 842/2002) — "Instalaciones interiores o
 // receptoras. Tubos y canales protectoras". Tablas 2 y 5, extraídas
@@ -27,10 +27,12 @@
 // el fabricante no declaró — se reporta explícito que hace falta el
 // dato del fabricante, mismo criterio que canalizacion.ts.
 //
+export type TipoInstalacionTuboREBT = "superficial" | "empotrada" | "al_aire";
+
 // Claves de sección en mm² (conductores unipolares aislados), cada
 // valor es un array de 5 diámetros exteriores en mm, para 1..5
 // conductores de esa sección en el mismo tubo.
-export const TABLA_DIAMETRO_TUBO_REBT = {
+export const TABLA_DIAMETRO_TUBO_REBT: Record<TipoInstalacionTuboREBT, Record<string, (number | null)[]>> = {
   superficial: {
     "1.5": [12, 12, 16, 16, 16],
     "2.5": [12, 12, 16, 16, 20],
@@ -101,7 +103,7 @@ export const TABLA_DIAMETRO_TUBO_REBT = {
 // Orden real de la tabla (coincide con las filas del texto oficial) —
 // para iterar/validar secciones sin depender del orden de las claves
 // del objeto.
-export const ORDEN_SECCIONES_REBT = ["1.5", "2.5", "4", "6", "10", "16", "25", "35", "50", "70", "95", "120", "150", "185", "240"];
+export const ORDEN_SECCIONES_REBT: string[] = ["1.5", "2.5", "4", "6", "10", "16", "25", "35", "50", "70", "95", "120", "150", "185", "240"];
 
 // "Para más de 5 conductores por tubo o para conductores o cables de
 // secciones diferentes a instalar en el mismo tubo, su sección interior
@@ -109,13 +111,13 @@ export const ORDEN_SECCIONES_REBT = ["1.5", "2.5", "4", "6", "10", "16", "25", "
 // sección ocupada por los conductores." — cita literal de ITC-BT-21,
 // Tablas 2 y 5 respectivamente. Expuesto para mostrar la regla en la
 // UI (no para calcular un diámetro — ver nota de cabecera).
-export const MULTIPLICADOR_SECCION_INTERIOR_MINIMO = {
+export const MULTIPLICADOR_SECCION_INTERIOR_MINIMO: Record<TipoInstalacionTuboREBT, number> = {
   superficial: 2.5,
   empotrada: 3,
   al_aire: 4,
 };
 
-export const TIPOS_INSTALACION_TUBO_REBT = Object.keys(TABLA_DIAMETRO_TUBO_REBT);
+export const TIPOS_INSTALACION_TUBO_REBT: string[] = Object.keys(TABLA_DIAMETRO_TUBO_REBT);
 
 // --- Tabla 9 de ITC-BT-21 — canalizaciones ENTERRADAS (usuario,
 // 2026-11-25, aportó el documento con los valores reales que faltaban
@@ -137,7 +139,11 @@ export const TIPOS_INSTALACION_TUBO_REBT = Object.keys(TABLA_DIAMETRO_TUBO_REBT)
 //   1.2.2 Empotrada:   >5 conductores → 3×   (Tabla 5, hasta 240mm²)
 //   1.2.3 Al aire:     >5 conductores → 4×   (Tabla 7, arriba, hasta 16mm² — alcance angosto a propósito, ver su nota)
 //   1.2.4 Enterrada:   >10 conductores → 4×  (Tabla 9, abajo, hasta 10 conductores — por eso el umbral es más alto que los demás)
-export const TABLA_DIAMETRO_TUBO_ENTERRADO_REBT = {
+export interface DiametroTuboEnterrado {
+  hasta6: number;
+  de7a10: number;
+}
+export const TABLA_DIAMETRO_TUBO_ENTERRADO_REBT: Record<string, DiametroTuboEnterrado> = {
   "1.5": { hasta6: 25, de7a10: 32 },
   "2.5": { hasta6: 32, de7a10: 40 },
   "4": { hasta6: 40, de7a10: 50 },
@@ -150,7 +156,7 @@ export const TABLA_DIAMETRO_TUBO_ENTERRADO_REBT = {
   "70": { hasta6: 125, de7a10: 160 },
 };
 
-export const ORDEN_SECCIONES_ENTERRADO_REBT = ["1.5", "2.5", "4", "6", "10", "16", "25", "35", "50", "70"];
+export const ORDEN_SECCIONES_ENTERRADO_REBT: string[] = ["1.5", "2.5", "4", "6", "10", "16", "25", "35", "50", "70"];
 
 // --- Instalación enterrada (usuario, 2026-11-25, "canalizaciones
 // aéreas y subterráneas") — ITC-BT-07 (redes subterráneas) + ITC-BT-19
@@ -163,16 +169,16 @@ export const ORDEN_SECCIONES_ENTERRADO_REBT = ["1.5", "2.5", "4", "6", "10", "16
 // sí tiene dato real detrás.
 
 /** ITC-BT-07, condiciones generales — profundidad mínima según dónde pasa la zanja, en metros. */
-export const PROFUNDIDAD_MINIMA_ENTERRADA_REBT_M = {
+export const PROFUNDIDAD_MINIMA_ENTERRADA_REBT_M: Record<"acera" | "calzada", number> = {
   acera: 0.6,
   calzada: 0.8,
 };
 
 /** ITC-BT-07 — protección mecánica (losetas o cinta de señalización) exigida a esta altura sobre el cable directamente enterrado, en metros. */
-export const PROTECCION_MECANICA_ALTURA_REBT_M = 0.25;
+export const PROTECCION_MECANICA_ALTURA_REBT_M: number = 0.25;
 
 /** ITC-BT-07 — separación mínima con otras canalizaciones de servicios, en metros. */
-export const SEPARACION_MINIMA_OTRAS_CANALIZACIONES_REBT_M = {
+export const SEPARACION_MINIMA_OTRAS_CANALIZACIONES_REBT_M: Record<"general" | "gas_alta_presion", number> = {
   general: 0.2,
   gas_alta_presion: 0.4,
 };
@@ -185,7 +191,14 @@ export const SEPARACION_MINIMA_OTRAS_CANALIZACIONES_REBT_M = {
 // Filas EXACTAMENTE las que publica la norma (no están todos los
 // enteros 2-20, hay saltos a 12/16/20) — un conteo intermedio se
 // resuelve en el código que la usa, nunca interpolando acá.
-export const TABLA_FACTOR_AGRUPACION_TUBOS_REBT = [
+export interface FilaFactorAgrupacionTubos {
+  cables: number;
+  contacto: number;
+  m025: number;
+  m050: number;
+  m100: number;
+}
+export const TABLA_FACTOR_AGRUPACION_TUBOS_REBT: FilaFactorAgrupacionTubos[] = [
   { cables: 2, contacto: 0.8, m025: 0.88, m050: 0.95, m100: 1.0 },
   { cables: 3, contacto: 0.71, m025: 0.8, m050: 0.88, m100: 0.95 },
   { cables: 4, contacto: 0.65, m025: 0.71, m050: 0.8, m100: 0.88 },

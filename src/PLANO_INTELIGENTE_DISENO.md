@@ -512,7 +512,7 @@ instalar dentro del plano".
   ni se puede "pegar" a un nodo), porque un equipo es una POSICIÓN,
   no un vértice de una poligonal. Reutiliza el MISMO catálogo de
   tipos que ya usa el diagrama unifilar
-  (`shared/data/bibliotecaComponentes.js` — `CATALOGO_COMPONENTES`,
+  (`shared/data/bibliotecaComponentes.ts` — `CATALOGO_COMPONENTES`,
   re-exportado íntegro desde `PlanoMediator`) y el mismo componente de
   símbolo SVG (`SimboloDiagrama`), para que un mismo tipo de
   componente se vea igual en las dos vistas.

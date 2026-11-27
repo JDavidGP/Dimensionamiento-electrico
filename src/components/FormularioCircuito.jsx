@@ -2,7 +2,7 @@ import React from "react";
 import Campo, { inputStyle } from "./Campo";
 import { colores, fuentes } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
-import { TIPOS_INSTALACION, OPCIONES_REPRESENTACION_CIRCUITO } from "../shared/constants/constantes.js";
+import { TIPOS_INSTALACION, OPCIONES_REPRESENTACION_CIRCUITO } from "../shared/constants/constantes.ts";
 
 const FASES = [
   { valor: "mono", label: "Mono" },
@@ -38,7 +38,7 @@ export default function FormularioCircuito({ form, setForm, onGuardar, onCancela
   const normativa = App.normativa.obtener(normativaActiva);
   const voltajesEstandar = normativa.voltajesPorFase[form.fases] ?? [];
   // Residencial básico oculta "Tri" (pedido explícito del usuario, ver la
-  // nota larga en shared/constants/constantes.js, TIPOS_INSTALACION) — NO
+  // nota larga en shared/constants/constantes.ts, TIPOS_INSTALACION) — NO
   // se le cambia la fase a un circuito que ya la tenía en tri si se
   // cambió el nivel después (no se inventa/corrige un dato del usuario en
   // silencio); el pill simplemente no aparece entre las opciones nuevas.

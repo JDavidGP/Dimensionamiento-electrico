@@ -1,13 +1,15 @@
+import type { Material } from "../../modules/normativa/tipos.ts";
+
 // Resistividad eléctrica de referencia a 20°C (Ω·mm²/m) — valores físicos
 // estándar (cobre recocido 100% IACS, aluminio serie 8000 aprox.), no
 // dependen de ninguna normativa específica.
-export const RESISTIVIDAD_20C = {
+export const RESISTIVIDAD_20C: Record<Material, number> = {
   cobre: 0.017241,
   aluminio: 0.028264,
 };
 
 // Coeficiente de temperatura de la resistividad (por °C), referencia 20°C.
-export const COEFICIENTE_TEMPERATURA = {
+export const COEFICIENTE_TEMPERATURA: Record<Material, number> = {
   cobre: 0.00393,
   aluminio: 0.00403,
 };

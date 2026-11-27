@@ -7,7 +7,7 @@
 // tema les llegue — `var(--x)` funciona igual en `style={{}}` y en
 // atributos SVG planos (`fill="var(--ok)"`), confirmado antes de
 // hacer el cambio.
-export const colores = {
+export const colores: Record<string, string> = {
   bg: "var(--bg)",
   panel: "var(--panel)",
   border: "var(--border)",
@@ -46,7 +46,7 @@ export const colores = {
 // color por la skill dataviz de este entorno. `colorAmbiente(id)` abajo
 // asigna un slot ESTABLE por habitación (nunca por posición en el
 // array, que cambia si se borra una anterior).
-export const PALETA_AMBIENTES = [
+export const PALETA_AMBIENTES: string[] = [
   "var(--ambiente-1)",
   "var(--ambiente-2)",
   "var(--ambiente-3)",
@@ -58,7 +58,7 @@ export const PALETA_AMBIENTES = [
 ];
 
 /** Slot de PALETA_AMBIENTES para una habitación — estable por id (nunca por índice en el array, que cambia si se borra otra antes). */
-export function colorAmbiente(habitacionId) {
+export function colorAmbiente(habitacionId: string): string {
   let hash = 0;
   for (let i = 0; i < habitacionId.length; i++) hash = (hash * 31 + habitacionId.charCodeAt(i)) >>> 0;
   return PALETA_AMBIENTES[hash % PALETA_AMBIENTES.length];
@@ -68,7 +68,7 @@ export function colorAmbiente(habitacionId) {
 // (antes se usaba el CDN de Google Fonts, que envía la IP del visitante a Google).
 // Si se instalan las fuentes localmente (p. ej. @fontsource/ibm-plex-sans),
 // se usarán primero; si no, se cae a la fuente nativa del sistema.
-export const fuentes = {
+export const fuentes: Record<string, string> = {
   display: '"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   mono: '"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   condensada: '"IBM Plex Sans Condensed", "Arial Narrow", ui-sans-serif, system-ui, sans-serif',

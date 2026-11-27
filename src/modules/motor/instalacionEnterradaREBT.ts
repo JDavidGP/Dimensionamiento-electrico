@@ -1,14 +1,14 @@
 // src/modules/motor/instalacionEnterradaREBT.ts
 //
 // Instalación enterrada REBT — ITC-BT-07/19, ver la nota larga en
-// shared/data/canalizacionREBT.js para la fuente. Geométrico/normativo
+// shared/data/canalizacionREBT.ts para la fuente. Geométrico/normativo
 // puro, igual criterio que canalizacionREBT.ts: no sabe de Tablero/
 // topología, solo recibe los datos ya elegidos por quien llama.
 import {
   PROFUNDIDAD_MINIMA_ENTERRADA_REBT_M,
   SEPARACION_MINIMA_OTRAS_CANALIZACIONES_REBT_M,
   TABLA_FACTOR_AGRUPACION_TUBOS_REBT,
-} from "../../shared/data/canalizacionREBT.js";
+} from "../../shared/data/canalizacionREBT.ts";
 
 export type UbicacionEnterradaREBT = "acera" | "calzada";
 export type SeparacionTubosREBT = "contacto" | "0.25" | "0.50" | "1.00_o_mas";

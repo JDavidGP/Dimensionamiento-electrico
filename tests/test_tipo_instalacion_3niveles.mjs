@@ -1,5 +1,5 @@
 import { ApplicationMediator as App } from "../src/core/ApplicationMediator.js";
-import { TIPOS_INSTALACION, TIPO_INSTALACION_POR_DEFECTO } from "../src/shared/constants/constantes.js";
+import { TIPOS_INSTALACION, TIPO_INSTALACION_POR_DEFECTO } from "../src/shared/constants/constantes.ts";
 
 function assert(cond, msg) {
   if (!cond) {

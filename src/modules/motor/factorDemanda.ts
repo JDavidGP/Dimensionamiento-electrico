@@ -41,7 +41,7 @@
  * eso normativa/index.js NO lo agrega a CAMPOS_OBLIGATORIOS.
  */
 
-import { FACTOR_CARGA_CONTINUA } from "../../shared/constants/constantes.js";
+import { FACTOR_CARGA_CONTINUA } from "../../shared/constants/constantes.ts";
 import { potenciaDeEquipo } from "./cargaCombinada.ts";
 import type { Equipo, Circuito, DetalleDemandaTipo } from "./tipos.ts";
 import type { Normativa } from "../normativa/tipos.ts";

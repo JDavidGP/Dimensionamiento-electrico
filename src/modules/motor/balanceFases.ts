@@ -10,14 +10,14 @@
 // fracción — eso lo resuelve el llamador (TableroMediator), esta
 // función solo hace la aritmética final sobre los aportes YA sumados.
 //
-// UMBRAL: ver UMBRAL_DESBALANCE_FASES_PCT en shared/constants/constantes.js
+// UMBRAL: ver UMBRAL_DESBALANCE_FASES_PCT en shared/constants/constantes.ts
 // para la fuente completa (IEEE Std 141 / NEMA MG-1, no un artículo del
 // NEC). CONFIRMADO como default del proyecto (10%), y MODIFICABLE — el
 // llamador puede pasar un `umbralPct` distinto (típicamente leído de
 // Config.limites.desbalanceFasesPct). Si ese umbral supera el
 // recomendado, esta función agrega una advertencia SERIA explicando el
 // riesgo real, no lo permite en silencio.
-import { UMBRAL_DESBALANCE_FASES_PCT } from "../../shared/constants/constantes.js";
+import { UMBRAL_DESBALANCE_FASES_PCT } from "../../shared/constants/constantes.ts";
 
 export type BalanceFases = { aplica: false } | {
   aplica: true;

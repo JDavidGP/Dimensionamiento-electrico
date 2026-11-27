@@ -33,15 +33,17 @@
 // son Fase 2, necesitan un motor de reglas por PAR de tipos, no solo
 // cardinalidad.
 
+import type { Componente } from "../../modules/diagrama/tipos.ts";
+
 export const CATEGORIAS_COMPONENTE = {
   FUENTE: "fuente",
   MEDICION_PROTECCION: "medicion_proteccion",
   DISTRIBUCION: "distribucion",
   CARGA: "carga",
   CONTROL: "control",
-};
+} as const;
 
-export const CATALOGO_COMPONENTES = [
+export const CATALOGO_COMPONENTES: Componente[] = [
   // --- Fuente ---
   { id: "acometida", nombre: "Acometida", categoria: "fuente", puntosConexion: { entradas: 0, salidas: 1 }, entidadVinculada: null },
   { id: "transformador", nombre: "Transformador", categoria: "fuente", puntosConexion: { entradas: 1, salidas: 1 }, entidadVinculada: "transformador" },
@@ -157,12 +159,14 @@ export const CATALOGO_COMPONENTES = [
   { id: "sensor", nombre: "Sensor", categoria: "control", puntosConexion: { entradas: 0, salidas: 1 }, entidadVinculada: null },
 ];
 
-export function obtenerComponente(tipoId) {
+export function obtenerComponente(tipoId: string): Componente | null {
   return CATALOGO_COMPONENTES.find((c) => c.id === tipoId) ?? null;
 }
 
-export function componentesPorCategoria() {
-  const mapa = {};
+export type MapaComponentesPorCategoria = Record<string, Componente[]>;
+
+export function componentesPorCategoria(): MapaComponentesPorCategoria {
+  const mapa: MapaComponentesPorCategoria = {};
   for (const c of CATALOGO_COMPONENTES) {
     (mapa[c.categoria] ??= []).push(c);
   }
@@ -170,8 +174,8 @@ export function componentesPorCategoria() {
 }
 
 /** Igual que componentesPorCategoria(), pero sin los tipos `soloPlano` (ej. caja de empalme) — para el editor de Diagrama unifilar, que no los necesita. */
-export function componentesPorCategoriaDiagrama() {
-  const mapa = {};
+export function componentesPorCategoriaDiagrama(): MapaComponentesPorCategoria {
+  const mapa: MapaComponentesPorCategoria = {};
   for (const c of CATALOGO_COMPONENTES) {
     if (c.soloPlano) continue;
     (mapa[c.categoria] ??= []).push(c);
@@ -201,7 +205,7 @@ export function componentesPorCategoriaDiagrama() {
 // marcador YA colocado de un tipo fuera de esta lista (de una ronda
 // anterior) sigue dibujándose normal, esto solo filtra qué se OFRECE
 // al colocar uno nuevo.
-const IDS_PLANO_EQUIPO = new Set([
+const IDS_PLANO_EQUIPO: Set<string> = new Set([
   "tablero_electrico",
   "puesta_tierra",
   "caja_empalme",
@@ -219,8 +223,8 @@ const IDS_PLANO_EQUIPO = new Set([
 ]);
 
 /** Igual que componentesPorCategoria(), pero acotado a los tipos que un electricista de verdad ubica en un plano de planta — ver IDS_PLANO_EQUIPO arriba. Para "Colocar equipo" del Plano; el Diagrama unifilar sigue usando componentesPorCategoriaDiagrama (el catálogo completo, sin los `soloPlano`). */
-export function componentesPorCategoriaPlano() {
-  const mapa = {};
+export function componentesPorCategoriaPlano(): MapaComponentesPorCategoria {
+  const mapa: MapaComponentesPorCategoria = {};
   for (const c of CATALOGO_COMPONENTES) {
     if (!IDS_PLANO_EQUIPO.has(c.id)) continue;
     (mapa[c.categoria] ??= []).push(c);

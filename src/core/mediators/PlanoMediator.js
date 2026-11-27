@@ -88,7 +88,7 @@ import {
   puntoConAnguloSnapeado,
   SNAP_ANGULO_TOLERANCIA_GRADOS,
 } from "../../modules/geometria/index.ts";
-import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria, componentesPorCategoriaPlano } from "../../shared/data/bibliotecaComponentes.js";
+import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoria, componentesPorCategoriaPlano } from "../../shared/data/bibliotecaComponentes.ts";
 import { OrigenMediator } from "./OrigenMediator.js";
 
 export const PlanoMediator = {
@@ -224,7 +224,7 @@ export const PlanoMediator = {
   codificarDXFComoBytes,
 
   // Catálogo de tipos de equipo — EL MISMO que usa el diagrama unifilar
-  // (shared/data/bibliotecaComponentes.js), nunca un segundo catálogo
+  // (shared/data/bibliotecaComponentes.ts), nunca un segundo catálogo
   // paralelo para los marcadores del plano.
   CATALOGO_COMPONENTES,
   CATEGORIAS_COMPONENTE,

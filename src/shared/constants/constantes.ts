@@ -2,8 +2,8 @@
 // Centralizados aquí para que un ajuste futuro (ej. al incorporar
 // las tablas oficiales del CIEN) no requiera tocar la lógica de cálculo.
 
-export const LIMITE_CAIDA_TENSION_PCT = 3.0; // % máximo de caída de tensión permitido
-export const FACTOR_CARGA_CONTINUA = 1.25; // Regla del 125% para cargas continuas (>3h)
+export const LIMITE_CAIDA_TENSION_PCT: number = 3.0; // % máximo de caída de tensión permitido
+export const FACTOR_CARGA_CONTINUA: number = 1.25; // Regla del 125% para cargas continuas (>3h)
 
 // Límite de caída de tensión ACUMULADA (alimentador + circuito derivado
 // sumados). CONFIRMADO con fuente — no es una cifra sin respaldo:
@@ -32,7 +32,7 @@ export const FACTOR_CARGA_CONTINUA = 1.25; // Regla del 125% para cargas continu
 // por tramo individual, que sigue aplicándose sin cambios en
 // seleccionarSeccion.js) — es un chequeo ADICIONAL sobre la suma de
 // ambos tramos. Ver modules/motor/caidaTensionAcumulada.js.
-export const LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT = 5.0;
+export const LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT: number = 5.0;
 
 // Umbral RECOMENDADO de desbalance de corriente entre líneas (L1/L2/L3)
 // de un tablero. CONFIRMADO por el usuario como valor por defecto del
@@ -55,13 +55,13 @@ export const LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT = 5.0;
 // encima de lo esperado, envejece el aislamiento más rápido, y un
 // desbalance de tensión asociado empuja a deratear motores (NEMA MG-1)
 // o directamente a no operarlos con seguridad por encima de 5%.
-export const UMBRAL_DESBALANCE_FASES_PCT = 10.0;
+export const UMBRAL_DESBALANCE_FASES_PCT: number = 10.0;
 
-export const MIN_COSPHI = 0.5;
-export const MAX_COSPHI = 1.0;
+export const MIN_COSPHI: number = 0.5;
+export const MAX_COSPHI: number = 1.0;
 
-export const MIN_TEMP_C = -10;
-export const MAX_TEMP_C = 60;
+export const MIN_TEMP_C: number = -10;
+export const MAX_TEMP_C: number = 60;
 
 // Tipo de instalación — 3 niveles, elegidos junto con la normativa
 // (ver SelectorNormativa.jsx). Declarado como constante por el mismo
@@ -98,13 +98,14 @@ export const TIPOS_INSTALACION = {
   RESIDENCIAL_BASICO: "residencial_basico",
   RESIDENCIAL_AVANZADO: "residencial_avanzado",
   COMERCIAL_INDUSTRIAL: "comercial_industrial",
-};
-export const TIPO_INSTALACION_POR_DEFECTO = TIPOS_INSTALACION.RESIDENCIAL_BASICO;
+} as const;
+export type TipoInstalacion = (typeof TIPOS_INSTALACION)[keyof typeof TIPOS_INSTALACION];
+export const TIPO_INSTALACION_POR_DEFECTO: TipoInstalacion = TIPOS_INSTALACION.RESIDENCIAL_BASICO;
 
 // Etiquetas para la UI — fuente única (antes vivía duplicado dentro de
 // SelectorNormativa.jsx; movido acá para que DocumentoMediator/el informe
 // técnico use la MISMA etiqueta, nunca un segundo mapeo que se desincronice).
-export const OPCIONES_TIPO_INSTALACION = [
+export const OPCIONES_TIPO_INSTALACION: { valor: TipoInstalacion; label: string }[] = [
   { valor: TIPOS_INSTALACION.RESIDENCIAL_BASICO, label: "Residencial básico" },
   { valor: TIPOS_INSTALACION.RESIDENCIAL_AVANZADO, label: "Residencial avanzado" },
   { valor: TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL, label: "Comercial / Industrial" },
@@ -126,10 +127,11 @@ export const REPRESENTACION_CIRCUITO = {
   PLANO: "plano",
   AMBOS: "ambos",
   NINGUNO: "ninguno",
-};
-export const REPRESENTACION_CIRCUITO_POR_DEFECTO = REPRESENTACION_CIRCUITO.AMBOS;
+} as const;
+export type RepresentacionCircuito = (typeof REPRESENTACION_CIRCUITO)[keyof typeof REPRESENTACION_CIRCUITO];
+export const REPRESENTACION_CIRCUITO_POR_DEFECTO: RepresentacionCircuito = REPRESENTACION_CIRCUITO.AMBOS;
 
-export const OPCIONES_REPRESENTACION_CIRCUITO = [
+export const OPCIONES_REPRESENTACION_CIRCUITO: { valor: RepresentacionCircuito; label: string }[] = [
   { valor: REPRESENTACION_CIRCUITO.AMBOS, label: "Diagrama y plano" },
   { valor: REPRESENTACION_CIRCUITO.DIAGRAMA, label: "Solo diagrama" },
   { valor: REPRESENTACION_CIRCUITO.PLANO, label: "Solo plano" },

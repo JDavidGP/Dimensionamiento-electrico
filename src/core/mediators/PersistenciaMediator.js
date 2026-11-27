@@ -16,7 +16,7 @@ import {
   nombreArchivo,
 } from "../../modules/persistencia/index.ts";
 import { generarPdfProyecto, extraerDatosDePdf } from "../../modules/persistencia/pdf.ts";
-import { OPCIONES_TIPO_INSTALACION } from "../../shared/constants/constantes.js";
+import { OPCIONES_TIPO_INSTALACION } from "../../shared/constants/constantes.ts";
 import { Logger } from "../services/Logger.js";
 import { Config } from "../services/Config.js";
 

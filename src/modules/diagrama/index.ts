@@ -27,12 +27,12 @@
 // DiagramaMediator (core/mediators/DiagramaMediator.js).
 
 import { generarId } from "../../shared/utils/id.ts";
-import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.js";
+import { obtenerComponente } from "../../shared/data/bibliotecaComponentes.ts";
 import { validarReglaElectrica } from "./reglas.ts";
 import type { NodoDiagrama, DatosNodo, ConexionDiagrama, DatosConexion, ResultadoValidacion } from "./tipos.ts";
 
 export const NODO_VACIO: Omit<NodoDiagrama, "id"> = {
-  tipo: "", // id del catálogo (shared/data/bibliotecaComponentes.js)
+  tipo: "", // id del catálogo (shared/data/bibliotecaComponentes.ts)
   nombre: "",
   posicion: { x: 0, y: 0 },
   // Si el tipo tiene entidadVinculada, el id de la entidad real
@@ -55,7 +55,7 @@ export const CONEXION_VACIA: Omit<ConexionDiagrama, "id"> = {
   nodoDestinoId: "",
   tipoConductor: "cable", // "cable" | "barra" — lo suficiente para distinguir un conductor de una barra de distribución
   longitud: "",
-  calibre: "", // AWG/kcmil — reusa AREA_MM2_POR_AWG (shared/data/seccionesConductor.js) cuando se calcule, no se recalcula acá
+  calibre: "", // AWG/kcmil — reusa AREA_MM2_POR_AWG (shared/data/seccionesConductor.ts) cuando se calcule, no se recalcula acá
   material: "cobre",
   fases: "mono", // "mono" | "bi" | "tri" — mismo vocabulario que circuito/tablero
   notas: "",

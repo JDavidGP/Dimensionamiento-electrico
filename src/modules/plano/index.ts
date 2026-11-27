@@ -309,7 +309,7 @@ export function vincularRutaConductor(ruta: RutaConductorPlano, entidadId: strin
 // Un marcador puntual (no forma parte del grafo de nodos/segmentos —
 // ver la nota en PlanoInteligente.jsx sobre por qué quedan
 // independientes en esta ronda) con un `tipo` del MISMO catálogo que
-// ya usa el diagrama unifilar (shared/data/bibliotecaComponentes.js —
+// ya usa el diagrama unifilar (shared/data/bibliotecaComponentes.ts —
 // ver PlanoMediator para `obtenerComponente`/`componentesPorCategoria`
 // reexportados, nunca un segundo catálogo) y un `entidadId` opcional
 // que lo vincula a un tablero/circuito/equipo/fuenteEnergia/

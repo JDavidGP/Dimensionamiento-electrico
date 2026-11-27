@@ -1,7 +1,7 @@
 // Tipo de instalación — reescrito 2026-11-24: el enum de 2 niveles
 // ("Domiciliaria"/"Industrial") se reemplazó por 3 niveles
 // ("Residencial básico"/"Residencial avanzado"/"Comercial / Industrial",
-// ver TIPOS_INSTALACION en shared/constants/constantes.js). El valor
+// ver TIPOS_INSTALACION en shared/constants/constantes.ts). El valor
 // guardado en el JSON también cambió: ya no es "industrial" sino
 // "comercial_industrial".
 import { chromium } from "playwright";

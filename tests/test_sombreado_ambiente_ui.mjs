@@ -82,7 +82,15 @@ assert((await poligonos.count()) === 2, "Cada ambiente generado dibuja su propio
 const fill1 = await poligonos.nth(0).getAttribute("fill");
 const fill2 = await poligonos.nth(1).getAttribute("fill");
 assert(/^var\(--ambiente-\d\)$/.test(fill1), `El color viene de la paleta categórica (CSS var), no un hex suelto (real: '${fill1}')`);
-assert(fill1 !== fill2, `2 ambientes distintos tienen colores DISTINTOS entre sí (real: '${fill1}' vs '${fill2}')`);
+assert(/^var\(--ambiente-\d\)$/.test(fill2), `El color del 2do ambiente también viene de la paleta categórica (real: '${fill2}')`);
+// NO se afirma fill1 !== fill2 acá: los ids de habitación son aleatorios
+// (generarId()) y la paleta tiene solo 8 slots fijos — 2 ids al azar
+// tienen ~12,5% de chance real de colisionar al mismo slot, lo cual es
+// comportamiento ESPERADO (paleta categórica finita, nunca se inventa
+// un 9no color), no un bug. Afirmarlo acá causaba una falla intermitente
+// real (reproducida en sesión, 2026-11-27). La prueba determinística de
+// que el hash SÍ distingue ids distintos vive en test_colorAmbiente.mjs,
+// con ids LITERALES elegidos a propósito para no colisionar.
 
 const puntos1 = (await poligonos.nth(0).getAttribute("points")).trim().split(/\s+/);
 assert(puntos1.length === 4, `El sombreado de un ambiente rectangular tiene 4 puntos (real: ${puntos1.length})`);

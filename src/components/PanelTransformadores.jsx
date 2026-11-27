@@ -3,7 +3,7 @@ import { colores, fuentes } from "../styles/colores";
 import Campo, { inputStyle, colorEstadoDe } from "./Campo";
 import { BotonPill } from "./PanelTableros";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
-import { TIPOS_CONEXION_EQUIPO } from "../shared/data/equiposEspeciales.js";
+import { TIPOS_CONEXION_EQUIPO } from "../shared/data/equiposEspeciales.ts";
 
 // Lista propia de Transformadores, con su CRUD completo — mismo patrón
 // de acordeón que PanelFuentesEnergia.jsx antes de su rediseño en dos

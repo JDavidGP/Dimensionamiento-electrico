@@ -27,7 +27,7 @@ assert(
 );
 
 // --- 2. Cambiar a comercial/industrial ---
-// 3er nivel de TIPOS_INSTALACION (ver shared/constants/constantes.js):
+// 3er nivel de TIPOS_INSTALACION (ver shared/constants/constantes.ts):
 // ya no hay un botón "Industrial" — es "Comercial / Industrial".
 await page.getByRole("button", { name: "Normativa", exact: true }).click();
 await page.waitForTimeout(350);

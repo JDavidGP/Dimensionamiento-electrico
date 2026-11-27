@@ -1,7 +1,7 @@
 // src/modules/motor/canalizacionREBT.ts
 //
 // Diámetro mínimo de tubo por ITC-BT-21 (REBT) — ver la nota larga en
-// shared/data/canalizacionREBT.js para la fuente y el porqué de NO
+// shared/data/canalizacionREBT.ts para la fuente y el porqué de NO
 // calcular el caso de >5 (superficial/empotrada/al aire) o >10
 // (enterrado) conductores (depende de un diámetro interior que el
 // fabricante declara, no la norma). Geométrico puro, igual criterio
@@ -16,7 +16,7 @@ import {
   MULTIPLICADOR_SECCION_INTERIOR_MINIMO,
   TIPOS_INSTALACION_TUBO_REBT,
   TABLA_DIAMETRO_TUBO_ENTERRADO_REBT,
-} from "../../shared/data/canalizacionREBT.js";
+} from "../../shared/data/canalizacionREBT.ts";
 
 export { TIPOS_INSTALACION_TUBO_REBT };
 
@@ -79,7 +79,7 @@ export function diametroMinimoTuboREBT(
 
 /**
  * Diámetro mínimo de tubo ENTERRADO — ITC-BT-21 Tabla 9. Estructura
- * distinta a Tabla 2/5 (ver nota en shared/data/canalizacionREBT.js):
+ * distinta a Tabla 2/5 (ver nota en shared/data/canalizacionREBT.ts):
  * solo 2 bandas (≤6 conductores / 7-10), tabulada hasta 10 (no 5). Para
  * >10 conductores o secciones mixtas, la norma no da tabla — exige
  * sección interior ≥4× la ocupada, con diámetro interior declarado por

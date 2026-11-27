@@ -1,4 +1,4 @@
-import { CONEXIONES_DISPONIBLES_POR_DEFECTO } from "../../shared/data/equiposEspeciales.js";
+import { CONEXIONES_DISPONIBLES_POR_DEFECTO } from "../../shared/data/equiposEspeciales.ts";
 
 /**
  * Configuración global de la aplicación.
@@ -25,7 +25,7 @@ export const Config = {
   },
   // Configuración para equipos especiales (motor/contactor/transformador)
   // — scaffold a pedido del usuario, sin conectar a UI todavía. Ver
-  // shared/data/equiposEspeciales.js para los tipos y el razonamiento
+  // shared/data/equiposEspeciales.ts para los tipos y el razonamiento
   // de los valores por defecto.
   equiposEspeciales: {
     conexionesDisponibles: { ...CONEXIONES_DISPONIBLES_POR_DEFECTO },

@@ -1,4 +1,4 @@
-import { RESISTIVIDAD_20C, COEFICIENTE_TEMPERATURA, TEMP_OPERACION_CONDUCTOR_C } from "../../shared/data/materiales.js";
+import { RESISTIVIDAD_20C, COEFICIENTE_TEMPERATURA, TEMP_OPERACION_CONDUCTOR_C } from "../../shared/data/materiales.ts";
 import type { Material } from "../normativa/tipos.ts";
 
 // Resistividad del material corregida a una temperatura dada.
