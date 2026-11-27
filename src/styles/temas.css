@@ -30,6 +30,16 @@
  * README, no se le tocó el valor sin que el usuario lo pida.
  */
 
+/* Sombreado por ambiente (usuario, 2026-11-27, "concepto abierto...
+ * tengo que pensar en alguna forma... un sombreado para determinar
+ * cada ambiente"): 8 colores categóricos (ver habitacionesPlano en
+ * PlanoCanvas.jsx), un slot FIJO por ambiente (nunca reciclado al
+ * azar) — paleta validada contra ceguera al color (Delta E ≥8 CVD,
+ * ≥15 visión normal, por par adyacente) de la skill dataviz de este
+ * mismo entorno, misma referencia que usaría cualquier gráfico de la
+ * app. "claro" usa la columna Light, "musgo" (más oscuro) la columna
+ * Dark de esa misma paleta — 8 hues, mismo orden en los 2 temas.
+ */
 :root,
 :root[data-tema="musgo"] {
   --bg: #222a3f;
@@ -46,6 +56,14 @@
   --error-a14: #b5303b24;
   --error-a44: #b5303b70;
   --ok-a14: #5bba2c24;
+  --ambiente-1: #338ced;
+  --ambiente-2: #e76624;
+  --ambiente-3: #00a888;
+  --ambiente-4: #d28e05;
+  --ambiente-5: #e24d8b;
+  --ambiente-6: #0aac23;
+  --ambiente-7: #9887ef;
+  --ambiente-8: #eb6263;
 }
 
 :root[data-tema="claro"] {
@@ -63,6 +81,14 @@
   --error-a14: #b5303b24;
   --error-a44: #b5303b70;
   --ok-a14: #5bba2c24;
+  --ambiente-1: #257de0;
+  --ambiente-2: #f47230;
+  --ambiente-3: #00b894;
+  --ambiente-4: #f2a600;
+  --ambiente-5: #ee7fac;
+  --ambiente-6: #008a17;
+  --ambiente-7: #6a4ce2;
+  --ambiente-8: #ec4647;
 }
 
 @media (prefers-color-scheme: light) {
@@ -81,6 +107,14 @@
     --error-a14: #b5303b24;
     --error-a44: #b5303b70;
     --ok-a14: #5bba2c24;
+    --ambiente-1: #257de0;
+    --ambiente-2: #f47230;
+    --ambiente-3: #00b894;
+    --ambiente-4: #f2a600;
+    --ambiente-5: #ee7fac;
+    --ambiente-6: #008a17;
+    --ambiente-7: #6a4ce2;
+    --ambiente-8: #ec4647;
   }
 }
 

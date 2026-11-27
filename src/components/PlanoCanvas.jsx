@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { colores } from "../styles/colores";
+import { colores, colorAmbiente } from "../styles/colores";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.js";
 import { SimboloDiagrama } from "./simbolosDiagrama.jsx";
 
@@ -494,6 +494,38 @@ const PlanoCanvas = forwardRef(function PlanoCanvas(
               {mostrarImagenFondo && (
                 <image href={imagen.dataUrl} x={0} y={0} width={imagen.anchoPx} height={imagen.altoPx} />
               )}
+
+              {/* Sombreado por ambiente (usuario, 2026-11-27, pensando en
+                  concepto abierto: "un sombreado para determinar cada
+                  ambiente... para que se distingan entre sí"). Color
+                  categórico ESTABLE por habitación (colorAmbiente, nunca
+                  por posición en el array), semi-transparente y SIN
+                  pointerEvents (nunca intercepta un click que ya iba a
+                  otra cosa — paredes/equipos siguen siendo lo clickeable).
+                  Se dibuja ANTES que las paredes/conductores/equipos a
+                  propósito: es un fondo de zona, nunca tapa nada real. Al
+                  "abrir" un ambiente (borrar la pared de un lado, ya
+                  posible con "Borrar" — las habitaciones guardan su
+                  polígono por NODOS, no por segmentos, así que esto no
+                  rompe nada) 2 ambientes contiguos sin pared entre sí se
+                  ven como 2 zonas de color distinto que se tocan, sin
+                  línea — igual que un concepto abierto en un plano CAD
+                  real. */}
+              {habitaciones.map((h) => {
+                const puntos = puntosDeHabitacion(h);
+                if (puntos.length < 3) return null;
+                const puntosPx = puntos.map((p) => px(p));
+                return (
+                  <polygon
+                    key={`sombreado-${h.id}`}
+                    points={puntosPx.map((p) => `${p.x},${p.y}`).join(" ")}
+                    fill={colorAmbiente(h.id)}
+                    fillOpacity={0.22}
+                    stroke="none"
+                    pointerEvents="none"
+                  />
+                );
+              })}
 
               {/* Conexiones del diagrama unifilar superpuestas sobre el plano
                   (usuario, 2026-11-22: "continuemos con diagrama unifilar y

@@ -40,6 +40,30 @@ export const colores = {
   textSobreAcento: "#fff",
 };
 
+// Paleta categórica para el sombreado por ambiente (usuario, 2026-11-27,
+// "concepto abierto... un sombreado para determinar cada ambiente") —
+// 8 slots FIJOS (nunca ciclados al azar), validados contra ceguera al
+// color por la skill dataviz de este entorno. `colorAmbiente(id)` abajo
+// asigna un slot ESTABLE por habitación (nunca por posición en el
+// array, que cambia si se borra una anterior).
+export const PALETA_AMBIENTES = [
+  "var(--ambiente-1)",
+  "var(--ambiente-2)",
+  "var(--ambiente-3)",
+  "var(--ambiente-4)",
+  "var(--ambiente-5)",
+  "var(--ambiente-6)",
+  "var(--ambiente-7)",
+  "var(--ambiente-8)",
+];
+
+/** Slot de PALETA_AMBIENTES para una habitación — estable por id (nunca por índice en el array, que cambia si se borra otra antes). */
+export function colorAmbiente(habitacionId) {
+  let hash = 0;
+  for (let i = 0; i < habitacionId.length; i++) hash = (hash * 31 + habitacionId.charCodeAt(i)) >>> 0;
+  return PALETA_AMBIENTES[hash % PALETA_AMBIENTES.length];
+}
+
 // Fuentes del sistema: la app no carga nada de servidores externos
 // (antes se usaba el CDN de Google Fonts, que envía la IP del visitante a Google).
 // Si se instalan las fuentes localmente (p. ej. @fontsource/ibm-plex-sans),
