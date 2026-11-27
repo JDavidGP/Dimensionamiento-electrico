@@ -92,6 +92,25 @@ assert((await botonPantallaCompleta.count()) === 0, "El botón '⛶' (entrar) ya
 const alturaCanvasDespues = await svgCanvas.evaluate((el) => el.style.height);
 assert(alturaCanvasDespues.includes("vh") && alturaCanvasDespues !== "480px", `En pantalla completa, el lienzo pide una altura basada en el viewport, no la fija de 480px (real: '${alturaCanvasDespues}')`);
 
+// --- 2b. Bug real reportado por el usuario (2026-11-26/27): una
+//     acción SIN relación con pantalla completa (ej. "Deshacer") hacía
+//     que el navegador saliera de la Fullscreen API real por su
+//     cuenta, y la app confiaba ciegamente en ESE evento para colapsar
+//     TODO el modo CSS con él — perdiendo el lienzo grande y el menú
+//     colapsado en medio de una edición, sin que el usuario lo pidiera.
+//     Simula exactamente eso: el navegador sale de la Fullscreen API
+//     real por su cuenta (document.fullscreenElement se vuelve null,
+//     sin pasar por el botón "Salir") — el modo CSS (position:fixed,
+//     el botón sigue en "⤡") NO debe colapsarse solo.
+await page.evaluate(() => document.dispatchEvent(new Event("fullscreenchange")));
+await page.waitForTimeout(150);
+const posicionTrasFullscreenchangeExterno = await planoGrid.evaluate((el) => getComputedStyle(el).position);
+assert(
+  posicionTrasFullscreenchangeExterno === "fixed",
+  `Un 'fullscreenchange' externo (el navegador salió de la Fullscreen API real por su cuenta) NO colapsa el modo CSS — solo el botón "⤡ Salir" explícito lo hace (real: '${posicionTrasFullscreenchangeExterno}')`
+);
+assert(await botonSalir.isVisible(), "El botón del lienzo sigue mostrando '⤡' (sigue en modo pantalla completa) tras el 'fullscreenchange' externo");
+
 // --- 3. El FAB "Herramientas" aparece, arranca EXPANDIDO — pero eso ahora
 //     muestra las 5 CATEGORÍAS (chips), no los 17 botones sueltos de una. ---
 const botonHerramientas = page.getByRole("button", { name: /herramientas/i });

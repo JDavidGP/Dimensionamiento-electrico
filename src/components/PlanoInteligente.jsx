@@ -830,19 +830,28 @@ export default function PlanoInteligente({
     screen.orientation?.unlock?.();
   }
 
-  // Si el sistema sale de la Fullscreen API real por su cuenta (botón
-  // atrás de Android, gesto del sistema) sin pasar por nuestro propio
-  // botón "Salir", esto sincroniza el modo CSS de vuelta — nunca al
-  // revés (si requestFullscreen nunca llegó a concederse, este evento
-  // tampoco dispara, y el modo CSS sigue siendo la única fuente de
-  // verdad, sin que la Fullscreen API lo condicione).
-  useEffect(() => {
-    function alCambiarFullscreen() {
-      if (!document.fullscreenElement) setPantallaCompletaPlano(false);
-    }
-    document.addEventListener("fullscreenchange", alCambiarFullscreen);
-    return () => document.removeEventListener("fullscreenchange", alCambiarFullscreen);
-  }, []);
+  // Bug real reportado por el usuario (celular→desktop, 2026-11-26/27:
+  // "estoy en modo pantalla completa editando tranquilo... al tocar
+  // deshacer me saca de pantalla completa"): este efecto ANTES
+  // sincronizaba el modo CSS (`pantallaCompletaPlano`, la fuente de
+  // verdad de TODO el layout — lienzo grande, menú colapsado) cada vez
+  // que `document.fullscreenElement` se volvía null, pensado
+  // originalmente para el botón atrás de Android/gestos del sistema.
+  // En desktop, una acción SIN NINGUNA relación con pantalla completa
+  // (Deshacer) hacía que el navegador del usuario saliera de la
+  // Fullscreen API real por su cuenta (motivo del navegador/SO, no de
+  // esta app — no reproducido en Chromium headless, pero sí real en su
+  // navegador) — y este efecto, confiando ciegamente en ESE evento,
+  // colapsaba TODO el modo CSS con él, perdiendo el lienzo grande y el
+  // menú colapsado en medio de una edición sin que el usuario lo
+  // pidiera. Quitado a propósito: el botón "⤡ Salir" (SIEMPRE visible
+  // dentro del lienzo, en cualquiera de los 2 modos) sigue siendo la
+  // ÚNICA forma de salir del modo CSS — nunca se infiere de un evento
+  // externo que puede dispararse por motivos ajenos a la intención real
+  // del usuario. Si el sistema sale de la Fullscreen API real por su
+  // cuenta (ESC, gesto), el modo CSS se queda como está: en el peor
+  // caso vuelve el chrome del navegador alrededor del lienzo grande,
+  // nunca un colapso sorpresivo de todo el layout.
 
   return (
     <div
