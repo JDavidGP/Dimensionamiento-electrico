@@ -1,9 +1,12 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
-import Campo, { inputStyle, colorEstadoDe } from "./Campo";
+import { useState, type FormEvent } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import Campo, { inputStyle, colorEstadoDe } from "./Campo.tsx";
 import { BotonPill } from "./PanelTableros";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPOS_CONEXION_EQUIPO } from "../shared/data/equiposEspeciales.ts";
+import type { Transformador } from "../core/services/DataProvider.ts";
+import type { Entrada } from "../modules/validacion/index.ts";
+import type { EsquemaProteccionTransformador } from "../modules/motor/index.ts";
 
 // Lista propia de Transformadores, con su CRUD completo — mismo patrón
 // de acordeón que PanelFuentesEnergia.jsx antes de su rediseño en dos
@@ -47,7 +50,7 @@ import { TIPOS_CONEXION_EQUIPO } from "../shared/data/equiposEspeciales.ts";
 // explícita del usuario: no conectar todavía el aviso de "secundario
 // en Δ sin neutro disponible" para cargas línea-neutro — queda para
 // una ronda aparte si hace falta.
-const FORM_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", impedanciaPct: "", tipoRefrigeracion: "", conexionPrimaria: "", conexionSecundaria: "", notas: "" };
+const FORM_VACIO: FormTransformador = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "", capacidadKVA: "", impedanciaPct: "", tipoRefrigeracion: "", conexionPrimaria: "", conexionSecundaria: "", notas: "" };
 const FASES_TRANSFORMADOR = [
   { valor: "mono", label: "Mono" },
   { valor: "tri", label: "Tri" },
@@ -61,8 +64,21 @@ const TIPOS_CONEXION_TRANSFORMADOR = [
   { valor: TIPOS_CONEXION_EQUIPO.DELTA, label: "Delta (Δ)" },
 ];
 
+interface FormTransformador {
+  nombre: string;
+  fases: string;
+  tensionPrimariaV: string;
+  tensionSecundariaV: string;
+  capacidadKVA: string;
+  impedanciaPct: string;
+  tipoRefrigeracion: string;
+  conexionPrimaria: string;
+  conexionSecundaria: string;
+  notas: string;
+}
+
 /** "Y" / "Δ" / "?" (sin asignar) — notación compacta de vector group para la tarjeta resumen. */
-function simboloConexion(valor) {
+function simboloConexion(valor: string | undefined) {
   if (valor === TIPOS_CONEXION_EQUIPO.ESTRELLA) return "Y";
   if (valor === TIPOS_CONEXION_EQUIPO.DELTA) return "Δ";
   return "?";
@@ -71,27 +87,36 @@ function simboloConexion(valor) {
 const ESQUEMAS_PROTECCION = [
   { valor: "primario_y_secundario", label: "Primario + secundario" },
   { valor: "solo_primario", label: "Solo primario" },
-];
+] as const;
 
-export default function PanelTransformadores({ transformadores = [], crearTransformador, editarTransformador, eliminarTransformador, listaIntegridad = [], normativaActiva }) {
-  const [activoId, setActivoId] = useState(null);
+interface PanelTransformadoresProps {
+  transformadores?: Transformador[];
+  crearTransformador: (datos: Partial<Transformador>) => Transformador;
+  editarTransformador: (id: string, cambios: Partial<Transformador>) => void;
+  eliminarTransformador: (id: string) => void;
+  listaIntegridad?: Entrada[];
+  normativaActiva: string;
+}
+
+export default function PanelTransformadores({ transformadores = [], crearTransformador, editarTransformador, eliminarTransformador, listaIntegridad = [], normativaActiva }: PanelTransformadoresProps) {
+  const [activoId, setActivoId] = useState<string | null>(null);
   const [formAbierto, setFormAbierto] = useState(false);
-  const [editandoId, setEditandoId] = useState(null);
-  const [form, setForm] = useState(FORM_VACIO);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormTransformador>(FORM_VACIO);
   // Esquema de protección — preferencia de herramienta para PREVISUALIZAR
   // el cálculo (solo primario vs. primario + secundario), no un dato del
   // transformador: no se persiste, igual criterio que asistenciaBordes en
   // el Plano. Una sola selección compartida por cualquier transformador
   // que esté expandido a la vez (alcanza para esta ronda).
-  const [esquemaProteccion, setEsquemaProteccion] = useState("primario_y_secundario");
+  const [esquemaProteccion, setEsquemaProteccion] = useState<EsquemaProteccionTransformador>("primario_y_secundario");
 
-  function abrirCreacion() {
+  function abrirCreacion(): void {
     setForm(FORM_VACIO);
     setEditandoId(null);
     setFormAbierto(true);
   }
 
-  function abrirEdicion(t) {
+  function abrirEdicion(t: Transformador): void {
     setForm({
       nombre: t.nombre,
       fases: t.fases,
@@ -108,25 +133,28 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
     setFormAbierto(true);
   }
 
-  function cerrarForm() {
+  function cerrarForm(): void {
     setForm(FORM_VACIO);
     setEditandoId(null);
     setFormAbierto(false);
   }
 
-  function alGuardar(e) {
+  // form es todo texto (estado de UI) — crearTransformador/
+  // editarTransformador (modules/motor/transformador.ts) ya toleran
+  // strings en runtime, el cast solo declara esa tolerancia.
+  function alGuardar(e: FormEvent): void {
     e.preventDefault();
     if (!form.nombre.trim()) return;
     if (editandoId) {
-      editarTransformador(editandoId, form);
+      editarTransformador(editandoId, form as unknown as Partial<Transformador>);
     } else {
-      const t = crearTransformador(form);
+      const t = crearTransformador(form as unknown as Partial<Transformador>);
       setActivoId(t.id);
     }
     cerrarForm();
   }
 
-  function alEliminar(t) {
+  function alEliminar(t: Transformador): void {
     eliminarTransformador(t.id);
     if (activoId === t.id) setActivoId(null);
     if (editandoId === t.id) cerrarForm();
@@ -361,7 +389,7 @@ export default function PanelTransformadores({ transformadores = [], crearTransf
 
                 {activo && (
                   <div style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    {entradaIntegridad?.problemas?.length > 0 && (
+                    {entradaIntegridad && entradaIntegridad.problemas.length > 0 && (
                       <div>
                         {entradaIntegridad.problemas.map((p, i) => (
                           <div
