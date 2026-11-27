@@ -1,8 +1,15 @@
-import React, { useMemo } from "react";
-import { colores } from "../styles/colores";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { colores } from "../styles/colores.ts";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPOS_FUENTE_UI } from "./PanelTableros";
-import { ContenidoSvgDiagrama, cajaEnvolvente, PALETA_IMPRESION } from "./DiagramaSvgContenido.jsx";
+import { ContenidoSvgDiagrama, cajaEnvolvente, PALETA_IMPRESION } from "./DiagramaSvgContenido.tsx";
+import type { ProyectoMeta } from "../modules/persistencia/tipos.ts";
+import type { Circuito, Equipo } from "../modules/validacion/tipos.ts";
+import type { ResultadoCircuito } from "../modules/motor/index.ts";
+import type { Tablero, FuenteEnergia, Transformador } from "../core/services/DataProvider.ts";
+import type { Entrada } from "../modules/validacion/index.ts";
+import type { AlimentadorResultado, TipoInstalacionResuelto, DatosMemoriaTecnica } from "../modules/documento/tipos.ts";
+import type { NodoDiagrama, ConexionDiagrama } from "../modules/diagrama/tipos.ts";
 
 // Memoria técnica / informe — 5ta pestaña, el lugar que ya estaba
 // anotado como pendiente en App.jsx desde que se armó el layout por
@@ -43,15 +50,20 @@ const COLOR_OK = "#2e7d32";
 const COLOR_ADVERTENCIA = "#b26a00";
 const COLOR_ERROR = "#c62828";
 
-function formatoNumero(n, decimales = 2) {
+function formatoNumero(n: number | null | undefined, decimales: number = 2): string {
   return typeof n === "number" && Number.isFinite(n) ? n.toFixed(decimales) : "—";
 }
 
-function celda(contenido, extra = {}) {
+function celda(contenido: ReactNode, extra: CSSProperties = {}) {
   return <td style={{ padding: "5px 8px", borderBottom: `1px solid ${COLOR_BORDE}`, fontSize: 11.5, ...extra }}>{contenido}</td>;
 }
 
-function Th({ children, alinearDerecha }) {
+interface ThProps {
+  children: ReactNode;
+  alinearDerecha?: boolean;
+}
+
+function Th({ children, alinearDerecha }: ThProps) {
   return (
     <th
       style={{
@@ -69,7 +81,12 @@ function Th({ children, alinearDerecha }) {
   );
 }
 
-function Seccion({ titulo, children }) {
+interface SeccionProps {
+  titulo: string;
+  children: ReactNode;
+}
+
+function Seccion({ titulo, children }: SeccionProps) {
   return (
     <div style={{ marginTop: 22 }}>
       <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.04em", color: COLOR_TEXTO, borderBottom: `1px solid ${COLOR_TEXTO}`, paddingBottom: 4, marginBottom: 10 }}>
@@ -78,6 +95,22 @@ function Seccion({ titulo, children }) {
       {children}
     </div>
   );
+}
+
+interface InformeTecnicoProps {
+  proyecto: ProyectoMeta;
+  normativaActiva: string;
+  tipoInstalacion: TipoInstalacionResuelto | null;
+  circuitos: Circuito[];
+  equipos: Equipo[];
+  resultados: ResultadoCircuito[];
+  tableros: Tablero[];
+  alimentadores: Record<string, AlimentadorResultado>;
+  fuentesEnergia: FuenteEnergia[];
+  transformadores: Transformador[];
+  listaIntegridad: Entrada[];
+  nodosDiagrama?: NodoDiagrama[];
+  conexionesDiagrama?: ConexionDiagrama[];
 }
 
 export default function InformeTecnico({
@@ -94,11 +127,16 @@ export default function InformeTecnico({
   listaIntegridad,
   nodosDiagrama = [],
   conexionesDiagrama = [],
-}) {
+}: InformeTecnicoProps) {
   const informe = useMemo(
     () =>
       App.documento.memoriaTecnica({
-        proyecto,
+        // proyecto/listaIntegridad cruzan de la forma ESTRICTA (validacion/
+        // tipos.ts) a la forma LAXA que modules/documento/tipos.ts declara
+        // a propósito (ese módulo puro no depende de validacion) — mismo
+        // cast, en el mismo punto de unión, que ya hace DocumentoMediator
+        // internamente (ver su nota de cabecera en memoriaTecnica()).
+        proyecto: proyecto as unknown as DatosMemoriaTecnica["proyecto"],
         normativaActiva,
         tipoInstalacion,
         circuitos,
@@ -108,7 +146,7 @@ export default function InformeTecnico({
         alimentadores,
         fuentesEnergia,
         transformadores,
-        listaIntegridad,
+        listaIntegridad: listaIntegridad as unknown as DatosMemoriaTecnica["listaIntegridad"],
       }),
     [proyecto, normativaActiva, tipoInstalacion, circuitos, equipos, resultados, tableros, alimentadores, fuentesEnergia, transformadores, listaIntegridad]
   );
@@ -330,15 +368,19 @@ export default function InformeTecnico({
           )}
         </Seccion>
 
-        {(informe.fuentesEnergia.length > 0 || informe.transformadores.length > 0) && (
+        {/* informe.fuentesEnergia/transformadores son el mismo passthrough
+            que las props originales (ver generarMemoriaTecnica — ese
+            módulo puro los declara `unknown[]` a propósito, no los toca),
+            así que se usan las props ya tipadas directo. */}
+        {(fuentesEnergia.length > 0 || transformadores.length > 0) && (
           <Seccion titulo="Fuentes de energía y transformadores">
-            {informe.fuentesEnergia.map((f) => (
+            {fuentesEnergia.map((f) => (
               <div key={f.id} style={{ fontSize: 12, marginBottom: 2 }}>
                 {f.nombre} — {TIPOS_FUENTE_UI.find((t) => t.valor === f.tipo)?.label ?? f.tipo}
                 {f.capacidadKW !== "" && f.capacidadKW != null ? ` (${f.capacidadKW} kW)` : ""}
               </div>
             ))}
-            {informe.transformadores.map((t) => (
+            {transformadores.map((t) => (
               <div key={t.id} style={{ fontSize: 12, marginBottom: 2 }}>
                 {t.nombre} — Transformador
                 {t.tensionPrimariaV && t.tensionSecundariaV ? ` (${t.tensionPrimariaV}V → ${t.tensionSecundariaV}V)` : ""}
@@ -355,10 +397,13 @@ export default function InformeTecnico({
             {" · "}
             <span style={{ color: COLOR_ERROR }}>{informe.integridad.resumen.error ?? 0} error(es)</span>
           </div>
-          {informe.integridad.entradas.length === 0 ? (
+          {/* entradasConProblemas es un .filter() de la prop listaIntegridad
+              (mismos objetos Entrada) — cast justificado, mismo cruce de
+              límite que ya documenta DocumentoMediator.memoriaTecnica. */}
+          {(informe.integridad.entradas as unknown as Entrada[]).length === 0 ? (
             <div style={{ fontSize: 12, color: COLOR_TEXTO_DIM }}>Sin advertencias pendientes.</div>
           ) : (
-            informe.integridad.entradas.map((e) => (
+            (informe.integridad.entradas as unknown as Entrada[]).map((e) => (
               <div key={`${e.tipo}-${e.id}`} style={{ fontSize: 11, marginBottom: 3 }}>
                 <strong>
                   {e.tipo} "{e.nombre}"
