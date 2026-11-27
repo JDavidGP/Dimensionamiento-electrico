@@ -312,9 +312,10 @@ export function useCircuitos() {
   // proteccionTransformador.ts) — bajo REBT queda vacío, sin cita
   // propia para esto todavía. Solo marcadores tipo "contacto"
   // (tomacorriente) — una luminaria o un motor no es lo que 210.8
-  // regula. Ver modules/plano/proteccionGFCI.ts para la simplificación
-  // deliberada (por tipo de ambiente completo, no por distancia a un
-  // fregadero/mesón específico).
+  // regula. Ver modules/plano/proteccionGFCI.ts: clasifica por tipo
+  // de ambiente completo (no por distancia a un fregadero/mesón) —
+  // exacto bajo NEC 2023 210.8(A)(6), que eliminó esa condición de
+  // distancia/mesón.
   const advertenciasGFCI = useMemo(() => {
     if (normativaActiva !== "NEC" && normativaActiva !== "CIEN") return [];
     const esResidencial = tipoInstalacion !== TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL;

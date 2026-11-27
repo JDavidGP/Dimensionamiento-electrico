@@ -8,16 +8,23 @@
 // "Protección GFCI (unidades de vivienda) → 210.8(A)" / "Protección
 // GFCI (no residencial) → 210.8(B)".
 //
-// SIMPLIFICACIÓN DELIBERADA: clasifica por TIPO DE AMBIENTE completo,
-// no por distancia a un fregadero/bañera/mesón específico (210.8(A)(6)
-// en cocina es, en el texto real, condicionado a "sirve superficies de
-// mesón" o "a 1.8m de un fregadero" — acá se simplifica a "cualquier
-// tomacorriente en un ambiente tipo Cocina"). Para Baño esto es exacto
-// (210.8(A)(1) no tiene condición de distancia); para Cocina es una
-// sobre-generalización A PROPÓSITO, conservadora (avisa de más en
-// seguridad, nunca de menos) — modelar la posición real de un
-// fregadero/mesón es un alcance mucho más grande (geometría de
-// artefactos dentro del ambiente), no esta ronda.
+// Clasifica por TIPO DE AMBIENTE completo ("cualquier tomacorriente en
+// un ambiente tipo Cocina/Baño/..."), sin mirar distancia a un
+// fregadero/bañera/mesón específico. Para Baño esto siempre fue exacto
+// (210.8(A)(1) no tiene condición de distancia). Para Cocina, en NEC
+// 2020 esto era una sobre-generalización A PROPÓSITO (210.8(A)(6)
+// condicionaba a "sirve superficies de mesón" o "a 1.8m de un
+// fregadero") — pero usuario, 2026-11-27, cita el texto vigente NEC
+// 2023 210.8(A)(6): esa condición de distancia/mesón FUE ELIMINADA.
+// Cita literal del encabezado 210.8(A): "All 125-volt through
+// 250-volt receptacles installed in [Kitchens] ... supplied by
+// single-phase branch circuits rated 150 volts or less to ground
+// shall have ground-fault circuit-interrupter protection for
+// personnel" — sin excepción por ubicación/distancia dentro de la
+// cocina. Es decir: ya NO es una sobre-generalización, es el criterio
+// EXACTO de la edición vigente (igual de exacto que Baño). Sigue sin
+// modelar geometría de artefactos (fregadero/mesón) porque ya no hace
+// falta para Cocina — y para Baño nunca hizo falta.
 
 import { OPCIONES_TIPO_AMBIENTE, type TipoAmbiente } from "./tipoAmbiente.ts";
 export type { TipoAmbiente };
