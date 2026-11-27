@@ -1,15 +1,28 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
-import Campo, { inputStyle } from "./Campo";
-import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas } from "../shared/utils/lineasFases";
+import { useState, type ReactNode, type FormEvent } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import Campo, { inputStyle } from "./Campo.tsx";
+import { lineasDisponiblesDeTablero, lineasRequeridas, siguienteSeleccionLineas, type Linea } from "../shared/utils/lineasFases.ts";
 import { ApplicationMediator as App } from "../core/ApplicationMediator.ts";
 import { TIPOS_INSTALACION } from "../shared/constants/constantes.ts";
+import type { Tablero, FuenteEnergia, Transformador } from "../core/services/DataProvider.ts";
+import type { Circuito } from "../modules/validacion/tipos.ts";
+import type { ResultadoCircuito } from "../modules/motor/index.ts";
+import type { Entrada } from "../modules/validacion/index.ts";
+import type { Fases } from "../modules/normativa/tipos.ts";
+import type { DatosTablero } from "../modules/tablero/tipos.ts";
+import type { SimultaneidadREBT } from "../modules/motor/index.ts";
+import type { Conmutacion, ModoConmutacion, ResultadoOrigen } from "../modules/origen/index.ts";
+import type { TipoInstalacionTuboREBT } from "../modules/motor/canalizacionREBT.ts";
+import type { UbicacionEnterradaREBT, SeparacionTubosREBT } from "../modules/motor/instalacionEnterradaREBT.ts";
+import type { useCircuitos } from "../hooks/useCircuitos.ts";
+
+type RetornoHook = ReturnType<typeof useCircuitos>;
 
 const FASES = [
   { valor: "mono", label: "Mono" },
   { valor: "bi", label: "Bi" },
   { valor: "tri", label: "Tri" },
-];
+] as const;
 
 // tensionManual es puramente de este formulario (no se guarda en el
 // tablero) — decide si, al cambiar las fases del alimentador, la
@@ -18,7 +31,26 @@ const FASES = [
 // FormularioCircuito.jsx, pero sin persistirlo: al editar un tablero
 // existente alcanza con derivarlo comparando su tensión contra los
 // valores estándar (ver abrirEdicion).
-const FORM_VACIO = {
+interface FormTablero {
+  nombre: string;
+  etiqueta: string;
+  funcion: string;
+  tensionAlimentacion: string;
+  tensionManual: boolean;
+  fases: string;
+  capacidadKW: string;
+  tableroPadreId: string;
+  fuenteSecundariaId: string;
+  fuenteAuxiliarId: string;
+  modoConmutacion: string;
+  horarioPrincipalInicio: string;
+  horarioPrincipalFin: string;
+  longitudAlimentador: string;
+  materialAlimentador: string;
+  notas: string;
+}
+
+const FORM_VACIO: FormTablero = {
   nombre: "",
   // Sistema de etiquetado (ver modules/etiquetado/index.js) — código
   // corto (ej. "TD1", autosugerido al abrir "+ Nuevo tablero", ver
@@ -59,7 +91,14 @@ const FORM_VACIO = {
 // (usuario, 2026-11-19) — se completan directo en el archivo JSON por
 // ahora si hace falta, igual criterio que varios campos "sin UI
 // todavía" ya documentados en el resto de la app.
-const FORM_TRANSFORMADOR_VACIO = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "" };
+interface FormTransformadorInline {
+  nombre: string;
+  fases: string;
+  tensionPrimariaV: string;
+  tensionSecundariaV: string;
+}
+
+const FORM_TRANSFORMADOR_VACIO: FormTransformadorInline = { nombre: "", fases: "tri", tensionPrimariaV: "", tensionSecundariaV: "" };
 
 // Exportadas para que PanelFuentesEnergia.jsx (lista propia de fuentes
 // de energía, con su CRUD completo) use las mismas etiquetas — nunca
@@ -70,7 +109,14 @@ export const TIPOS_FUENTE_UI = [
   { valor: "generador", label: "Generador" },
 ];
 
-export function BotonPill({ activo, onClick, children, flex = 1 }) {
+interface BotonPillProps {
+  activo: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  flex?: number | string;
+}
+
+export function BotonPill({ activo, onClick, children, flex = 1 }: BotonPillProps) {
   return (
     <button
       type="button"
@@ -96,18 +142,17 @@ export function BotonPill({ activo, onClick, children, flex = 1 }) {
 // tal como lo devuelve TableroMediator.calcularAlimentador. Cubre los
 // tres estados posibles: pendiente (falta dato), error (no hay calibre
 // que cumpla) y ok (dimensionado).
-function BloqueAlimentador({ resultado }) {
+function BloqueAlimentador({ resultado }: { resultado: ReturnType<typeof App.tablero.calcularAlimentadorAgregado> | undefined }) {
   if (!resultado) return null;
 
-  if (resultado.pendiente) {
-    return (
-      <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.4 }}>
-        Alimentador pendiente: {resultado.motivo}
-      </div>
-    );
-  }
-
   if (!resultado.ok) {
+    if (resultado.pendiente) {
+      return (
+        <div style={{ fontSize: 11.5, color: colores.textDim, lineHeight: 1.4 }}>
+          Alimentador pendiente: {resultado.motivo}
+        </div>
+      );
+    }
     return (
       <div style={{ fontSize: 11.5, color: colores.error, lineHeight: 1.4 }}>
         ⚠ {resultado.error}
@@ -136,7 +181,7 @@ function BloqueAlimentador({ resultado }) {
 // un transformador propio (el único origen con impedancia de fuente
 // conocida hoy) — para cualquier otro origen (acometida, batería,
 // generador) no se inventa un dato, el bloque simplemente no aparece.
-function BloqueCortocircuito({ resultado }) {
+function BloqueCortocircuito({ resultado }: { resultado: ReturnType<typeof App.tablero.cortocircuitoDesdeTablero> | undefined }) {
   if (!resultado || !resultado.aplica) return null;
 
   if (!resultado.ok) {
@@ -166,13 +211,19 @@ function BloqueCortocircuito({ resultado }) {
 // un nivel más arriba) — para que balance de fases pueda agregar la
 // demanda de este subtablero hacia el padre por la línea correcta.
 // Solo se renderiza si hay padre y el padre tiene más de una línea.
-function SelectorLineasAlimentador({ tablero, padre, onEditarTablero }) {
-  const disponibles = lineasDisponiblesDeTablero(padre.fases);
-  const requeridas = lineasRequeridas(tablero.fases, disponibles);
-  const actuales = tablero.lineasAlimentador ?? [];
+interface SelectorLineasAlimentadorProps {
+  tablero: Tablero;
+  padre: Tablero;
+  onEditarTablero: (id: string, cambios: DatosTablero) => void;
+}
+
+function SelectorLineasAlimentador({ tablero, padre, onEditarTablero }: SelectorLineasAlimentadorProps) {
+  const disponibles = lineasDisponiblesDeTablero(padre.fases as Fases);
+  const requeridas = lineasRequeridas(tablero.fases as Fases, disponibles);
+  const actuales = (tablero.lineasAlimentador ?? []) as Linea[];
   const completo = actuales.length === requeridas;
 
-  function asignar(nuevas) {
+  function asignar(nuevas: Linea[]): void {
     onEditarTablero(tablero.id, { lineasAlimentador: nuevas });
   }
 
@@ -236,7 +287,7 @@ function SelectorLineasAlimentador({ tablero, padre, onEditarTablero }) {
 // cruzado todavía), rojo al superarlo. Es una gradación de UI, no una
 // cifra normativa — el único corte que sí tiene fuente es `excede`
 // (porcentajeDesbalance > limitePct, ver balanceFases.js).
-function colorSeveridadBalance(pct, limite) {
+function colorSeveridadBalance(pct: number, limite: number): string {
   if (pct > limite) return colores.error;
   if (pct > limite * 0.7) return colores.warn;
   return colores.ok;
@@ -253,7 +304,7 @@ const MODOS_CONMUTACION_UI = [
   { valor: "manual", label: "Manual" },
 ];
 
-function nombreOrigenConmutacion(id, fuentesEnergia) {
+function nombreOrigenConmutacion(id: string | null | undefined, fuentesEnergia: FuenteEnergia[]): string {
   if (!id) return "— Ninguna —";
   if (id === "acometida") return "Red eléctrica local";
   return fuentesEnergia.find((f) => f.id === id)?.nombre ?? "(fuente eliminada)";
@@ -264,7 +315,7 @@ function nombreOrigenConmutacion(id, fuentesEnergia) {
 // BloqueConmutacion (que ya no tiene su propio selector de "principal":
 // ver la nota ahí sobre por qué se eliminó, para que no quede
 // desincronizado de este mismo valor).
-function etiquetaFuentePrincipal(padre, padreFuente, padreTransformador) {
+function etiquetaFuentePrincipal(padre: Tablero | null, padreFuente: FuenteEnergia | null, padreTransformador: Transformador | null): string {
   if (padre) return padre.nombre;
   if (padreFuente) {
     return `${padreFuente.nombre} (${TIPOS_FUENTE_UI.find((ti) => ti.valor === padreFuente.tipo)?.label})`;
@@ -280,9 +331,11 @@ function etiquetaFuentePrincipal(padre, padreFuente, padreTransformador) {
 // respaldo (ver conRespaldoDeFuente en TableroMediator.js; acá solo se
 // refleja en texto lo mismo que el motor ya está usando, no se
 // recalcula nada).
-function etiquetaDistanciaAlimentador(t, padreFuente) {
+function etiquetaDistanciaAlimentador(t: Tablero, padreFuente: FuenteEnergia | null): string | null {
   if (t.longitudAlimentador > 0) return `${t.longitudAlimentador}m de ${t.materialAlimentador}`;
-  if (padreFuente?.distanciaM > 0) return `${padreFuente.distanciaM}m de ${padreFuente.materialConductor} (de la fuente)`;
+  if (padreFuente && padreFuente.distanciaM !== "" && padreFuente.distanciaM > 0) {
+    return `${padreFuente.distanciaM}m de ${padreFuente.materialConductor} (de la fuente)`;
+  }
   return null;
 }
 
@@ -311,8 +364,18 @@ function etiquetaDistanciaAlimentador(t, padreFuente) {
 // la fuente principal (acá y en el selector de arriba) que se podían
 // desincronizar. "✎ Editar" abre el mismo formulario que el lápiz de
 // la fila del tablero (abrirEdicion), un solo punto de edición.
-function ResumenFuentesEnergia({ tablero, fuentesEnergia, nombreFuentePrincipal, onEditar }) {
-  const conf = tablero.conmutacion;
+interface ResumenFuentesEnergiaProps {
+  tablero: Tablero;
+  fuentesEnergia: FuenteEnergia[];
+  nombreFuentePrincipal: string;
+  onEditar: () => void;
+}
+
+function ResumenFuentesEnergia({ tablero, fuentesEnergia, nombreFuentePrincipal, onEditar }: ResumenFuentesEnergiaProps) {
+  // Declarado como Record<string,unknown>|null en modules/tablero/tipos.ts
+  // — la forma real es Conmutacion (modules/origen/tipos.ts), normalizada
+  // por normalizarConmutacion antes de guardarse.
+  const conf = tablero.conmutacion as unknown as Conmutacion | null;
   if (!conf?.activa) return null;
 
   return (
@@ -354,7 +417,7 @@ function ResumenFuentesEnergia({ tablero, fuentesEnergia, nombreFuentePrincipal,
 const GRADOS_ELECTRIFICACION_UI = [
   { valor: "basica", label: "Básica (5750W)" },
   { valor: "elevada", label: "Elevada (9200W)" },
-];
+] as const;
 
 // ITC-BT-15 apdo.3.b — usuario, 2026-11-21, documento "ITC-BT-15":
 // determina el límite de caída de tensión de la derivación individual
@@ -366,7 +429,7 @@ const GRADOS_ELECTRIFICACION_UI = [
 const ESQUEMAS_CONTADORES_UI = [
   { valor: "concentrados_mas_de_un_lugar", label: "Concentrados en más de un lugar (0,5%)" },
   { valor: "totalmente_concentrados", label: "Totalmente concentrados (1%)" },
-];
+] as const;
 
 /**
  * Edificio de viviendas REBT ITC-BT-10 (usuario, 2026-11-19): este
@@ -378,23 +441,33 @@ const ESQUEMAS_CONTADORES_UI = [
  * modules/motor/simultaneidadREBT.js para la Tabla 1 verificada contra
  * el texto oficial.
  */
-function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }) {
-  const [editando, setEditando] = useState(false);
-  const conf = tablero.simultaneidadREBT;
-  const FORM_VACIO_SIMULTANEIDAD = { activa: false, gradoPorDefecto: "basica", esquemaContadores: "" };
-  const [form, setForm] = useState(() => conf ?? FORM_VACIO_SIMULTANEIDAD);
+interface BloqueSimultaneidadREBTProps {
+  tablero: Tablero;
+  alimentador: ReturnType<typeof App.tablero.calcularAlimentadorAgregado> | undefined;
+  onEditarTablero: (id: string, cambios: DatosTablero) => void;
+}
 
-  function abrirEdicion() {
+const FORM_VACIO_SIMULTANEIDAD: SimultaneidadREBT = { activa: false, gradoPorDefecto: "basica", esquemaContadores: "" };
+
+function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }: BloqueSimultaneidadREBTProps) {
+  const [editando, setEditando] = useState(false);
+  // Declarado como Record<string,unknown>|null en modules/tablero/tipos.ts
+  // (dominio genérico) — la forma real es SimultaneidadREBT, normalizada
+  // por normalizarSimultaneidadREBT antes de guardarse (ver motor/simultaneidadREBT.ts).
+  const conf = tablero.simultaneidadREBT as unknown as SimultaneidadREBT | null;
+  const [form, setForm] = useState<SimultaneidadREBT>(() => conf ?? FORM_VACIO_SIMULTANEIDAD);
+
+  function abrirEdicion(): void {
     setForm(conf ?? FORM_VACIO_SIMULTANEIDAD);
     setEditando(true);
   }
 
-  function guardar() {
+  function guardar(): void {
     onEditarTablero(tablero.id, { simultaneidadREBT: { ...form, activa: true } });
     setEditando(false);
   }
 
-  function desactivar() {
+  function desactivar(): void {
     onEditarTablero(tablero.id, { simultaneidadREBT: { ...form, activa: false } });
     setEditando(false);
   }
@@ -405,7 +478,8 @@ function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }) {
     </div>
   );
 
-  const detalle = alimentador?.ok ? alimentador.simultaneidadREBT : null;
+  const detalleSimultaneidad = alimentador?.ok ? alimentador.simultaneidadREBT : null;
+  const detalle = detalleSimultaneidad?.ok ? detalleSimultaneidad : null;
 
   if (!editando) {
     return (
@@ -506,7 +580,7 @@ function BloqueSimultaneidadREBT({ tablero, alimentador, onEditarTablero }) {
 }
 
 /** Grado de electrificación de ESTE tablero cuando actúa como vivienda bajo el modo REBT de su padre — solo visible en ese caso. */
-function SelectorGradoVivienda({ tablero, onEditarTablero }) {
+function SelectorGradoVivienda({ tablero, onEditarTablero }: { tablero: Tablero; onEditarTablero: (id: string, cambios: DatosTablero) => void }) {
   return (
     <div style={{ fontSize: 11, color: colores.textDim, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
       <span>Grado de electrificación de esta vivienda (si todavía no tiene circuitos propios):</span>
@@ -522,7 +596,7 @@ function SelectorGradoVivienda({ tablero, onEditarTablero }) {
   );
 }
 
-function BloqueBalanceFases({ balance }) {
+function BloqueBalanceFases({ balance }: { balance: ReturnType<typeof App.tablero.balanceFasesDeTablero> | undefined }) {
   if (!balance || !balance.aplica) return null;
 
   if (!balance.ok) {
@@ -630,11 +704,17 @@ function BloqueBalanceFases({ balance }) {
 // completo si la normativa activa no tiene tabla de canalizaciones
 // todavía (ej. IEC_ES — ver canalizacionREBT.ts, que por ahora es un
 // método propio sin UI, no esta tabla).
-function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiva }) {
+interface BloqueCanalizacionProps {
+  circuitosDelTablero: Circuito[];
+  resultados: ResultadoCircuito[];
+  normativaActiva: string;
+}
+
+function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiva }: BloqueCanalizacionProps) {
   const normativa = App.normativa.obtener(normativaActiva);
   const tabla = normativa.canalizaciones;
   const [tipoConducto, setTipoConducto] = useState(tabla?.tiposDisponibles?.[0] ?? "");
-  const [seleccionados, setSeleccionados] = useState(() => new Set());
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(() => new Set());
   // Interior/exterior → enterrada o expuesta (usuario, 2026-11-25:
   // "primero confirma si es para intemperie, luego si es enterrada o
   // al aire"). La intemperie es la pregunta de ARRIBA: decide si hace
@@ -661,11 +741,11 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
         ? { id: c.id, nombre: c.nombre, seccion: r.seccion, fases: c.fases, ampacidadCorregida: r.ampacidadCorregida, corrienteDiseno: r.corrienteDiseno }
         : null;
     })
-    .filter(Boolean);
+    .filter((c): c is NonNullable<typeof c> => c !== null);
 
   if (candidatos.length === 0) return null;
 
-  function alternar(id) {
+  function alternar(id: string): void {
     setSeleccionados((previo) => {
       const nuevo = new Set(previo);
       if (nuevo.has(id)) nuevo.delete(id);
@@ -674,7 +754,7 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
     });
   }
 
-  const cantidadPorSeccion = {};
+  const cantidadPorSeccion: Record<string, number> = {};
   for (const c of candidatos) {
     if (!seleccionados.has(c.id)) continue;
     cantidadPorSeccion[c.seccion] = (cantidadPorSeccion[c.seccion] ?? 0) + 1;
@@ -771,12 +851,12 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
             {enterradoAbierto ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 4 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <select value={categoriaEnterrado} onChange={(e) => setCategoriaEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+                  <select value={categoriaEnterrado} onChange={(e) => setCategoriaEnterrado(e.target.value as typeof categoriaEnterrado)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
                     {App.motor.categoriasConductoEnterradoNEC.map((o) => (
                       <option key={o.valor} value={o.valor}>{o.label}</option>
                     ))}
                   </select>
-                  <select value={ubicacionEnterrado} onChange={(e) => setUbicacionEnterrado(e.target.value)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
+                  <select value={ubicacionEnterrado} onChange={(e) => setUbicacionEnterrado(e.target.value as typeof ubicacionEnterrado)} style={{ ...inputStyle(), width: "auto", padding: "4px 8px", fontSize: 11 }}>
                     {App.motor.ubicacionesEnterradoNEC.map((o) => (
                       <option key={o.valor} value={o.valor}>{o.label}</option>
                     ))}
@@ -828,15 +908,15 @@ function BloqueLlenadoConducto({ circuitosDelTablero, resultados, normativaActiv
 // SOLO el tramo de tubo flexible que alimenta una máquina, no tubo
 // rígido sobre estructura/falso techo (eso cae en "superficial"). El
 // title del <option> lo aclara para que no se use mal.
-const ETIQUETA_TIPO_INSTALACION_REBT = {
+const ETIQUETA_TIPO_INSTALACION_REBT: Record<string, string> = {
   superficial: "superficial",
   empotrada: "empotrada",
   al_aire: "al aire (tubo flexible a máquina)",
 };
 
-function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActiva }) {
+function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActiva }: BloqueCanalizacionProps) {
   const [tipoInstalacion, setTipoInstalacion] = useState(App.motor.tiposInstalacionTuboREBT[0]);
-  const [seleccionados, setSeleccionados] = useState(() => new Set());
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(() => new Set());
   const [cantidadTubosAgrupados, setCantidadTubosAgrupados] = useState("");
   const [separacionTubos, setSeparacionTubos] = useState("contacto");
   // Interior/exterior → enterrada o expuesta (usuario, 2026-11-25:
@@ -860,11 +940,11 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
       const r = resultados.find((res) => res.id === c.id);
       return r?.ok ? { id: c.id, nombre: c.nombre, seccion: r.seccion } : null;
     })
-    .filter(Boolean);
+    .filter((c): c is NonNullable<typeof c> => c !== null);
 
   if (candidatos.length === 0) return null;
 
-  function alternar(id) {
+  function alternar(id: string): void {
     setSeleccionados((previo) => {
       const nuevo = new Set(previo);
       if (nuevo.has(id)) nuevo.delete(id);
@@ -879,17 +959,22 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
   // — ver canalizacionREBT.ts) en vez de la Tabla 2/5 de
   // superficial/empotrada: "Tipo de instalación" deja de aplicar una
   // vez que el tubo va bajo tierra.
+  // TIPOS_INSTALACION_TUBO_REBT/las claves de SEPARACION_TUBOS/
+  // UBICACIONES_ENTERRADO_REBT quedan tipadas `string[]` en
+  // shared/data/canalizacionREBT.ts (Object.keys() siempre devuelve
+  // string[]) — los casts solo declaran que el <select> de abajo
+  // nunca ofrece un valor fuera de ese catálogo.
   const resultadoTubo =
     seleccionadosArr.length > 0 && seccionesDistintas.size === 1
       ? enterradoAbierto
         ? App.motor.diametroTuboEnterradoREBT(seleccionadosArr[0].seccion, seleccionadosArr.length)
-        : App.motor.diametroTuboREBT(seleccionadosArr[0].seccion, seleccionadosArr.length, tipoInstalacion)
+        : App.motor.diametroTuboREBT(seleccionadosArr[0].seccion, seleccionadosArr.length, tipoInstalacion as TipoInstalacionTuboREBT)
       : null;
 
   const cantidadTubosNum = parseInt(cantidadTubosAgrupados, 10);
-  const factorAgrupacion = cantidadTubosNum >= 2 ? App.motor.factorAgrupacionTubosREBT(cantidadTubosNum, separacionTubos) : null;
+  const factorAgrupacion = cantidadTubosNum >= 2 ? App.motor.factorAgrupacionTubosREBT(cantidadTubosNum, separacionTubos as SeparacionTubosREBT) : null;
 
-  const profundidadMinimaM = App.motor.profundidadMinimaEnterradaREBT(ubicacionEnterrado);
+  const profundidadMinimaM = App.motor.profundidadMinimaEnterradaREBT(ubicacionEnterrado as UbicacionEnterradaREBT);
   const profundidadRealNum = parseFloat(profundidadRealM);
   const profundidadOk = profundidadMinimaM != null && profundidadRealNum >= 0 ? profundidadRealNum >= profundidadMinimaM : null;
 
@@ -1019,6 +1104,26 @@ function BloqueCanalizacionREBT({ circuitosDelTablero, resultados, normativaActi
 // existentes, pero encadenarlo hacia arriba (subpaneles, jerarquía
 // visual) es el siguiente paso, no esta sesión — acá solo se muestra
 // de qué tablero depende, sin construir el árbol completo.
+interface PanelTablerosProps {
+  tableros: Tablero[];
+  circuitos?: Circuito[];
+  resultados?: ResultadoCircuito[];
+  circuitosDeTablero: (tableroId: string) => Circuito[];
+  circuitosSinTablero: () => Circuito[];
+  alimentadores: Record<string, ReturnType<typeof App.tablero.calcularAlimentadorAgregado>>;
+  balancesFases?: Record<string, ReturnType<typeof App.tablero.balanceFasesDeTablero>>;
+  crearTablero: (datos: DatosTablero) => Tablero;
+  editarTablero: (id: string, cambios: DatosTablero) => void;
+  eliminarTablero: (id: string) => void;
+  listaIntegridad?: Entrada[];
+  desincronizacionRutas?: RetornoHook["desincronizacionRutas"];
+  normativaActiva: string;
+  tipoInstalacion: string;
+  fuentesEnergia?: FuenteEnergia[];
+  transformadores?: Transformador[];
+  crearTransformador?: (datos: Partial<Transformador>) => Transformador;
+}
+
 export default function PanelTableros({
   tableros,
   circuitos = [],
@@ -1037,16 +1142,16 @@ export default function PanelTableros({
   fuentesEnergia = [],
   transformadores = [],
   crearTransformador,
-}) {
-  const [tableroActivoId, setTableroActivoId] = useState(null);
+}: PanelTablerosProps) {
+  const [tableroActivoId, setTableroActivoId] = useState<string | null>(null);
   const [formAbierto, setFormAbierto] = useState(false);
-  const [editandoId, setEditandoId] = useState(null);
-  const [form, setForm] = useState(FORM_VACIO);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormTablero>(FORM_VACIO);
   // Cuando se crea desde el botón "+ Agregar subtablero" de un tablero
   // puntual, el padre queda resuelto de una (no hay que buscarlo en el
   // dropdown) — guardamos el objeto completo para mostrar su nombre sin
   // tener que volver a buscarlo por id.
-  const [padreForzado, setPadreForzado] = useState(null);
+  const [padreForzado, setPadreForzado] = useState<Tablero | null>(null);
   // Mini-formulario inline para Transformador — solo visible
   // cuando tipoInstalacion === TIPOS_INSTALACION.COMERCIAL_INDUSTRIAL (ver TIPOS_ORIGEN.
   // TRANSFORMADOR en modules/origen/index.js).
@@ -1054,19 +1159,19 @@ export default function PanelTableros({
   const [formTransformador, setFormTransformador] = useState(FORM_TRANSFORMADOR_VACIO);
 
   const normativa = App.normativa.obtener(normativaActiva);
-  const voltajesEstandar = normativa.voltajesPorFase?.[form.fases] ?? [];
+  const voltajesEstandar = normativa.voltajesPorFase?.[form.fases as Fases] ?? [];
 
   const sinAsignar = circuitosSinTablero();
 
   // Tensión por defecto para una fase dada, según la normativa activa
   // — el primer valor estándar de esa fase, o "" si la normativa no
   // tiene ninguno definido (no se inventa un número).
-  function tensionPorDefecto(fases) {
-    const estandar = normativa.voltajesPorFase?.[fases] ?? [];
+  function tensionPorDefecto(fases: string): string {
+    const estandar = normativa.voltajesPorFase?.[fases as Fases] ?? [];
     return estandar[0] != null ? String(estandar[0]) : "";
   }
 
-  function abrirCreacion() {
+  function abrirCreacion(): void {
     setForm({ ...FORM_VACIO, tensionAlimentacion: tensionPorDefecto("mono"), etiqueta: App.etiquetado.sugerirTablero(tableros) });
     setEditandoId(null);
     setPadreForzado(null);
@@ -1077,7 +1182,7 @@ export default function PanelTableros({
   // tablero nuevo con tableroPadreId ya resuelto a ESTE tablero — el
   // mismo formulario de siempre, solo que el campo "Tablero padre" no
   // hace falta buscarlo, ya se sabe de dónde cuelga.
-  function abrirCreacionSubtablero(tableroPadre) {
+  function abrirCreacionSubtablero(tableroPadre: Tablero): void {
     setForm({
       ...FORM_VACIO,
       tensionAlimentacion: tensionPorDefecto("mono"),
@@ -1089,15 +1194,18 @@ export default function PanelTableros({
     setFormAbierto(true);
   }
 
-  function abrirEdicion(t) {
+  function abrirEdicion(t: Tablero): void {
     // tensionManual se deriva, no se guardó: si la tensión actual del
     // tablero coincide con alguno de los valores estándar de SU fase
     // bajo la normativa activa, se muestra como esa pill seleccionada;
     // si no coincide con ninguno (ej. viene de otra normativa, o se
     // cargó un proyecto hecho bajo otro estándar), se muestra como
     // "Manual" — nunca se le cambia el valor en silencio.
-    const estandar = normativa.voltajesPorFase?.[t.fases] ?? [];
-    const conf = t.conmutacion;
+    const estandar = normativa.voltajesPorFase?.[t.fases as Fases] ?? [];
+    // Declarado como Record<string,unknown>|null en modules/tablero/tipos.ts
+    // — la forma real es Conmutacion (modules/origen/tipos.ts), normalizada
+    // por normalizarConmutacion antes de guardarse.
+    const conf = t.conmutacion as unknown as Conmutacion | null;
     setForm({
       nombre: t.nombre,
       etiqueta: t.etiqueta || "",
@@ -1121,7 +1229,7 @@ export default function PanelTableros({
     setFormAbierto(true);
   }
 
-  function cerrarForm() {
+  function cerrarForm(): void {
     setForm(FORM_VACIO);
     setEditandoId(null);
     setPadreForzado(null);
@@ -1130,7 +1238,7 @@ export default function PanelTableros({
     setFormTransformador(FORM_TRANSFORMADOR_VACIO);
   }
 
-  function alGuardar(e) {
+  function alGuardar(e: FormEvent): void {
     e.preventDefault();
     if (!form.nombre.trim()) return;
     // Arma `conmutacion` acá, a partir de los 3 roles ya elegidos en
@@ -1141,7 +1249,7 @@ export default function PanelTableros({
       ...form,
       conmutacion: App.origen.normalizarConmutacion({
         activa: !!(form.fuenteSecundariaId || form.fuenteAuxiliarId),
-        modo: form.modoConmutacion,
+        modo: form.modoConmutacion as ModoConmutacion,
         fuentePrincipalId: form.tableroPadreId || "acometida",
         fuenteSecundariaId: form.fuenteSecundariaId,
         fuenteAuxiliarId: form.fuenteAuxiliarId,
@@ -1149,16 +1257,19 @@ export default function PanelTableros({
         horarioPrincipalFin: form.horarioPrincipalFin,
       }),
     };
+    // form es todo texto (estado de UI) — crearTablero/editarTablero
+    // (modules/tablero/index.ts, función `normalizar`) ya toleran
+    // strings en runtime, el cast solo declara esa tolerancia.
     if (editandoId) {
-      editarTablero(editandoId, datos);
+      editarTablero(editandoId, datos as unknown as DatosTablero);
     } else {
-      const t = crearTablero(datos);
+      const t = crearTablero(datos as unknown as DatosTablero);
       setTableroActivoId(t.id); // lo abre de una, para ver que se creó bien
     }
     cerrarForm();
   }
 
-  function alEliminar(t) {
+  function alEliminar(t: Tablero): void {
     eliminarTablero(t.id);
     if (tableroActivoId === t.id) setTableroActivoId(null);
     if (editandoId === t.id) cerrarForm();
@@ -1189,7 +1300,7 @@ export default function PanelTableros({
   // creado todavía no está en el array correspondiente (llega en el
   // próximo render, vía el hook) así que buscarlo ahí no lo
   // encontraría — se pasa su tipo de una, ya se sabe.
-  function alElegirPrincipal(nuevoPrincipalId, tipoConocido) {
+  function alElegirPrincipal(nuevoPrincipalId: string, tipoConocido?: string): void {
     const fuentePrincipal = fuentesEnergia.find((f) => f.id === nuevoPrincipalId);
     const tipoPrincipal = tipoConocido ?? fuentePrincipal?.tipo;
     let sugerenciaSecundaria = form.fuenteSecundariaId;
@@ -1416,7 +1527,7 @@ export default function PanelTableros({
                           type="button"
                           disabled={!formTransformador.nombre.trim()}
                           onClick={() => {
-                            const transformador = crearTransformador(formTransformador);
+                            const transformador = crearTransformador!(formTransformador as unknown as Partial<Transformador>);
                             alElegirPrincipal(transformador.id, "transformador");
                             setFormTransformador(FORM_TRANSFORMADOR_VACIO);
                             setNuevoTransformadorAbierto(false);
@@ -1607,15 +1718,19 @@ export default function PanelTableros({
             // (Batería/Generador) — se resuelven por separado porque
             // solo un tablero tiene `fases` (relevante para el
             // selector de líneas del alimentador más abajo).
-            const origenResuelto = t.tableroPadreId ? App.origen.resolver(t.tableroPadreId, tableros, fuentesEnergia, transformadores) : { tipo: "acometida" };
-            const padre = origenResuelto.tipo === "tablero" ? origenResuelto.tablero : null;
-            const padreFuente =
+            const origenResuelto: ResultadoOrigen = t.tableroPadreId ? App.origen.resolver(t.tableroPadreId, tableros, fuentesEnergia, transformadores) : { tipo: "acometida" };
+            // origenResuelto.tablero/fuente/transformador vienen con el tipo
+            // del módulo DUEÑO (id opcional — ver nota de ConIdObligatorio
+            // en DataProvider.ts); acá siempre son entidades YA guardadas.
+            const padre = (origenResuelto.tipo === "tablero" ? origenResuelto.tablero : null) as unknown as Tablero | null;
+            const padreFuente = (
               origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.RED_LOCAL ||
               origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.BATERIA ||
               origenResuelto.tipo === App.origen.TIPOS_FUENTE_ENERGIA.GENERADOR
                 ? origenResuelto.fuente
-                : null;
-            const padreTransformador = origenResuelto.tipo === "transformador" ? origenResuelto.transformador : null;
+                : null
+            ) as unknown as FuenteEnergia | null;
+            const padreTransformador = (origenResuelto.tipo === "transformador" ? origenResuelto.transformador : null) as unknown as Transformador | null;
             const activo = tableroActivoId === t.id;
             // Integridad de ESTE tablero (tableroPadreId inexistente,
             // auto-referencia, sin circuitos asociados) — mismo patrón
@@ -1684,7 +1799,7 @@ export default function PanelTableros({
 
                 {activo && (
                   <div style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px", display: "flex", flexDirection: "column", gap: 10 }}>
-                    {entradaIntegridad?.problemas?.length > 0 && (
+                    {entradaIntegridad && entradaIntegridad.problemas.length > 0 && (
                       <div>
                         {entradaIntegridad.problemas.map((p, i) => (
                           <div
@@ -1728,7 +1843,9 @@ export default function PanelTableros({
                       </button>
                     </div>
 
-                    {padre?.simultaneidadREBT?.activa && <SelectorGradoVivienda tablero={t} onEditarTablero={editarTablero} />}
+                    {(padre?.simultaneidadREBT as unknown as SimultaneidadREBT | null | undefined)?.activa && (
+                      <SelectorGradoVivienda tablero={t} onEditarTablero={editarTablero} />
+                    )}
 
                     <BloqueAlimentador resultado={alimentadores?.[t.id]} />
 
