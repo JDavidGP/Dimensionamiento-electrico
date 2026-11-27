@@ -26,7 +26,7 @@ export default function Header({ umbralDesbalanceFasesPct, setUmbralDesbalanceFa
             color: colores.textMain,
           }}
         >
-          DIMENSIONAMIENTO ELÉCTRICO
+          DEC
         </h1>
         <span style={{ color: colores.copper, fontFamily: fuentes.mono, fontSize: 12 }}>v0.5 · factor de demanda NEC</span>
       </div>
