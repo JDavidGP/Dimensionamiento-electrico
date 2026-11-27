@@ -1,10 +1,46 @@
 import { CONEXIONES_DISPONIBLES_POR_DEFECTO } from "../../shared/data/equiposEspeciales.ts";
+import type { TipoEquipoEspecial, TipoConexionEquipo } from "../../shared/data/equiposEspeciales.ts";
+
+export interface LimitesConfig {
+  caidaTensionPct: number;
+  factorCargaContinua: number;
+  desbalanceFasesPct: number;
+}
+
+export interface FeaturesConfig {
+  diagrama: boolean;
+  documentoPdf: boolean;
+  sqlite: boolean;
+}
+
+export interface EquiposEspecialesConfig {
+  conexionesDisponibles: Record<TipoEquipoEspecial, TipoConexionEquipo[]>;
+}
+
+export interface ConfigParcial {
+  formatoVersion?: number;
+  normativaPorDefecto?: string;
+  idioma?: string;
+  limites?: Partial<LimitesConfig>;
+  features?: Partial<FeaturesConfig>;
+  equiposEspeciales?: { conexionesDisponibles?: Partial<Record<TipoEquipoEspecial, TipoConexionEquipo[]>> };
+}
+
+export interface ConfigApp {
+  formatoVersion: number;
+  normativaPorDefecto: string;
+  idioma: string;
+  limites: LimitesConfig;
+  features: FeaturesConfig;
+  equiposEspeciales: EquiposEspecialesConfig;
+  set(partial: ConfigParcial): void;
+}
 
 /**
  * Configuración global de la aplicación.
  * Valores por defecto; pueden sobrescribirse en runtime.
  */
-export const Config = {
+export const Config: ConfigApp = {
   formatoVersion: 1,
   normativaPorDefecto: "NEC",
   idioma: "es",
@@ -30,7 +66,7 @@ export const Config = {
   equiposEspeciales: {
     conexionesDisponibles: { ...CONEXIONES_DISPONIBLES_POR_DEFECTO },
   },
-  set(partial) {
+  set(partial: ConfigParcial): void {
     // Fusiona limites/features/equiposEspeciales en el objeto existente
     // en vez de reemplazar la referencia — si no, Object.assign(this,
     // partial) sustituiría, ej., this.limites completo por solo lo

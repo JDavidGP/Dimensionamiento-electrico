@@ -13,8 +13,8 @@
  * que el resto de los mediadores de dominio.
  */
 import { generarMemoriaTecnica } from "../../modules/documento/index.ts";
-import { DataProvider } from "../services/DataProvider.js";
-import { Logger } from "../services/Logger.js";
+import { DataProvider } from "../services/DataProvider.ts";
+import { Logger } from "../services/Logger.ts";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { OrigenMediator } from "./OrigenMediator.js";
 import { ValidacionMediator } from "./ValidacionMediator.js";

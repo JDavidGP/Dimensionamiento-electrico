@@ -16,7 +16,7 @@ import {
   ESTADOS,
 } from "../../modules/validacion/index.ts";
 import { NormativaMediator } from "./NormativaMediator.js";
-import { DataProvider } from "../services/DataProvider.js";
+import { DataProvider } from "../services/DataProvider.ts";
 
 export const ValidacionMediator = {
   ESTADOS,

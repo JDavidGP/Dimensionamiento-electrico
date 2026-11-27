@@ -9,7 +9,7 @@
 // de "crear sin conectar" que modules/motor/transformador.js. Los
 // valores por defecto de abajo son un punto de partida razonable, no
 // una tabla normativa cerrada; se pueden ajustar en runtime vía
-// Config.equiposEspeciales (ver core/services/Config.js) sin tocar
+// Config.equiposEspeciales (ver core/services/Config.ts) sin tocar
 // este archivo.
 
 /** Tipos de conexión eléctrica aplicables a equipos especiales. */

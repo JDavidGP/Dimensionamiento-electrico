@@ -9,9 +9,9 @@
  *      → validar → ValidacionMediator
  *      → guardar → PersistenciaMediator
  */
-import { DataProvider } from "./services/DataProvider.js";
-import { Logger } from "./services/Logger.js";
-import { Config } from "./services/Config.js";
+import { DataProvider } from "./services/DataProvider.ts";
+import { Logger } from "./services/Logger.ts";
+import { Config } from "./services/Config.ts";
 import {
   MotorCalculoMediator,
   NormativaMediator,

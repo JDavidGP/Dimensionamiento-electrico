@@ -1,6 +1,6 @@
 import { normalizarTransformador, calcularCorrientesNominales } from "../src/modules/motor/transformador.ts";
 import { TIPOS_CONEXION_EQUIPO, TIPOS_EQUIPO_ESPECIAL, CONEXIONES_DISPONIBLES_POR_DEFECTO, EQUIPO_ESPECIAL_VACIO } from "../src/shared/data/equiposEspeciales.ts";
-import { Config } from "../src/core/services/Config.js";
+import { Config } from "../src/core/services/Config.ts";
 
 let fallos = 0;
 function assert(cond, msg) {

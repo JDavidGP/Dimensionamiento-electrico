@@ -47,7 +47,7 @@ export const LIMITE_CAIDA_TENSION_ACUMULADA_PROVISIONAL_PCT: number = 5.0;
 // extremo más conservador de esa práctica citada.
 //
 // MODIFICABLE en runtime — Config.limites.desbalanceFasesPct (ver
-// core/services/Config.js) empieza igual a este valor pero se puede
+// core/services/Config.ts) empieza igual a este valor pero se puede
 // sobrescribir por proyecto. balanceFases() (modules/motor) genera una
 // ADVERTENCIA SERIA cuando el umbral efectivamente usado supera este
 // valor recomendado — subir el margen no es gratis: más desbalance de

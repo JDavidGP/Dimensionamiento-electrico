@@ -42,8 +42,8 @@ import {
   ZOOM_MAX,
 } from "../../modules/geometria/index.ts";
 import { CATALOGO_COMPONENTES, CATEGORIAS_COMPONENTE, obtenerComponente, componentesPorCategoriaDiagrama } from "../../shared/data/bibliotecaComponentes.ts";
-import { DataProvider } from "../services/DataProvider.js";
-import { Logger } from "../services/Logger.js";
+import { DataProvider } from "../services/DataProvider.ts";
+import { Logger } from "../services/Logger.ts";
 import { OrigenMediator } from "./OrigenMediator.js";
 
 export const DiagramaMediator = {

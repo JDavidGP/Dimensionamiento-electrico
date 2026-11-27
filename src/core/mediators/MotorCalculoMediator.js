@@ -37,8 +37,8 @@ import {
   calcularCargaSimultaneaViviendas,
 } from "../../modules/motor/index.ts";
 import { NormativaMediator } from "./NormativaMediator.js";
-import { DataProvider } from "../services/DataProvider.js";
-import { Logger } from "../services/Logger.js";
+import { DataProvider } from "../services/DataProvider.ts";
+import { Logger } from "../services/Logger.ts";
 
 export const MotorCalculoMediator = {
   /**

@@ -55,11 +55,11 @@ import {
   calcularCortocircuitoMonofasico,
   limiteCaidaTensionDI_REBT,
 } from "../../modules/motor/index.ts";
-import { DataProvider } from "../services/DataProvider.js";
+import { DataProvider } from "../services/DataProvider.ts";
 import { NormativaMediator } from "./NormativaMediator.js";
 import { OrigenMediator } from "./OrigenMediator.js";
-import { Logger } from "../services/Logger.js";
-import { Config } from "../services/Config.js";
+import { Logger } from "../services/Logger.ts";
+import { Config } from "../services/Config.ts";
 
 /**
  * Si el tablero no declaró su propia distancia de alimentador, y su

@@ -7,11 +7,38 @@
  * ApplicationMediator / el hook; este servicio solo expone acceso
  * controlado.
  */
-import { Repository } from "./Repository.js";
-import { Logger } from "./Logger.js";
+import { Repository } from "./Repository.ts";
+import { Logger } from "./Logger.ts";
+import type { Circuito, Equipo, Tablero, FuenteEnergia, Transformador, Diferencial, Proyecto } from "../../modules/validacion/tipos.ts";
+import type { NodoDiagrama, ConexionDiagrama } from "../../modules/diagrama/tipos.ts";
+import type { ResultadoCircuito } from "../../modules/motor/tipos.ts";
+
+/**
+ * Snapshot del estado del proyecto que este servicio expone — NO es
+ * (todavía) el modelo canónico completo, que sigue viviendo en
+ * hooks/useCircuitos.js hasta que esa etapa de la migración a
+ * TypeScript llegue (ver la nota gemela en modules/diagrama/tipos.ts).
+ * Reusa las formas MÍNIMAS ya definidas para motor/validación/diagrama
+ * — lo suficiente para lo que este servicio en sí necesita (sobre todo
+ * `id`, para los `.find` de abajo), no una forma inventada en paralelo.
+ */
+export interface SnapshotDatos {
+  proyecto: Proyecto | null;
+  circuitos: Circuito[];
+  equipos: Equipo[];
+  tableros: Tablero[];
+  fuentesEnergia: FuenteEnergia[];
+  transformadores: Transformador[];
+  diferenciales: Diferencial[];
+  nodosDiagrama: NodoDiagrama[];
+  conexionesDiagrama: ConexionDiagrama[];
+  normativaActiva: string;
+  tipoInstalacion: string | null;
+  resultados: ResultadoCircuito[];
+}
 
 /** Estado en memoria del documento activo (lo rellena ApplicationMediator). */
-let snapshot = {
+let snapshot: SnapshotDatos = {
   proyecto: null,
   circuitos: [],
   equipos: [],
@@ -28,91 +55,91 @@ let snapshot = {
 
 export const DataProvider = {
   /** Actualiza el snapshot (solo ApplicationMediator debería llamarlo). */
-  setSnapshot(partial) {
+  setSnapshot(partial: Partial<SnapshotDatos>): void {
     snapshot = { ...snapshot, ...partial };
   },
 
-  getSnapshot() {
+  getSnapshot(): SnapshotDatos {
     return snapshot;
   },
 
-  getProyecto() {
+  getProyecto(): Proyecto | null {
     return snapshot.proyecto;
   },
 
-  getCircuitos() {
+  getCircuitos(): Circuito[] {
     return snapshot.circuitos;
   },
 
-  getEquipos() {
+  getEquipos(): Equipo[] {
     return snapshot.equipos;
   },
 
-  getEquiposDeCircuito(circuitoId) {
+  getEquiposDeCircuito(circuitoId: string): Equipo[] {
     return snapshot.equipos.filter((e) => e.circuitoId === circuitoId);
   },
 
-  getCircuito(id) {
+  getCircuito(id: string): Circuito | null {
     return snapshot.circuitos.find((c) => c.id === id) ?? null;
   },
 
-  getEquipo(id) {
+  getEquipo(id: string): Equipo | null {
     return snapshot.equipos.find((e) => e.id === id) ?? null;
   },
 
-  getTableros() {
+  getTableros(): Tablero[] {
     return snapshot.tableros;
   },
 
-  getTablero(id) {
+  getTablero(id: string): Tablero | null {
     return snapshot.tableros.find((t) => t.id === id) ?? null;
   },
 
-  getFuentesEnergia() {
+  getFuentesEnergia(): FuenteEnergia[] {
     return snapshot.fuentesEnergia;
   },
 
-  getFuenteEnergia(id) {
+  getFuenteEnergia(id: string): FuenteEnergia | null {
     return snapshot.fuentesEnergia.find((f) => f.id === id) ?? null;
   },
 
-  getTransformadores() {
+  getTransformadores(): Transformador[] {
     return snapshot.transformadores;
   },
 
-  getTransformador(id) {
+  getTransformador(id: string): Transformador | null {
     return snapshot.transformadores.find((t) => t.id === id) ?? null;
   },
 
-  getDiferenciales() {
+  getDiferenciales(): Diferencial[] {
     return snapshot.diferenciales;
   },
 
-  getDiferencial(id) {
+  getDiferencial(id: string): Diferencial | null {
     return snapshot.diferenciales.find((d) => d.id === id) ?? null;
   },
 
-  getNodosDiagrama() {
+  getNodosDiagrama(): NodoDiagrama[] {
     return snapshot.nodosDiagrama;
   },
 
-  getConexionesDiagrama() {
+  getConexionesDiagrama(): ConexionDiagrama[] {
     return snapshot.conexionesDiagrama;
   },
 
-  getNormativaActivaId() {
+  getNormativaActivaId(): string {
     return snapshot.normativaActiva;
   },
 
-  getTipoInstalacion() {
+  getTipoInstalacion(): string | null {
     return snapshot.tipoInstalacion;
   },
 
-  getResultados() {
+  getResultados(): ResultadoCircuito[] {
     return snapshot.resultados;
   },
 
-  getResultado(circuitoId) {
+  getResultado(circuitoId: string): ResultadoCircuito | null {
     return snapshot.resultados.find((r) => r.id === circuitoId) ?? null;
   },
 
@@ -125,7 +152,7 @@ export const DataProvider = {
     plantillas: () => Repository.getPlantillas(),
   },
 
-  logState() {
+  logState(): void {
     Logger.debug("DataProvider snapshot", {
       circuitos: snapshot.circuitos.length,
       equipos: snapshot.equipos.length,

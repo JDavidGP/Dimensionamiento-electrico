@@ -15,7 +15,7 @@
 import { ApplicationMediator as App } from "../../core/ApplicationMediator.js";
 import type { TableroExtraido } from "./esquema.ts";
 import type { FormularioCircuito, FormularioEquipo } from "../validacion/formularios.ts";
-import type { DatosTablero } from "../tablero/tipos.ts";
+import type { FormularioTablero } from "../../shared/data/plantillas.ts";
 
 const { CIRCUITO_VACIO, EQUIPO_VACIO, TABLERO_VACIO } = App.data.tablas.plantillas();
 
@@ -42,7 +42,12 @@ export interface CircuitoParaImportar {
 
 export interface TableroParaImportar {
   nombre: string;
-  datos: DatosTablero;
+  // Forma de FORMULARIO (todo texto), no el Tablero real parseado — ver
+  // FormularioTablero (shared/data/plantillas.ts). Hoy solo se MUESTRA
+  // en la vista previa (ImportarProyectoPDF.jsx); crear el tablero real
+  // a partir de esto queda pendiente (igual que circuitoForm/equipoForm
+  // sí tienen su paso de creación real, esto todavía no).
+  datos: FormularioTablero;
   circuitos: CircuitoParaImportar[];
 }
 

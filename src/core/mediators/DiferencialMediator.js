@@ -16,8 +16,8 @@ import {
   requiereDiferencialREBT,
   SENSIBILIDAD_MAXIMA_DIFERENCIAL_GENERAL_MA,
 } from "../../modules/diferencial/index.ts";
-import { DataProvider } from "../services/DataProvider.js";
-import { Logger } from "../services/Logger.js";
+import { DataProvider } from "../services/DataProvider.ts";
+import { Logger } from "../services/Logger.ts";
 
 export const DiferencialMediator = {
   /** ITC-BT-25: máximo de circuitos por diferencial, expuesto para la UI y la validación (ver modules/validacion/referencial.ts). */

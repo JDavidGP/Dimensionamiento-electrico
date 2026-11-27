@@ -1,28 +1,28 @@
 /**
  * Cache en memoria para tablas normativas y resultados frecuentes.
  */
-const store = new Map();
+const store = new Map<string, unknown>();
 
 export const Cache = {
-  get(key) {
-    return store.has(key) ? store.get(key) : undefined;
+  get<T = unknown>(key: string): T | undefined {
+    return store.has(key) ? (store.get(key) as T) : undefined;
   },
-  set(key, value, ttlMs = 0) {
+  set(key: string, value: unknown, ttlMs = 0): void {
     store.set(key, value);
     if (ttlMs > 0) {
       setTimeout(() => store.delete(key), ttlMs);
     }
   },
-  has(key) {
+  has(key: string): boolean {
     return store.has(key);
   },
-  delete(key) {
+  delete(key: string): void {
     store.delete(key);
   },
-  clear() {
+  clear(): void {
     store.clear();
   },
-  keys() {
+  keys(): string[] {
     return [...store.keys()];
   },
 };
