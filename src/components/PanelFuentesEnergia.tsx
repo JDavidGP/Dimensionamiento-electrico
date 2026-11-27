@@ -1,7 +1,10 @@
-import React, { useState } from "react";
-import { colores, fuentes } from "../styles/colores";
-import Campo, { inputStyle, colorEstadoDe } from "./Campo";
+import { useState, type FormEvent } from "react";
+import { colores, fuentes } from "../styles/colores.ts";
+import Campo, { inputStyle, colorEstadoDe } from "./Campo.tsx";
 import { TIPOS_FUENTE_UI, BotonPill } from "./PanelTableros";
+import type { FuenteEnergia } from "../core/services/DataProvider.ts";
+import type { DatosFuenteEnergia } from "../modules/origen/tipos.ts";
+import type { Entrada } from "../modules/validacion/index.ts";
 
 // Rediseño (usuario, 2026-11-20, con el ejemplo de las 3 casas: solo
 // red local / red local + generador / las 3 fuentes): el cuadro de
@@ -20,7 +23,25 @@ import { TIPOS_FUENTE_UI, BotonPill } from "./PanelTableros";
 // en modules/origen/fuentesEnergia.js para por qué esto es aditivo y no
 // rompe proyectos viejos (ese null sigue significando "acometida
 // genérica, sin detalle").
-const FORM_CREAR_VACIO = { nombre: "", tipo: "red_local", rol: "" };
+interface FormCrearFuente {
+  nombre: string;
+  tipo: string;
+  rol: string;
+}
+
+interface FormDetalleFuente {
+  nombre: string;
+  tipo: string;
+  rol: string;
+  capacidadKW: string;
+  distanciaM: string;
+  materialConductor: string;
+  horarioInicio: string;
+  horarioFin: string;
+  notas: string;
+}
+
+const FORM_CREAR_VACIO: FormCrearFuente = { nombre: "", tipo: "red_local", rol: "" };
 
 const ROLES_UI = [
   { valor: "principal", label: "Principal" },
@@ -28,7 +49,7 @@ const ROLES_UI = [
   { valor: "auxiliar", label: "Auxiliar" },
 ];
 
-function formDetalleDesde(f) {
+function formDetalleDesde(f: FuenteEnergia): FormDetalleFuente {
   return {
     nombre: f.nombre,
     tipo: f.tipo,
@@ -42,26 +63,39 @@ function formDetalleDesde(f) {
   };
 }
 
-export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEnergia, editarFuenteEnergia, eliminarFuenteEnergia, listaIntegridad = [] }) {
-  const [activaId, setActivaId] = useState(null);
-  const [formCrear, setFormCrear] = useState(FORM_CREAR_VACIO);
-  const [formDetalle, setFormDetalle] = useState(null);
+interface PanelFuentesEnergiaProps {
+  fuentesEnergia?: FuenteEnergia[];
+  crearFuenteEnergia: (datos: DatosFuenteEnergia) => FuenteEnergia;
+  editarFuenteEnergia: (id: string, cambios: DatosFuenteEnergia) => void;
+  eliminarFuenteEnergia: (id: string) => void;
+  listaIntegridad?: Entrada[];
+}
 
-  function rolTomadoPor(rol, excluirId) {
+export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEnergia, editarFuenteEnergia, eliminarFuenteEnergia, listaIntegridad = [] }: PanelFuentesEnergiaProps) {
+  const [activaId, setActivaId] = useState<string | null>(null);
+  const [formCrear, setFormCrear] = useState<FormCrearFuente>(FORM_CREAR_VACIO);
+  const [formDetalle, setFormDetalle] = useState<FormDetalleFuente | null>(null);
+
+  function rolTomadoPor(rol: string, excluirId: string | null): FuenteEnergia | null {
     if (!rol) return null;
     return fuentesEnergia.find((f) => f.rol === rol && f.id !== excluirId) || null;
   }
 
-  function alCrear(e) {
+  // Los formularios (FormCrearFuente/FormDetalleFuente) son todo texto
+  // (estado de UI, ver el mismo criterio que FormularioCircuito/Equipo)
+  // — crearFuenteEnergia/editarFuenteEnergia (modules/origen/fuentesEnergia.ts,
+  // función `normalizar`) ya toleran strings en runtime (Number(...)||0),
+  // el cast solo declara esa tolerancia que DatosFuenteEnergia no refleja.
+  function alCrear(e: FormEvent): void {
     e.preventDefault();
     if (!formCrear.nombre.trim()) return;
-    const f = crearFuenteEnergia(formCrear);
+    const f = crearFuenteEnergia(formCrear as unknown as DatosFuenteEnergia);
     setFormCrear(FORM_CREAR_VACIO);
     setActivaId(f.id);
     setFormDetalle(formDetalleDesde(f));
   }
 
-  function alExpandir(f) {
+  function alExpandir(f: FuenteEnergia): void {
     if (activaId === f.id) {
       setActivaId(null);
       setFormDetalle(null);
@@ -71,13 +105,13 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
     }
   }
 
-  function alGuardarDetalle(e) {
+  function alGuardarDetalle(e: FormEvent): void {
     e.preventDefault();
-    if (!formDetalle || !formDetalle.nombre.trim()) return;
-    editarFuenteEnergia(activaId, formDetalle);
+    if (!formDetalle || !formDetalle.nombre.trim() || !activaId) return;
+    editarFuenteEnergia(activaId, formDetalle as unknown as DatosFuenteEnergia);
   }
 
-  function alEliminar(f) {
+  function alEliminar(f: FuenteEnergia): void {
     eliminarFuenteEnergia(f.id);
     if (activaId === f.id) {
       setActivaId(null);
@@ -126,7 +160,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
             </div>
             {formCrear.rol && rolTomadoPor(formCrear.rol, null) && (
               <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4 }}>
-                Le quitará el rol "{ROLES_UI.find((r) => r.valor === formCrear.rol)?.label}" a "{rolTomadoPor(formCrear.rol, null).nombre}" (solo puede
+                Le quitará el rol "{ROLES_UI.find((r) => r.valor === formCrear.rol)?.label}" a "{rolTomadoPor(formCrear.rol, null)?.nombre}" (solo puede
                 haber una fuente con cada rol).
               </div>
             )}
@@ -211,7 +245,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
                       onSubmit={alGuardarDetalle}
                       style={{ borderTop: `1px solid ${colores.border}`, padding: "10px 12px 12px 30px", display: "flex", flexDirection: "column", gap: 8 }}
                     >
-                      {entradaIntegridad?.problemas?.length > 0 && (
+                      {entradaIntegridad && entradaIntegridad.problemas.length > 0 && (
                         <div>
                           {entradaIntegridad.problemas.map((p, i) => (
                             <div
@@ -257,7 +291,7 @@ export default function PanelFuentesEnergia({ fuentesEnergia = [], crearFuenteEn
                         </div>
                         {formDetalle.rol && rolTomadoPor(formDetalle.rol, f.id) && (
                           <div style={{ fontSize: 10.5, color: colores.warn, marginTop: 4 }}>
-                            Le quitará el rol "{ROLES_UI.find((r) => r.valor === formDetalle.rol)?.label}" a "{rolTomadoPor(formDetalle.rol, f.id).nombre}".
+                            Le quitará el rol "{ROLES_UI.find((r) => r.valor === formDetalle.rol)?.label}" a "{rolTomadoPor(formDetalle.rol, f.id)?.nombre}".
                           </div>
                         )}
                       </Campo>
