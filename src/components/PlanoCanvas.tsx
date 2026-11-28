@@ -548,7 +548,7 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
             ref={svgRef}
             width={tamanoCanvas.ancho}
             height={tamanoCanvas.alto}
-            style={{ display: "block", cursor: modo === "mover" || modo === "mover-ambiente" ? "grab" : "crosshair" }}
+            style={{ display: "block", cursor: modo === "mover" || modo === "mover-ambiente" ? "grab" : "crosshair", userSelect: "none", WebkitUserSelect: "none" }}
             onClick={alClick}
             onWheel={alWheel}
             onPointerDown={alPointerDown}
@@ -599,7 +599,7 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
                     key={`sombreado-${h.id}`}
                     points={puntosPx.map((p) => `${p.x},${p.y}`).join(" ")}
                     fill={colorAmbiente(h.id)}
-                    fillOpacity={0.22}
+                    fillOpacity={0.14}
                     stroke="none"
                     pointerEvents="none"
                   />

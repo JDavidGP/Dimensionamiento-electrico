@@ -1,4 +1,5 @@
 import { Fragment, useRef, useState, useMemo, type FormEvent, type ChangeEvent } from "react";
+import { createPortal } from "react-dom";
 import { colores, fuentes } from "../styles/colores.ts";
 import { inputStyle } from "./Campo.tsx";
 import { BotonPill } from "./PanelTableros.tsx";
@@ -983,7 +984,23 @@ export default function PlanoInteligente({
   // caso vuelve el chrome del navegador alrededor del lienzo grande,
   // nunca un colapso sorpresivo de todo el layout.
 
-  return (
+  // Bug real encontrado probando pantalla completa + "Restablecer"
+  // (usuario, 2026-11-28): al entrar y salir de pantalla completa, el
+  // lienzo quedaba "fantasma" tapando TODA la pantalla (hasta bloqueando
+  // clicks en Diagrama unifilar/otras pestañas) — nunca un problema de
+  // z-index, sino de posicionamiento: este componente vive dentro de
+  // SubTabs.tsx, que desliza sus 3 sub-pestañas con un `transform:
+  // translateX(...)` en un div ancestro. Por especificación CSS, CUALQUIER
+  // ancestro con `transform` pasa a ser el "contenedor de posicionamiento"
+  // de un descendiente `position:fixed` (el mismo motivo ya documentado en
+  // App.tsx para el `transform:none` de impresión con TabsViewPager) — el
+  // `inset:0` de abajo entonces NO se resuelve contra el viewport real
+  // sino contra esa tira deslizante, dejando el lienzo mal posicionado y
+  // reteniendo los clicks. `createPortal` saca este árbol fuera de esa
+  // jerarquía SOLO mientras está en pantalla completa, renderizándolo
+  // directo en `document.body` — en modo normal sigue exactamente en su
+  // lugar de siempre, sin ancestros con transform de por medio.
+  const vista = (
     <div
       ref={contenedorPlanoRef}
       className="plano-grid"
@@ -2213,6 +2230,8 @@ export default function PlanoInteligente({
       </div>
     </div>
   );
+
+  return pantallaCompletaPlano ? createPortal(vista, document.body) : vista;
 }
 
 /** Segmento más cercano a un punto (modelo, metros) — distancia punto-a-segmento mínima. */
