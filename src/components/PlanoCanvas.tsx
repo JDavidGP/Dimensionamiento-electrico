@@ -210,6 +210,13 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
   // rectángulo real lo arma el padre (onTrazarRectangulo) recién al
   // soltar, nunca mientras se arrastra.
   const [rectanguloArrastre, setRectanguloArrastre] = useState<RectanguloArrastre | null>(null);
+  // Nombre del ambiente al pasar el mouse — usuario, 2026-11-28: "quiero
+  // que cada vez ponga el cursor sobre el ambiente me diga qué ambiente
+  // es". Puramente local/efímero (nunca sale de este componente, a
+  // diferencia de habitacionResaltadaId que sí viene del padre y
+  // persiste hasta el próximo click) — no tiene sentido levantarlo más
+  // arriba, es solo un tooltip pasajero.
+  const [habitacionHoverId, setHabitacionHoverId] = useState<string | null>(null);
   // Canvas oculto con los píxeles de la imagen cargada — solo para que
   // alClick pueda leer un parche chico y "pegarse" al borde más
   // cercano (ver modules/plano/deteccionBordes.js). Se arma UNA vez
@@ -382,6 +389,35 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
     return h.nodoIds.map((id) => nodos.find((n) => n.id === id)?.punto).filter((p): p is Punto => Boolean(p));
   }
 
+  /** Claves (par de nodos ordenado) de los segmentos que forman el perímetro de una habitación — para saber qué paredes "pertenecen" a un ambiente resaltado (ver clavesParedesResaltadas más abajo). Un mismo segmento puede pertenecer a 2 ambientes contiguos, por eso esto se recalcula por ambiente y nunca se guarda en el segmento. */
+  function clavesSegmentosDeHabitacion(h: HabitacionPlano): Set<string> {
+    const claves = new Set<string>();
+    for (let i = 0; i < h.nodoIds.length; i++) {
+      const a = h.nodoIds[i];
+      const b = h.nodoIds[(i + 1) % h.nodoIds.length];
+      claves.add([a, b].sort().join("|"));
+    }
+    return claves;
+  }
+
+  /** Posición (ya en metros/zoom del lienzo) y ángulo para una etiqueta de medida pegada a un segmento — gira con la pared (usuario, 2026-11-28: "si la pared es horizontal va horizontal el dato... si es vertical se gira y pega al contorno de esa pared") en vez de quedar siempre horizontal sin importar la orientación real. `ladoSigno` separa la medida de longitud (-1, arriba/izquierda de la pared) del espesor (+1, abajo/derecha) para que no se pisen. */
+  function etiquetaDeSegmento(a: Punto, b: Punto, offsetPx: number, ladoSigno: 1 | -1): { x: number; y: number; angulo: number } {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const largo = Math.hypot(dx, dy) || 1;
+    // Perpendicular unitario a la pared, para offsetear la etiqueta HACIA
+    // UN LADO de la pared (nunca a lo largo de ella, que sería invisible
+    // en una pared vertical si se usara un offset vertical fijo como antes).
+    const nx = (-dy / largo) * ladoSigno;
+    const ny = (dx / largo) * ladoSigno;
+    const offset = offsetPx / transformVista.zoom;
+    let angulo = Math.atan2(dy, dx) * (180 / Math.PI);
+    // Nunca cabeza abajo: un texto rotado 100° se lee mejor rotado -80°.
+    if (angulo > 90) angulo -= 180;
+    if (angulo < -90) angulo += 180;
+    return { x: (a.x + b.x) / 2 + nx * offset, y: (a.y + b.y) / 2 + ny * offset, angulo };
+  }
+
   /** La habitación (si alguna) bajo `puntoImagen` — convierte a espacio modelo para el point-in-polygon, ya que ahí es donde viven los nodos. */
   function habitacionEn(puntoImagen: Punto): HabitacionPlano | null {
     if (!escalaMetrosPorPixel) return null;
@@ -440,6 +476,17 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
 
   function alPointerMove(e: ReactPointerEvent<SVGSVGElement>): void {
     if (punterosRef.current.has(e.pointerId)) punterosRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // Nombre del ambiente al pasar el cursor (usuario, 2026-11-28) —
+    // calculado aquí, NO con onMouseEnter/onMouseLeave en el <polygon>
+    // de sombreado: activar pointer-events en ese polygon rompía el
+    // click-to-toggle existente de habitacionResaltadaId (ver commit).
+    // Point-in-polygon puro sobre la posición del cursor, igual que ya
+    // se hace en alPointerDown/alClick — sin tocar pointer-events de nada.
+    if (punterosRef.current.size < 2) {
+      const puntoImagenHover = App.plano.aModelo(puntoPantallaDesdeEvento(e), transformVista);
+      const hoverId = habitacionEn(puntoImagenHover)?.id ?? null;
+      if (hoverId !== habitacionHoverId) setHabitacionHoverId(hoverId);
+    }
     if (punterosRef.current.size >= 2 && pinchRef.current) {
       // Zoom Y pan de 2 dedos a la vez (igual que cualquier mapa
       // táctil) — funciona en CUALQUIER modo, es un gesto de la VISTA,
@@ -515,6 +562,11 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
     setRectanguloArrastre(null);
   }
 
+  function alPointerLeave(e: ReactPointerEvent<SVGSVGElement>): void {
+    alPointerUp(e);
+    setHabitacionHoverId(null);
+  }
+
   function zoomBoton(factor: number): void {
     const centro = { x: tamanoCanvas.ancho / 2, y: tamanoCanvas.alto / 2 };
     setTransformVista((actual) => App.plano.aplicarZoom(actual, factor, centro));
@@ -532,6 +584,16 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
 
   const grosorLinea = 3 / transformVista.zoom;
   const radioNodo = 5 / transformVista.zoom;
+
+  // Paredes del ambiente resaltado (click, ver PlanoInteligente.tsx) —
+  // usuario, 2026-11-28: "ocultamos los datos y se muestran una vez que
+  // hacemos click en ese ambiente". Mientras se está editando (cualquier
+  // modo salvo "mover") la medida en vivo de CADA pared sigue siempre
+  // visible, sea del ambiente resaltado o no — ese es el caso que ya
+  // pedía "no perderse después de trazar varias" (nota más abajo); el
+  // ocultamiento es solo para cuando se está mirando el plano ya hecho.
+  const habitacionResaltada = habitacionResaltadaId ? habitaciones.find((h) => h.id === habitacionResaltadaId) ?? null : null;
+  const clavesParedesResaltadas = habitacionResaltada ? clavesSegmentosDeHabitacion(habitacionResaltada) : null;
 
   return (
     <div style={{ position: "relative" }}>
@@ -555,7 +617,7 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
             onPointerMove={alPointerMove}
             onPointerUp={alPointerUp}
             onPointerCancel={alPointerUp}
-            onPointerLeave={alPointerUp}
+            onPointerLeave={alPointerLeave}
           >
             <defs>
               {/* Flecha de las conexiones del diagrama superpuestas — ver
@@ -652,6 +714,16 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
                 // MISMA distancia entre nodos que ya usa el resto del
                 // motor del Plano (ej. longitudPolilinea de una ruta).
                 const largoM = App.plano.distancia(nodoA.punto, nodoB.punto);
+                // Ocultar la medida en modo "mover" (solo mirando el plano
+                // ya hecho) salvo que esta pared pertenezca al ambiente
+                // resaltado por click — mientras se EDITA (cualquier otro
+                // modo) la medida en vivo de cada pared sigue siempre
+                // visible, ese es un caso distinto (ver nota de arriba).
+                const claveSegmento = [seg.nodoAId, seg.nodoBId].sort().join("|");
+                const perteneceAResaltada = clavesParedesResaltadas?.has(claveSegmento) ?? false;
+                const mostrarMedida = esConductor || modo !== "mover" || perteneceAResaltada;
+                const etiquetaLargo = etiquetaDeSegmento(a, b, 13, -1);
+                const etiquetaEspesor = etiquetaDeSegmento(a, b, 10, 1);
                 return (
                   <Fragment key={seg.id}>
                     <line
@@ -664,26 +736,31 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
                       strokeDasharray={esConductor ? `${grosorLinea} ${grosorLinea}` : undefined}
                       strokeLinecap="round"
                     />
-                    <text
-                      x={(a.x + b.x) / 2}
-                      y={(a.y + b.y) / 2 + 13 / transformVista.zoom}
-                      textAnchor="middle"
-                      fontSize={10 / transformVista.zoom}
-                      fill={colores.textDim}
-                      pointerEvents="none"
-                    >
-                      {largoM.toFixed(2)}m
-                    </text>
+                    {mostrarMedida && (
+                      <text
+                        x={etiquetaLargo.x}
+                        y={etiquetaLargo.y}
+                        textAnchor="middle"
+                        fontSize={10 / transformVista.zoom}
+                        fill={colores.textDim}
+                        pointerEvents="none"
+                        transform={`rotate(${etiquetaLargo.angulo} ${etiquetaLargo.x} ${etiquetaLargo.y})`}
+                      >
+                        {largoM.toFixed(2)}m
+                      </text>
+                    )}
                     {/* Espesor medido (usuario, 2026-11-20: "medir el ancho visible de
                         una pared, 2 clicks") — solo registro visual, no alimenta ningún
                         cálculo todavía. */}
-                    {seg.tipo === "pared" && seg.espesorM !== "" && seg.espesorM > 0 && (
+                    {mostrarMedida && seg.tipo === "pared" && seg.espesorM !== "" && seg.espesorM > 0 && (
                       <text
-                        x={(a.x + b.x) / 2}
-                        y={(a.y + b.y) / 2 - 4 / transformVista.zoom}
+                        x={etiquetaEspesor.x}
+                        y={etiquetaEspesor.y}
                         textAnchor="middle"
                         fontSize={11 / transformVista.zoom}
                         fill={colores.textDim}
+                        pointerEvents="none"
+                        transform={`rotate(${etiquetaEspesor.angulo} ${etiquetaEspesor.x} ${etiquetaEspesor.y})`}
                       >
                         {(seg.espesorM * 100).toFixed(1)}cm
                       </text>
@@ -709,36 +786,44 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
                 };
                 const c = px(centroideModelo);
                 const resaltada = h.id === habitacionResaltadaId;
+                // Nombre al pasar el mouse (usuario, 2026-11-28: "quiero
+                // que cada vez ponga el cursor sobre el ambiente me diga
+                // qué ambiente es") O al tocarlo (usuario, 2026-11-27,
+                // "modo Mover vista" — un click sin arrastre ahí no hacía
+                // nada antes de esto): revelado bajo demanda, no siempre
+                // visible, para no amontonar el dibujo en un plano con
+                // muchos ambientes chicos. El click (resaltada) se ve más
+                // marcado (negrita/acento) porque además destapa el
+                // área/perímetro y las medidas de sus paredes — el hover
+                // es solo un vistazo rápido del nombre, sin abrir nada más.
+                const enHover = h.id === habitacionHoverId;
                 return (
                   <Fragment key={`medidas-${h.id}`}>
-                    {/* Nombre del ambiente al tocarlo (usuario, 2026-11-27,
-                        "modo Mover vista" — un click sin arrastre ahí no
-                        hacía nada antes de esto): revelado bajo demanda,
-                        no siempre visible, para no amontonar el dibujo en
-                        un plano con muchos ambientes chicos. */}
-                    {resaltada && (
+                    {(resaltada || enHover) && (
                       <text
                         x={c.x}
                         y={c.y - 14 / transformVista.zoom}
                         textAnchor="middle"
                         fontSize={13 / transformVista.zoom}
-                        fontWeight="bold"
-                        fill={colores.copper}
+                        fontWeight={resaltada ? "bold" : undefined}
+                        fill={resaltada ? colores.copper : colores.textMain}
                         pointerEvents="none"
                       >
                         {h.nombre || "(sin nombre)"}
                       </text>
                     )}
-                    <text
-                      x={c.x}
-                      y={c.y}
-                      textAnchor="middle"
-                      fontSize={11 / transformVista.zoom}
-                      fill={colores.textDim}
-                      pointerEvents="none"
-                    >
-                      {h.areaM2.toFixed(2)}m² · {h.perimetroM.toFixed(2)}m perímetro
-                    </text>
+                    {(modo !== "mover" || resaltada) && (
+                      <text
+                        x={c.x}
+                        y={c.y}
+                        textAnchor="middle"
+                        fontSize={11 / transformVista.zoom}
+                        fill={colores.textDim}
+                        pointerEvents="none"
+                      >
+                        {h.areaM2.toFixed(2)}m² · {h.perimetroM.toFixed(2)}m perímetro
+                      </text>
+                    )}
                   </Fragment>
                 );
               })}

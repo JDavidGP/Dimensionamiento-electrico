@@ -3,10 +3,14 @@
 // localiza y realiza los cambios que quiera más fácil"). En modo
 // "Mover vista" (el único donde un click SIN arrastre no hacía
 // absolutamente nada antes de esto), tocar dentro de un ambiente ya
-// generado revela su nombre arriba de su área/perímetro (que ya se
-// mostraba siempre) — tocar el MISMO ambiente de nuevo lo oculta
-// (toggle), tocar OTRO lo cambia, y tocar fuera de cualquier ambiente
-// lo oculta.
+// generado revela su nombre Y su área/perímetro — tocar el MISMO
+// ambiente de nuevo lo oculta (toggle), tocar OTRO lo cambia, y tocar
+// fuera de cualquier ambiente lo oculta.
+// Actualizado 2026-11-28 (usuario: "ocultamos los datos y se muestran
+// una vez que hacemos click en ese ambiente"): en modo "Mover vista"
+// el área/perímetro YA NO está siempre visible, solo junto al nombre
+// al tocar. Además, pasar el cursor por ENCIMA (sin click) revela solo
+// el nombre — un vistazo rápido, sin destapar área/perímetro.
 import { chromium } from "playwright";
 import { fileURLToPath } from "url";
 const DIR = fileURLToPath(new URL(".", import.meta.url));
@@ -40,9 +44,24 @@ async function puntoPantallaDesdeImagen(puntoImagen) {
   const panX = parseFloat(m[1]), panY = parseFloat(m[2]), zoom = parseFloat(m[3]);
   return { x: box.x + puntoImagen.x * zoom + panX, y: box.y + puntoImagen.y * zoom + panY };
 }
+// Tras cada click, el mouse queda posado donde clickeó — y ahora el
+// hover (independiente del click) también revela el nombre, así que
+// sin moverlo a un punto neutral no se podría distinguir "nombre
+// revelado por el click (resaltada)" de "nombre revelado porque el
+// cursor sigue encima (hover)". Point-in-polygon sobre un punto bien
+// afuera de ambos ambientes para asentar el estado tras cada click.
+const PUNTO_AFUERA = { x: 700, y: 50 };
 async function click(puntoImagen) {
   const p = await puntoPantallaDesdeImagen(puntoImagen);
   await page.mouse.click(p.x, p.y);
+  await page.waitForTimeout(100);
+  const afuera = await puntoPantallaDesdeImagen(PUNTO_AFUERA);
+  await page.mouse.move(afuera.x, afuera.y);
+  await page.waitForTimeout(100);
+}
+async function mover(puntoImagen) {
+  const p = await puntoPantallaDesdeImagen(puntoImagen);
+  await page.mouse.move(p.x, p.y);
   await page.waitForTimeout(100);
 }
 
@@ -99,8 +118,23 @@ assert((await svg.getByText("Dormitorio", { exact: true }).count()) === 0, "...y
 await click({ x: 700, y: 50 }); // esquina lejos de ambos ambientes
 assert((await svg.getByText("Cocina", { exact: true }).count()) === 0, "Tocar fuera de cualquier ambiente oculta el nombre que estuviera revelado");
 
-// --- 6. El área/perímetro de cada ambiente sigue SIEMPRE visible, con o sin nombre revelado ---
-assert((await svg.getByText("12.00m² · 14.00m perímetro").count()) === 2, "El área/perímetro de ambos ambientes sigue visible siempre (2 ambientes de 4m×3m)");
+// --- 6. Sin ningún ambiente tocado, el área/perímetro está oculto (ya no es siempre visible) ---
+assert((await svg.getByText("12.00m² · 14.00m perímetro").count()) === 0, "Sin tocar ningún ambiente, el área/perímetro de ambos está oculto");
+
+// --- 7. Tocar un ambiente revela SU área/perímetro junto a su nombre (no el del otro) ---
+await click({ x: 150, y: 150 }); // toca Dormitorio
+assert((await svg.getByText("Dormitorio", { exact: true }).count()) === 1, "Tocar 'Dormitorio' revela su nombre de nuevo");
+assert((await svg.getByText("12.00m² · 14.00m perímetro").count()) === 1, "...y SU área/perímetro (no el de 'Cocina')");
+
+// --- 8. Pasar el cursor por ENCIMA (sin click) de 'Cocina' revela solo su nombre, sin destapar su área/perímetro ---
+await mover({ x: 450, y: 450 });
+assert((await svg.getByText("Cocina", { exact: true }).count()) === 1, "Pasar el cursor sobre 'Cocina' revela su nombre (sin tocar/click)");
+assert((await svg.getByText("12.00m² · 14.00m perímetro").count()) === 1, "El hover de 'Cocina' NO destapa su área/perímetro (sigue siendo solo 1: el de 'Dormitorio' resaltado)");
+
+// --- 9. Sacar el cursor de cualquier ambiente oculta el nombre revelado por hover (pero no el resaltado por click) ---
+await mover({ x: 700, y: 50 });
+assert((await svg.getByText("Cocina", { exact: true }).count()) === 0, "Al sacar el cursor de 'Cocina', su nombre por hover desaparece");
+assert((await svg.getByText("Dormitorio", { exact: true }).count()) === 1, "'Dormitorio' sigue revelado (fue un click, no un hover)");
 
 console.log("\nErrores de página:", errores);
 assert(errores.length === 0, "Sin errores de página durante todo el flujo");
