@@ -75,6 +75,40 @@ function corrienteCargaAproximadaA(potenciaW: number, voltajeV: number, fases: s
   return potenciaW / divisor;
 }
 
+// Nombres de dispositivos del CUADRO (no circuitos) — usuario,
+// 2026-11-28, segunda vuelta con la misma memoria REBT real: a pesar de
+// la regla nueva en ollamaClient.ts, el modelo (3B, corriendo local)
+// volvió a confundirlos con circuitos, esta vez con un agravante — les
+// asignó la corriente NOMINAL DEL DISPOSITIVO (25A del ICP, 25A del
+// IGA, 40A del diferencial) como si fuera corriente_a de un circuito
+// real. adaptador.ts YA trataba corriente_a como aproximación de carga
+// cuando falta potencia_w (caso legítimo: un circuito real sin potencia
+// declarada, usando el amperaje de SU PROPIO breaker) — acá NO aplica,
+// ese amperaje es del dispositivo en sí, no de ninguna carga, y usarlo
+// así fabrica una demanda irreal (en este caso 20700W/90A de la nada).
+// Reconocidos por nombre (español/inglés, con o sin la sigla entre
+// paréntesis) — la propia lista de ollamaClient.ts enumera estos mismos
+// dispositivos, así que el patrón cubre exactamente lo que se le pidió
+// NO incluir.
+const PATRONES_DISPOSITIVO_CUADRO: RegExp[] = [
+  /\bICP\b/i,
+  /\bIGA\b/i,
+  /\bDPS\b/i,
+  /\bSPD\b/i,
+  /\bPIA\b/i,
+  /\bGFCI\b/i,
+  /interruptor de control de potencia/i,
+  /interruptor general autom/i,
+  /\binterruptor general\b/i,
+  /\bmain breaker\b/i,
+  /protecci[oó]n contra sobretensiones/i,
+  /protector(?:es)? de sobretensiones/i,
+  /interruptor diferencial/i,
+];
+function pareceDispositivoDelCuadro(descripcion: string): boolean {
+  return PATRONES_DISPOSITIVO_CUADRO.some((patron) => patron.test(descripcion));
+}
+
 export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva: string): TableroParaImportar[] {
   return tableros.map((t) => {
     const fasesTablero = t.fases || "mono";
@@ -103,6 +137,13 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
       // el usuario lo revise/descarte a mano a que un click de "importar
       // todo" cree 5 circuitos fantasma sin que se note.
       const sinNingunDato = c.potencia_w == null && c.corriente_a == null && c.voltaje_v == null;
+      // Segunda vuelta de este mismo bug (usuario, 2026-11-28, mismo PDF
+      // REBT): el nombre SÍ coincide con un dispositivo del cuadro (ver
+      // pareceDispositivoDelCuadro arriba) y no trae potencia propia —
+      // aunque traiga una corriente, esa corriente es la nominal DEL
+      // DISPOSITIVO, nunca una carga a aproximar (ver nota arriba de
+      // PATRONES_DISPOSITIVO_CUADRO).
+      const esDispositivoSinCarga = c.potencia_w == null && pareceDispositivoDelCuadro(c.descripcion);
 
       let voltaje = c.voltaje_v;
       if (voltaje == null) {
@@ -156,6 +197,16 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
           modoEntrada: "potencia",
           valor: String(c.potencia_w),
         };
+      } else if (esDispositivoSinCarga) {
+        // NO se usa c.corriente_a como aproximación de carga acá (a
+        // diferencia de la rama de abajo) — es la corriente NOMINAL del
+        // dispositivo (ICP/IGA/diferencial/DPS/PIA...), no la de ninguna
+        // carga real, usarla así fabrica una demanda que no existe.
+        advertencias.push(
+          `"${c.descripcion}" parece ser un DISPOSITIVO de protección del cuadro general (ICP, interruptor general, diferencial, protector de sobretensiones, PIA), no un circuito con carga propia${
+            c.corriente_a != null ? ` — su corriente nominal (${c.corriente_a}A) NO se usó como aproximación de carga, para no inventar una demanda que no existe` : ""
+          }. El circuito se crea sin carga — revisar contra el documento antes de incluirlo, por eso no viene premarcado.`
+        );
       } else if (c.corriente_a != null) {
         equipoForm = {
           ...EQUIPO_VACIO,
@@ -206,7 +257,7 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
         advertencias,
         valido: !errorValidacion,
         errorValidacion,
-        incluir: !errorValidacion && !sinNingunDato,
+        incluir: !errorValidacion && !sinNingunDato && !esDispositivoSinCarga,
       };
     });
 
