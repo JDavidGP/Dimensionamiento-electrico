@@ -91,6 +91,18 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
     const circuitos: CircuitoParaImportar[] = t.circuitos.map((c) => {
       const advertencias: string[] = [];
       const fases = c.fases || fasesTablero;
+      // Sin NINGÚN dato numérico (ni voltaje, ni potencia, ni corriente,
+      // solo un nombre) — usuario, 2026-11-28, probando con una memoria
+      // técnica real: la IA local confundió los DISPOSITIVOS del cuadro
+      // general (ICP, IGA, diferencial, protector de sobretensiones) con
+      // circuitos reales, generando "circuitos" huérfanos de 0W (la
+      // sección de dispositivos del cuadro no tiene datos de carga, a
+      // diferencia de la tabla real de circuitos — ver la regla nueva en
+      // ollamaClient.ts). Ya se avisa con el mensaje de abajo, pero un
+      // circuito así de vacío no se pre-marca para incluir — mejor que
+      // el usuario lo revise/descarte a mano a que un click de "importar
+      // todo" cree 5 circuitos fantasma sin que se note.
+      const sinNingunDato = c.potencia_w == null && c.corriente_a == null && c.voltaje_v == null;
 
       let voltaje = c.voltaje_v;
       if (voltaje == null) {
@@ -156,6 +168,10 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
         advertencias.push(
           `El documento no da la potencia real de este circuito — se usó el amperaje del breaker (${c.corriente_a}A) como aproximación, probablemente sobreestima la carga real.`
         );
+      } else if (sinNingunDato) {
+        advertencias.push(
+          `"${c.descripcion}" no tiene NINGÚN dato numérico (ni voltaje, ni potencia, ni corriente) — probablemente el documento describe acá un DISPOSITIVO del tablero (ICP, interruptor general, diferencial, protector de sobretensiones) y no un circuito real con carga propia. Revisar contra el documento antes de incluirlo — por eso no viene premarcado.`
+        );
       } else {
         advertencias.push("Sin potencia ni corriente en el documento — el circuito se crea sin carga, hay que agregarla a mano.");
       }
@@ -190,7 +206,7 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
         advertencias,
         valido: !errorValidacion,
         errorValidacion,
-        incluir: !errorValidacion,
+        incluir: !errorValidacion && !sinNingunDato,
       };
     });
 
