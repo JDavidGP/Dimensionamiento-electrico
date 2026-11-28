@@ -1,0 +1,21 @@
+# PostgreSQL para desarrollo local del backend de DEC — un solo
+# comando (`docker compose up -d`) en vez de instalar Postgres directo
+# en el sistema. Usuario/contraseña/nombre de base coinciden EXACTO con
+# el DATABASE_URL de .env.example (postgres://dec:dec@localhost:5432/dec)
+# — con esto levantado, .env no necesita tocarse para esa variable.
+services:
+  postgres:
+    image: postgres:16
+    container_name: dec-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dec
+      POSTGRES_PASSWORD: dec
+      POSTGRES_DB: dec
+    ports:
+      - "5432:5432"
+    volumes:
+      - dec-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  dec-postgres-data:

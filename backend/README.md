@@ -15,7 +15,20 @@ extra todavía.
 ## Requisitos
 
 - Node.js 20+
-- PostgreSQL 14+ corriendo y accesible
+- PostgreSQL 14+ corriendo y accesible — directo en el sistema, o con
+  Docker (ver abajo)
+
+## Postgres con Docker (recomendado para probar en la propia máquina)
+
+`docker-compose.yml` ya viene configurado para coincidir exacto con el
+`DATABASE_URL` de `.env.example` (usuario/contraseña/base `dec`/`dec`/`dec`)
+— con esto levantado, `.env` no necesita tocar esa variable.
+
+```bash
+docker compose up -d   # levanta Postgres en segundo plano, persistido en un volumen
+docker compose down    # lo apaga (los datos quedan en el volumen)
+docker compose down -v # lo apaga Y borra los datos, para empezar de cero
+```
 
 ## Arrancar en desarrollo
 
