@@ -1571,7 +1571,7 @@ export default function PlanoInteligente({
           }
           nodoIdsTrazoActual={trazoActual}
           modo={modo}
-          onArrastrarHabitacion={(habitacionId, deltaM) => moverHabitacionPlano(habitacionId, deltaM, engancheAutomatico)}
+          onArrastrarHabitacion={(habitacionId, deltaM, radioEngancheM) => moverHabitacionPlano(habitacionId, deltaM, engancheAutomatico, radioEngancheM)}
           onIniciarArrastre={iniciarArrastrePlano}
           onArrastrarMarcador={moverMarcadorEquipoPlano}
           onTrazarRectangulo={alTrazarRectangulo}
@@ -1803,8 +1803,8 @@ export default function PlanoInteligente({
                     {h.areaM2.toFixed(2)} m² · perímetro {h.perimetroM.toFixed(2)} m
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                    <span style={{ fontSize: 10.5, color: colores.textDim }} title="Deja vacío para usar la altura general del plano.">
-                      Altura propia (m):
+                    <span style={{ fontSize: 10.5, color: colores.textDim }} title="Dejá vacío para usar la altura general del plano. Usalo cuando ESTE ambiente tenga un techo distinto al resto — ej. un cobertizo o cuarto de bomba con menos altura que la casa.">
+                      ¿Techo distinto al general? Altura propia (m):
                     </span>
                     <input
                       type="number"

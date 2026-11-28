@@ -61,6 +61,18 @@ function tamanoMarcadorPx(escalaMetrosPorPixel: number | null | undefined, zoom:
   return acotado / zoom;
 }
 
+// Enganche automático de "Mover ambiente" (usuario, 2026-11-28: "se
+// siente tosco arrastrar... no se acercan o pasan de largo") — el radio
+// de enganche vivía fijo en METROS reales (RADIO_SNAP_METROS, ver
+// enganchePuzzle.ts), así que a un zoom alejado 30cm eran apenas un par
+// de píxeles (nunca parecía "agarrar") y a un zoom muy acercado esos
+// mismos 30cm eran un salto grande en pantalla (se sentía que "se
+// pasaba"/tosco). Mismo truco que tamanoMarcadorPx: un radio FIJO EN
+// PANTALLA (siempre se siente igual sin importar el zoom), convertido a
+// metros reales recién acá, donde SÍ se conoce el zoom — el hook
+// (moverHabitacionPlano) sigue sin saber nada de píxeles de pantalla.
+const RADIO_ENGANCHE_PANTALLA_PX = 10;
+
 // Motor de renderizado — ver PLANO_INTELIGENTE_DISENO.md §2. Es el
 // ÚNICO componente que sabe de `transformVista` (zoom/pan, efímero) y
 // de SVG/DOM; NO sabe qué significa un click (calibrar/trazar pared/
@@ -105,7 +117,7 @@ interface PlanoCanvasProps {
   conexionesDiagrama?: ConexionDiagramaEnPlano[];
   onClickImagen?: (puntoImagen: Punto) => void;
   onClickMarcador?: (marcador: MarcadorEquipoPlano) => void;
-  onArrastrarHabitacion?: (habitacionId: string, deltaModelo: Punto) => void;
+  onArrastrarHabitacion?: (habitacionId: string, deltaModelo: Punto, radioEngancheM: number) => void;
   onArrastrarMarcador?: (marcadorId: string, deltaModelo: Punto) => void;
   onIniciarArrastre?: () => void;
   onClickParedCandidata?: (candidata: LineaCandidata) => void;
@@ -217,6 +229,14 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
   // persiste hasta el próximo click) — no tiene sentido levantarlo más
   // arriba, es solo un tooltip pasajero.
   const [habitacionHoverId, setHabitacionHoverId] = useState<string | null>(null);
+  // Ambiente que se está arrastrando ahora mismo (modo "mover ambiente")
+  // — usuario, 2026-11-28: "demasiados números amontonados" al tener
+  // varios ambientes juntos. Mientras se arrastra uno, sus medidas (para
+  // guiar el enganche) siguen visibles, pero las de los DEMÁS ambientes
+  // se ocultan igual que en modo "Mover vista" — antes se mostraban
+  // SIEMPRE las de todos los ambientes en este modo (ver mostrarMedida
+  // más abajo), que es justo lo que generaba el amontonamiento.
+  const [habitacionArrastrandoId, setHabitacionArrastrandoId] = useState<string | null>(null);
   // Canvas oculto con los píxeles de la imagen cargada — solo para que
   // alClick pueda leer un parche chico y "pegarse" al borde más
   // cercano (ver modules/plano/deteccionBordes.js). Se arma UNA vez
@@ -466,6 +486,7 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
       if (habitacion) {
         onIniciarArrastre?.();
         arrastreAmbienteRef.current = { habitacionId: habitacion.id, x: e.clientX, y: e.clientY, seMovio: false };
+        setHabitacionArrastrandoId(habitacion.id);
       }
     }
     if (esModoArrastreRectangulo(modo)) {
@@ -527,7 +548,8 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
         // puntos, solo queda dividir por el zoom (ver coordenadas.js).
         const deltaImagen = { x: dx / transformVista.zoom, y: dy / transformVista.zoom };
         const deltaModelo = App.plano.imagenAModelo(deltaImagen, escalaMetrosPorPixel);
-        onArrastrarHabitacion?.(arrastreAmbienteRef.current.habitacionId, deltaModelo);
+        const radioEngancheM = (RADIO_ENGANCHE_PANTALLA_PX / transformVista.zoom) * escalaMetrosPorPixel;
+        onArrastrarHabitacion?.(arrastreAmbienteRef.current.habitacionId, deltaModelo, radioEngancheM);
         arrastreAmbienteRef.current.x = e.clientX;
         arrastreAmbienteRef.current.y = e.clientY;
       }
@@ -556,6 +578,7 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
     arrastreRef.current = null;
     arrastreMarcadorRef.current = null;
     arrastreAmbienteRef.current = null;
+    setHabitacionArrastrandoId(null);
     if (rectanguloArrastre && esModoArrastreRectangulo(modo) && onTrazarRectangulo) {
       onTrazarRectangulo(rectanguloArrastre.inicio, rectanguloArrastre.actual);
     }
@@ -588,12 +611,27 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
   // Paredes del ambiente resaltado (click, ver PlanoInteligente.tsx) —
   // usuario, 2026-11-28: "ocultamos los datos y se muestran una vez que
   // hacemos click en ese ambiente". Mientras se está editando (cualquier
-  // modo salvo "mover") la medida en vivo de CADA pared sigue siempre
-  // visible, sea del ambiente resaltado o no — ese es el caso que ya
-  // pedía "no perderse después de trazar varias" (nota más abajo); el
-  // ocultamiento es solo para cuando se está mirando el plano ya hecho.
+  // modo salvo "mover"/"mover-ambiente") la medida en vivo de CADA pared
+  // sigue siempre visible, sea del ambiente resaltado o no — ese es el
+  // caso que ya pedía "no perderse después de trazar varias" (nota más
+  // abajo); el ocultamiento es solo para cuando se está mirando el plano
+  // ya hecho o reacomodando ambientes (ver "modoQuieto" más abajo).
   const habitacionResaltada = habitacionResaltadaId ? habitaciones.find((h) => h.id === habitacionResaltadaId) ?? null : null;
   const clavesParedesResaltadas = habitacionResaltada ? clavesSegmentosDeHabitacion(habitacionResaltada) : null;
+  // Ambiente que se arrastra ahora (ver habitacionArrastrandoId) —
+  // mismo tratamiento que el resaltado, para que sus medidas sigan
+  // visibles como guía mientras se reposiciona.
+  const habitacionArrastrando = habitacionArrastrandoId ? habitaciones.find((h) => h.id === habitacionArrastrandoId) ?? null : null;
+  const clavesParedesArrastrando = habitacionArrastrando ? clavesSegmentosDeHabitacion(habitacionArrastrando) : null;
+  // "Mover vista" (pan) y "Mover ambiente" (arrastrar) son los 2 modos de
+  // solo MIRAR/reacomodar, no de trazar algo nuevo — en ambos se oculta
+  // el amontonamiento de medidas de TODOS los ambientes (usuario,
+  // 2026-11-28: "demasiados números amontonados"), mostrando solo lo
+  // relevante (resaltado/arrastrado/hover). En cualquier otro modo
+  // (trazando pared, generando ambiente, etc.) se sigue mostrando todo,
+  // sin cambios — ahí la medida en vivo de cada pared es la que guía el
+  // trazado.
+  const modoQuieto = modo === "mover" || modo === "mover-ambiente";
 
   return (
     <div style={{ position: "relative" }}>
@@ -714,14 +752,16 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
                 // MISMA distancia entre nodos que ya usa el resto del
                 // motor del Plano (ej. longitudPolilinea de una ruta).
                 const largoM = App.plano.distancia(nodoA.punto, nodoB.punto);
-                // Ocultar la medida en modo "mover" (solo mirando el plano
-                // ya hecho) salvo que esta pared pertenezca al ambiente
-                // resaltado por click — mientras se EDITA (cualquier otro
+                // Ocultar la medida en los modos "quietos" (ver
+                // modoQuieto más arriba) salvo que esta pared pertenezca
+                // al ambiente resaltado por click o al que se está
+                // arrastrando ahora — mientras se EDITA (cualquier otro
                 // modo) la medida en vivo de cada pared sigue siempre
                 // visible, ese es un caso distinto (ver nota de arriba).
                 const claveSegmento = [seg.nodoAId, seg.nodoBId].sort().join("|");
                 const perteneceAResaltada = clavesParedesResaltadas?.has(claveSegmento) ?? false;
-                const mostrarMedida = esConductor || modo !== "mover" || perteneceAResaltada;
+                const perteneceAArrastrando = clavesParedesArrastrando?.has(claveSegmento) ?? false;
+                const mostrarMedida = esConductor || !modoQuieto || perteneceAResaltada || perteneceAArrastrando;
                 const etiquetaLargo = etiquetaDeSegmento(a, b, 13, -1);
                 const etiquetaEspesor = etiquetaDeSegmento(a, b, 10, 1);
                 return (
@@ -786,33 +826,38 @@ const PlanoCanvas = forwardRef<PlanoCanvasHandle, PlanoCanvasProps>(function Pla
                 };
                 const c = px(centroideModelo);
                 const resaltada = h.id === habitacionResaltadaId;
+                const arrastrando = h.id === habitacionArrastrandoId;
                 // Nombre al pasar el mouse (usuario, 2026-11-28: "quiero
                 // que cada vez ponga el cursor sobre el ambiente me diga
                 // qué ambiente es") O al tocarlo (usuario, 2026-11-27,
                 // "modo Mover vista" — un click sin arrastre ahí no hacía
-                // nada antes de esto): revelado bajo demanda, no siempre
-                // visible, para no amontonar el dibujo en un plano con
-                // muchos ambientes chicos. El click (resaltada) se ve más
-                // marcado (negrita/acento) porque además destapa el
+                // nada antes de esto) O al arrastrarlo (usuario,
+                // 2026-11-28: "demasiados números amontonados" — antes se
+                // mostraban SIEMPRE las de TODOS los ambientes en modo
+                // "Mover ambiente", ahora solo las del que se está
+                // moviendo): revelado bajo demanda, no siempre visible,
+                // para no amontonar el dibujo en un plano con muchos
+                // ambientes chicos. El click/arrastre se ve más marcado
+                // (negrita/acento) porque además destapa el
                 // área/perímetro y las medidas de sus paredes — el hover
                 // es solo un vistazo rápido del nombre, sin abrir nada más.
                 const enHover = h.id === habitacionHoverId;
                 return (
                   <Fragment key={`medidas-${h.id}`}>
-                    {(resaltada || enHover) && (
+                    {(resaltada || arrastrando || enHover) && (
                       <text
                         x={c.x}
                         y={c.y - 14 / transformVista.zoom}
                         textAnchor="middle"
                         fontSize={13 / transformVista.zoom}
-                        fontWeight={resaltada ? "bold" : undefined}
-                        fill={resaltada ? colores.copper : colores.textMain}
+                        fontWeight={resaltada || arrastrando ? "bold" : undefined}
+                        fill={resaltada || arrastrando ? colores.copper : colores.textMain}
                         pointerEvents="none"
                       >
                         {h.nombre || "(sin nombre)"}
                       </text>
                     )}
-                    {(modo !== "mover" || resaltada) && (
+                    {(!modoQuieto || resaltada || arrastrando) && (
                       <text
                         x={c.x}
                         y={c.y}

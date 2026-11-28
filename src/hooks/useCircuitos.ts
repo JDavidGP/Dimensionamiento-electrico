@@ -1507,12 +1507,20 @@ export function useCircuitos() {
   // `conEnganche` (usuario, 2026-11-25, deuda dejada a propósito al
   // construir "plano sin imagen" v1): engancha el ambiente arrastrado
   // contra los demás ambientes y el marco del plano (real o sintético)
-  // cuando algún borde queda a menos de RADIO_SNAP_METROS — ver
+  // cuando algún borde queda a menos de `radioEngancheM` — ver
   // modules/plano/enganchePuzzle.ts para la mecánica completa. El
   // instalador puede apagarlo (checkbox en PlanoInteligente.jsx) si
   // molesta sobre un plano con ambientes irregulares (el enganche usa
   // la CAJA envolvente de cada ambiente, no su forma exacta).
-  function moverHabitacionPlano(habitacionId: string, deltaM: Punto, conEnganche: boolean = true): void {
+  // `radioEngancheM` (usuario, 2026-11-28: "se siente tosco... no se
+  // acercan o pasan de largo"): este hook deliberadamente no sabe nada
+  // de píxeles de pantalla ni de zoom (ver nota de arquitectura más
+  // abajo) — quien SÍ sabe el zoom (PlanoCanvas.tsx) convierte un radio
+  // fijo EN PANTALLA a metros reales recién ahí y lo manda acá, para que
+  // el enganche se sienta igual sin importar qué tan acercado/alejado
+  // esté el plano. Sin ese dato (otro llamador cualquiera), cae al valor
+  // fijo de siempre.
+  function moverHabitacionPlano(habitacionId: string, deltaM: Punto, conEnganche: boolean = true, radioEngancheM: number = App.plano.RADIO_SNAP_METROS): void {
     const habitacion = habitacionesPlano.find((h) => h.id === habitacionId);
     if (!habitacion) return;
     if (!conEnganche) {
@@ -1540,7 +1548,7 @@ export function useCircuitos() {
       });
     }
 
-    const deltaConEnganche = App.plano.calcularDeltaConEnganche(cajaActual, deltaM, cajasReferencia, App.plano.RADIO_SNAP_METROS);
+    const deltaConEnganche = App.plano.calcularDeltaConEnganche(cajaActual, deltaM, cajasReferencia, radioEngancheM);
     setNodosPlano(App.plano.moverNodos(habitacion.nodoIds, deltaConEnganche, nodosPlano));
   }
 
