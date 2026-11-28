@@ -96,6 +96,21 @@ export function adaptarParaImportar(tableros: TableroExtraido[], normativaActiva
       if (voltaje == null) {
         voltaje = t.tension_v ?? primerVoltajeEstandar(normativaActiva, fases) ?? 120;
         advertencias.push(`Sin voltaje en el documento — se usó ${voltaje}V por defecto, revisar.`);
+      } else {
+        // Bug real reportado por el usuario (2026-11-28, probando con
+        // un PDF de otra normativa a la seleccionada): el voltaje que
+        // trae el documento se usa TAL CUAL (nunca se fuerza al de la
+        // normativa activa — podría ser el dato real), pero si no
+        // figura en la lista de voltajes estándar de esa normativa es
+        // una señal fuerte de que el documento es de otra normativa, y
+        // antes pasaba desapercibido. Solo avisa, nunca bloquea — el
+        // usuario decide con el checkbox de "incluir" en la vista previa.
+        const estandares = App.normativa.voltajesPorFase(normativaActiva, fases);
+        if (estandares.length > 0 && !estandares.includes(voltaje)) {
+          advertencias.push(
+            `${voltaje}V no es un voltaje estándar de ${normativaActiva} para fase ${fases} (esperado: ${estandares.join("/")}V) — revisar si el documento corresponde a otra normativa.`
+          );
+        }
       }
 
       const form = {
